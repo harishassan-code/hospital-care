@@ -36,8 +36,14 @@ LABELS = {
     "area: docs": ("bfdadc", ""),
     "area: qa": ("f9d0c4", ""),
 }
-for code, (name, color) in EPICS.items():
-    LABELS[f"epic: {code} {name}"] = (color, f"WBS epic {code}")
+
+
+def epic_label(code):
+    return f"epic: {code} {EPICS[code][0].replace(',', '')}"
+
+
+for code, (_, color) in EPICS.items():
+    LABELS[epic_label(code)] = (color, f"WBS epic {code}")
 
 
 def gh(*args, input=None, check=True):
@@ -109,7 +115,7 @@ def issue_body(item):
 
 
 def issue_labels(item):
-    labels = [f"type: {item['type']}", f"priority: {item['priority']}", f"epic: {item['epic']} {EPICS[item['epic']][0]}"]
+    labels = [f"type: {item['type']}", f"priority: {item['priority']}", epic_label(item["epic"])]
     labels += [f"area: {a}" for a in item["area"]]
     if item["sprint"] is None:
         labels.append("stretch")

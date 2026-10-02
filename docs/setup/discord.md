@@ -78,7 +78,7 @@ GitHub's scheduled workflows can run a few minutes late. That's normal.
 ## 5. Pin these in `#links`
 
 - Repo: `https://github.com/harishassan-code/hospital-care`
-- Board: GitHub Project *Hospital Care Scrum Board*
+- Board: https://github.com/users/harishassan-code/projects/1
 - Working agreement: `docs/scrum/working-agreement.md`
 - Timeline: `docs/scrum/timeline.md`
 - Staging frontend/API URLs (once deployed)

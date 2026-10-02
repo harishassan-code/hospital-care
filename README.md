@@ -9,7 +9,7 @@ Built for the **Agile Software Project Management** course using Scrum, with 1-w
 
 | | |
 |---|---|
-| **Board** | GitHub Project → *Hospital Care Scrum Board* (Projects tab) |
+| **Board** | [Hospital Care Scrum Board](https://github.com/users/harishassan-code/projects/1) |
 | **Sprints** | [Milestones](../../milestones) · [Timeline](docs/scrum/timeline.md) |
 | **How we work** | [Working agreement](docs/scrum/working-agreement.md) · [Contributing](CONTRIBUTING.md) |
 | **Course deliverables** | [docs/deliverables](docs/deliverables/README.md) |
