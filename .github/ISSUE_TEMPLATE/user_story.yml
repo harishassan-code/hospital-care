@@ -1,0 +1,48 @@
+name: User story
+description: A backlog item that delivers user value
+title: "[Story] "
+labels: ["type: story", "needs refinement"]
+body:
+  - type: textarea
+    id: story
+    attributes:
+      label: User story
+      value: |
+        As a <role>,
+        I want <capability>,
+        so that <benefit>.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Testable conditions, ideally Given/When/Then.
+      value: |
+        - [ ] Given ..., when ..., then ...
+    validations:
+      required: true
+  - type: input
+    id: wbs
+    attributes:
+      label: WBS reference
+      placeholder: e.g. 3.2 Blood Inventory → Blood Unit Registration
+  - type: dropdown
+    id: points
+    attributes:
+      label: Story points (set during planning; also set the Points field on the board)
+      options: ["?", "1", "2", "3", "5", "8", "13"]
+  - type: textarea
+    id: notes
+    attributes:
+      label: Technical notes, dependencies and UI/API considerations
+  - type: checkboxes
+    id: dor
+    attributes:
+      label: Definition of Ready
+      options:
+        - label: Clear user and value statement
+        - label: Acceptance criteria written and understood by the team
+        - label: Dependencies identified
+        - label: Small enough to finish within one sprint (≤ 8 points)
+        - label: UI/API/data impact understood well enough to estimate

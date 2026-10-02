@@ -1,0 +1,40 @@
+# Posts Scrum reminders to Discord. Needs repo secret DISCORD_SCRUM_WEBHOOK
+# (Discord channel → Edit Channel → Integrations → Webhooks → Copy URL).
+# Cron times are UTC; Pakistan time (PKT) = UTC+5.
+name: Discord Scrum reminders
+
+on:
+  schedule:
+    - cron: "0 5 * * *"   # 10:00 PKT daily: stand-up prompt
+    - cron: "0 12 * * 5"  # 17:00 PKT Friday: ceremonies tonight at 22:00
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post reminder
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_SCRUM_WEBHOOK }}
+          SCHEDULE: ${{ github.event.schedule }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "DISCORD_SCRUM_WEBHOOK not set; skipping"; exit 0; fi
+          if [ "$SCHEDULE" = "0 12 * * 5" ]; then
+            MSG=$(cat <<TXT
+          📅 **Sprint ceremonies tonight at 10:00 PM** in the 🔊 Scrum Room voice channel.
+          Agenda: Sprint Review (demo) → Retrospective → Sprint Planning.
+          Before the call: update your cards on the board and have your demo ready.
+          Milestones: $REPO_URL/milestones
+          TXT
+            )
+          else
+            MSG=$(cat <<TXT
+          ☀️ **Daily stand-up**: reply in a thread on this message by 11:59 PM.
+          **Yesterday:** what I finished (link PRs/issues)
+          **Today:** what I'm working on
+          **Blockers:** anything stopping me (tag @Scrum Master)
+          TXT
+            )
+          fi
+          jq -n --arg c "$MSG" '{content: $c}' | curl -fsS -H "Content-Type: application/json" -d @- "$WEBHOOK"

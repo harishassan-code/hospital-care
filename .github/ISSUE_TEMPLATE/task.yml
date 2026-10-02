@@ -1,0 +1,22 @@
+name: Task
+description: Technical or process work that supports a story (setup, docs, refactor, research)
+title: "[Task] "
+labels: ["type: task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs to be done
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      value: |
+        - [ ]
+  - type: input
+    id: parent
+    attributes:
+      label: Related story (optional)
+      placeholder: "#12"

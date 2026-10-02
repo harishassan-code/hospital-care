@@ -1,0 +1,35 @@
+name: Bug report
+description: Something is broken
+title: "[Bug] "
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: ["critical (blocks demo/workflow)", "high", "medium", "low"]
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Where (page/endpoint, browser, branch/commit)

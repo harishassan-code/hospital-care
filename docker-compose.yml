@@ -1,0 +1,45 @@
+# Local development: `docker compose up` → frontend :5173, API :8000, Postgres :5432
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: hospitalcare
+      POSTGRES_USER: hospitalcare
+      POSTGRES_PASSWORD: hospitalcare
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hospitalcare"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DATABASE_URL: postgres://hospitalcare:hospitalcare@db:5432/hospitalcare
+      DJANGO_DEBUG: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8000/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
