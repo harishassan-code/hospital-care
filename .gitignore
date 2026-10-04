@@ -24,3 +24,6 @@ frontend/dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local-only files kept out of the public repo
+.quarantine/
