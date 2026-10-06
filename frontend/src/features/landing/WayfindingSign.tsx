@@ -2,7 +2,7 @@ import { ER_STATUS_LABEL, type PublicStatus } from '../../api/publicStatus'
 import { hospital } from '../../config/hospital'
 import { FloorLines } from './FloorLines'
 import { ALL_LINES, LINES } from './lines'
-import { isInNow } from './schedule'
+import { isInNow } from '../../lib/time'
 import styles from './WayfindingSign.module.css'
 
 type WayfindingSignProps = {

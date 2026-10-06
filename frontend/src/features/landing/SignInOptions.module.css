@@ -14,7 +14,9 @@
 }
 
 .title {
+  font-family: var(--font-body);
   font-size: var(--text-xl);
+  font-weight: 700;
 }
 
 .actions {

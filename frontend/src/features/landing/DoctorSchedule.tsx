@@ -1,15 +1,9 @@
 import { useState, type CSSProperties } from 'react'
 import type { Doctor } from '../../api/publicStatus'
+import { FilterBar } from '../../components/ui/FilterBar'
+import { DAY_MINUTES, formatClock, isInNow, minutesOfDay, shiftSegments } from '../../lib/time'
 import styles from './DoctorSchedule.module.css'
-import {
-  DAY_MINUTES,
-  departmentsOf,
-  formatClock,
-  isInNow,
-  minutesOfDay,
-  shiftSegments,
-  sortForDisplay,
-} from './schedule'
+import { departmentsOf, sortForDisplay } from './schedule'
 
 const TICK_HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24]
 const ALL = 'All'
@@ -38,19 +32,12 @@ export function DoctorSchedule({ doctors, now }: DoctorScheduleProps) {
 
   return (
     <div className={styles.schedule}>
-      <div className={styles.filters} role="group" aria-label="Show doctors from">
-        {[ALL, ...departmentsOf(doctors)].map((name) => (
-          <button
-            key={name}
-            type="button"
-            className={styles.filter}
-            aria-pressed={department === name}
-            onClick={() => setDepartment(name)}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
+      <FilterBar
+        label="Show doctors from"
+        options={[ALL, ...departmentsOf(doctors)].map((name) => ({ value: name, label: name }))}
+        value={department}
+        onChange={setDepartment}
+      />
 
       <div className={styles.chart}>
         <div className={styles.axis} aria-hidden="true">

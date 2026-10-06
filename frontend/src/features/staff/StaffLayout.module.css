@@ -1,0 +1,295 @@
+.shell {
+  --sidebar: 15.5rem;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--sidebar) minmax(0, 1fr);
+}
+
+/* ── Sidebar: the overhead sign ────────────────────────── */
+
+/* The colour fills the whole column; only the inner panel stays put while the page scrolls. */
+.sidebar {
+  --focus: var(--sign-text);
+  background: var(--sign);
+  color: var(--sign-text);
+}
+
+.sidebarInner {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  text-decoration: none;
+}
+
+.monogram {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--sign-text);
+  color: var(--sign);
+  font-family: var(--font-display);
+  font-weight: 900;
+  border-radius: var(--radius);
+}
+
+.brandName,
+.brandSub {
+  display: block;
+}
+
+.brandName {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.brandSub {
+  font-size: var(--text-xs);
+  color: var(--sign-muted);
+}
+
+.menuButton {
+  display: none;
+}
+
+.navArea {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.navList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-2) 0;
+  list-style: none;
+}
+
+/* The active page gets the teal floor-line stripe. */
+.navLink {
+  display: flex;
+  align-items: center;
+  min-height: 2.875rem;
+  padding: 0 var(--space-4) 0 calc(var(--space-4) + var(--stripe));
+  color: var(--sign-muted);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-left: var(--stripe) solid transparent;
+}
+
+.navLink:hover {
+  color: var(--sign-text);
+  background: color-mix(in srgb, var(--sign-text) 6%, transparent);
+}
+
+.navLink[aria-current='page'] {
+  color: var(--sign-text);
+  background: color-mix(in srgb, var(--sign-text) 9%, transparent);
+  border-left-color: var(--line-portal);
+}
+
+.navLink:focus-visible {
+  outline-offset: -3px;
+}
+
+.user {
+  padding: var(--space-4);
+  border-top: 1px solid color-mix(in srgb, var(--sign-text) 16%, transparent);
+  font-size: var(--text-sm);
+}
+
+.userName {
+  font-weight: 700;
+}
+
+.userRole {
+  color: var(--sign-muted);
+}
+
+.signOut {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--sign-text);
+  font-weight: 700;
+}
+
+/* ── Main column ───────────────────────────────────────── */
+
+.column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  background: color-mix(in srgb, var(--status-warning) 10%, var(--surface));
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-sm);
+}
+
+.roleField {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.roleField select {
+  min-height: 2.25rem;
+  padding: 0 var(--space-2);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--rule);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.topMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.shift {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.bell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+
+.bell:hover {
+  border-color: var(--ink-muted);
+}
+
+.bellCount {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 1.4rem;
+  padding: 0 4px;
+  background: var(--status-critical);
+  color: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.4rem;
+  text-align: center;
+  border-radius: 999px;
+}
+
+.main {
+  padding: var(--space-6);
+}
+
+.denied {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 34rem;
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: var(--stripe) solid var(--status-critical);
+  border-radius: var(--radius);
+}
+
+.denied h2 {
+  font-size: var(--text-xl);
+}
+
+.denied a {
+  font-weight: 700;
+}
+
+/* ── Narrow screens: the sidebar becomes a top bar with a menu ── */
+
+@media (max-width: 59.99rem) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebarInner {
+    position: static;
+    height: auto;
+  }
+
+  .brandRow {
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .menuButton {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding: 0 var(--space-4);
+    background: none;
+    border: 2px solid color-mix(in srgb, var(--sign-text) 40%, transparent);
+    border-radius: var(--radius);
+    color: var(--sign-text);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .navArea[data-open='false'] {
+    display: none;
+  }
+
+  .banner,
+  .topBar,
+  .main {
+    padding-inline: var(--space-4);
+  }
+}

@@ -1,7 +1,7 @@
 import { ER_STATUS_LABEL, type ErStatus, type PublicStatus } from '../../api/publicStatus'
 import { hospital } from '../../config/hospital'
+import { formatClock } from '../../lib/time'
 import styles from './EmergencyStatus.module.css'
-import { formatClock } from './schedule'
 
 const STATUS_ICON: Record<ErStatus, string> = {
   accepting: 'M5 12.5l4.5 4.5L19 7.5',

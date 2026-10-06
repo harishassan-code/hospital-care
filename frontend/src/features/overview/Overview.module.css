@@ -1,0 +1,233 @@
+/* ── Status tiles ──────────────────────────────────────── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: var(--stripe) solid var(--sign);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.tile:hover {
+  border-color: var(--ink-muted);
+  border-top-color: var(--sign);
+}
+
+.tileLabel {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* Standalone figure: body face, proportional digits. */
+.tileValue {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.tileUnit {
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+.tileDetail {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.count {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ── Needs attention ───────────────────────────────────── */
+
+.attention {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attentionItem {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 2px var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.attentionItem:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.attentionTitle {
+  font-weight: 700;
+}
+
+.attentionDetail {
+  grid-column: 2;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ── Bar charts ────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+}
+
+.bars {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) 12rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.barName {
+  font-weight: 700;
+}
+
+.group {
+  font-family: var(--font-mono);
+}
+
+.barValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.minimum {
+  color: var(--ink-muted);
+}
+
+/* Stacked bar: 2px surface gaps between segments; square at the baseline, rounded at the end. */
+.stack {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+}
+
+.segment {
+  flex-basis: 0;
+}
+
+.segment:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.track {
+  position: relative;
+  height: 14px;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--line-clinics);
+  border-radius: 0 4px 4px 0;
+}
+
+.tick {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+
+/* ── Table ─────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  text-align: left;
+  font-weight: 700;
+  color: var(--ink-muted);
+  border-bottom: 2px solid var(--rule);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+}
+
+.table td {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 40rem) {
+  .barRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .stack,
+  .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .attentionItem {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .attentionDetail {
+    grid-column: 1;
+  }
+}

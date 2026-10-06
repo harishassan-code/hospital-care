@@ -41,6 +41,12 @@ No gradients, glows or drop-shadow "lift" effects.
 
 ### Type
 
+> **Changed 6 Oct 2026:** fonts replaced to set the product apart from common AI-generated designs.
+> Now **Big Shoulders Display** (display; drawn for the City of Chicago from its civic signage),
+> **Radio Canada** (body; made for clear public communication) and **Martian Mono** (data).
+> Sentence-case card titles use the body face; the display face is kept for uppercase signage and page titles.
+> The original choice is kept below for the record.
+
 - **Overpass** (display, derived from Highway Gothic road signage): sign rows only (uppercase, heavy) and
   page headings (sentence case).
 - **Atkinson Hyperlegible Next** (body): designed for low-vision legibility.

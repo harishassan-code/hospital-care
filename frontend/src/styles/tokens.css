@@ -18,10 +18,25 @@
   --line-portal: #00806a;
   --focus: #1c5bb8;
 
-  /* Type */
-  --font-display: 'Overpass Variable', 'Overpass', 'Arial Narrow', sans-serif;
-  --font-body: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
-  --font-mono: 'Atkinson Hyperlegible Mono Variable', 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+  /* Status text (AA on white and wall). Status is always shown with an icon + label too. */
+  --status-critical: #c8202f;
+  --status-warning: #8a5a00;
+  --status-ok: #1d7a3e;
+
+  /* Bed-status fills for charts and tiles (validated with the dataviz palette checker). */
+  --bed-occupied: #1c5bb8;
+  --bed-reserved: #b03a7e;
+  --bed-cleaning: #c2850c;
+  --bed-free: #2b8a4e;
+  --bed-out: #8d9a95;
+
+  /* Type
+     Display: Big Shoulders Display, drawn for the City of Chicago from its civic signage (sign rows, headings).
+     Body: Radio Canada, made for clear public communication across languages.
+     Data: Martian Mono, for times, unit numbers and counts. */
+  --font-display: 'Big Shoulders Display Variable', 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --font-body: 'Radio Canada Variable', 'Radio Canada', system-ui, sans-serif;
+  --font-mono: 'Martian Mono Variable', 'Martian Mono', ui-monospace, monospace;
 
   --text-xs: 0.8125rem;
   --text-sm: 0.9375rem;

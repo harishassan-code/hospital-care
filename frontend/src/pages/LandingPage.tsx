@@ -3,14 +3,15 @@ import { getPublicStatus, type PublicStatus } from '../api/publicStatus'
 import { SiteFooter } from '../components/layout/SiteFooter'
 import { SiteHeader } from '../components/layout/SiteHeader'
 import { hospital } from '../config/hospital'
+import { formatClock } from '../lib/time'
+import { useNow } from '../lib/useNow'
+import { useScrollToHash } from '../lib/useScrollToHash'
 import { Destination } from '../features/landing/Destination'
 import { DoctorSchedule } from '../features/landing/DoctorSchedule'
 import { EmergencyStatus } from '../features/landing/EmergencyStatus'
 import { RailRow } from '../features/landing/FloorLines'
 import { ALL_LINES } from '../features/landing/lines'
-import { formatClock } from '../features/landing/schedule'
 import { SignInOptions } from '../features/landing/SignInOptions'
-import { useNow } from '../features/landing/useNow'
 import { WayfindingSign } from '../features/landing/WayfindingSign'
 import styles from './LandingPage.module.css'
 
@@ -18,6 +19,7 @@ export default function LandingPage() {
   const now = useNow()
   const [status, setStatus] = useState<PublicStatus | null>(null)
   const [failed, setFailed] = useState(false)
+  useScrollToHash(status !== null || failed)
 
   useEffect(() => {
     let active = true

@@ -72,6 +72,13 @@ input {
   top: var(--space-4);
 }
 
+/* Wide tables scroll inside this box. position: relative keeps absolutely positioned
+   children (like .visually-hidden labels) inside it, so they can't widen the page. */
+.table-scroll {
+  position: relative;
+  overflow-x: auto;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
