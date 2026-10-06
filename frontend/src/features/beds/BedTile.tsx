@@ -34,11 +34,21 @@ type BedTileProps = {
   bed: Bed
   now: Date
   editable: boolean
-  onAction: (action: BedAction) => void
+  /** Resolves once the server has answered; the tile's buttons are disabled until then. */
+  onAction: (action: BedAction) => Promise<void>
 }
 
 export function BedTile({ bed, now, editable, onAction }: BedTileProps) {
   const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const run = async (action: BedAction) => {
+    setBusy(true)
+    try {
+      await onAction(action)
+    } finally {
+      setBusy(false)
+    }
+  }
   const status = STATUS_LABEL[bed.status]
   const overdue = isCleaningOverdue(bed, now)
 
@@ -95,9 +105,10 @@ export function BedTile({ bed, now, editable, onAction }: BedTileProps) {
               <button
                 type="button"
                 className={styles.primaryAction}
+                disabled={busy}
                 onClick={() => {
                   setConfirming(false)
-                  onAction('discharge')
+                  run('discharge')
                 }}
               >
                 Confirm discharge
@@ -115,7 +126,8 @@ export function BedTile({ bed, now, editable, onAction }: BedTileProps) {
                 type="button"
                 className={styles.action}
                 aria-label={`${t.label} ${bed.label}`}
-                onClick={() => (t.action === 'discharge' ? setConfirming(true) : onAction(t.action))}
+                disabled={busy}
+                onClick={() => (t.action === 'discharge' ? setConfirming(true) : run(t.action))}
               >
                 {t.label}
               </button>

@@ -1,10 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { hospital } from '../config/hospital'
+import { samplePublicStatus } from '../test/fixtures/publicStatus'
+import { mockApi, ok } from '../test/mockApi'
 import LandingPage from './LandingPage'
 
+afterEach(() => vi.restoreAllMocks())
+
 it('shows the hospital, the sign and live emergency status', async () => {
+  mockApi({ 'GET /public/status/': ok(samplePublicStatus(new Date())) })
   render(
     <MemoryRouter>
       <LandingPage />
@@ -22,4 +27,14 @@ it('shows the hospital, the sign and live emergency status', async () => {
     'href',
     `tel:${hospital.emergencyNumber}`,
   )
+})
+
+it('says so when live status is unavailable', async () => {
+  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+  render(
+    <MemoryRouter>
+      <LandingPage />
+    </MemoryRouter>,
+  )
+  expect(await screen.findByText(/Live status isn’t available right now/)).toBeInTheDocument()
 })

@@ -7,7 +7,7 @@ export function StaffDataState() {
   return (
     <p role="status">
       {failed
-        ? `The hospital's system didn't respond. Reload the page, or call ${hospital.mainPhone} if it keeps happening.`
+        ? `The hospital’s system didn’t respond. Reload the page, or call ${hospital.mainPhone} if it keeps happening.`
         : 'Loading…'}
     </p>
   )

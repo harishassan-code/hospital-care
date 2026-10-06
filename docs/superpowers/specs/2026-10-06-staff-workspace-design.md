@@ -3,7 +3,15 @@
 **Status:** Approved by Haris, 6 Oct 2026
 **Scope:** frontend only. Shell, Overview dashboard, Beds, Blood bank, Pharmacy. Sample data, in-memory changes.
 
-## Access (preview mode)
+## Access
+
+> **Changed 7 Oct 2026:** preview mode is gone. The backend (`hassanqureshi/backend`) provides real sign-in, so
+> `/staff` asks `GET /api/auth/me/`: signed-out visitors go to `/login?next=…`, patients see "This area is for
+> hospital staff", and staff get the workspace with the role from their account. Each page loads only the modules
+> the role may see (the API answers 403 otherwise). Bed actions are saved with `POST /api/beds/<id>/actions/`;
+> a 409 means someone else moved the bed first, and the board refreshes. The original preview design is kept below.
+
+### Original: preview mode
 
 Login is not wired yet, so `/staff/*` opens in preview mode with a banner:
 "Preview: sign-in isn't connected yet. Viewing as [role ▾]". The role decides navigation and actions:

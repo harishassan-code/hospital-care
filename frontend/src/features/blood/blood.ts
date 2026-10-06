@@ -54,7 +54,11 @@ export function availableCounts(units: BloodUnit[]): Record<Component, Record<Bl
   return counts
 }
 
-/** First-expiry-first-out: the unit that expires soonest is used first. */
+/**
+ * First-expiry-first-out: the unit that expires soonest is used first. Compares real times, not text:
+ * the API's timestamps vary in offset and fractional seconds.
+ */
 export function sortFefo(units: BloodUnit[]): BloodUnit[] {
-  return [...units].sort((a, b) => a.expiresAt.localeCompare(b.expiresAt))
+  const time = (u: BloodUnit) => new Date(u.expiresAt).getTime()
+  return [...units].sort((a, b) => time(a) - time(b))
 }

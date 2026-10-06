@@ -66,6 +66,7 @@ python -m venv .venv
 .venv/Scripts/activate          # Windows (Git Bash: source .venv/Scripts/activate) · macOS/Linux: source .venv/bin/activate
 pip install -r requirements-dev.txt
 python manage.py migrate
+python manage.py seed_demo      # demo wards, beds, blood, medicines, doctors and one login per role
 python manage.py runserver
 ```
 
@@ -76,6 +77,13 @@ cd frontend
 npm install
 npm run dev
 ```
+
+### Signing in
+
+Open http://localhost:5173/login and use one of the demo accounts listed in
+[docs/architecture/api.md](docs/architecture/api.md#demo-data) (one per role). Staff land in the staff workspace at
+`/staff` and see only the modules their role allows; patients land on the home page. The frontend talks to the
+API at `VITE_API_URL` (default `http://localhost:8000/api`), so both servers must be running.
 
 ### Checks to run before pushing (CI runs the same ones)
 

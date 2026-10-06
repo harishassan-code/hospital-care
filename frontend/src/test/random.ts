@@ -1,6 +1,6 @@
 /**
- * Small deterministic random generator (mulberry32) for sample data, so the same seed always
- * produces the same wards, units and stock, and tests can rely on it.
+ * Small deterministic random generator (mulberry32) for the test fixtures, so the same seed always
+ * produces the same wards, units and stock.
  */
 export function seededRandom(seed: number) {
   let state = seed >>> 0

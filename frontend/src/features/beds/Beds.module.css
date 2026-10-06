@@ -146,6 +146,12 @@
   border-color: var(--ink-muted);
 }
 
+.action:disabled,
+.primaryAction:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
 .primaryAction {
   background: var(--line-portal);
   border: 2px solid var(--line-portal);

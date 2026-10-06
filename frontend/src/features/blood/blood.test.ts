@@ -76,4 +76,13 @@ describe('stock', () => {
     ]
     expect(sortFefo(units).map((u) => u.id)).toEqual(['soon', 'mid', 'late'])
   })
+
+  it('sorts by actual time, whatever the timestamp format the server sends', () => {
+    const units = [
+      unit('b', { expiresAt: '2026-10-07T15:00:00+05:00' }),
+      unit('a', { expiresAt: '2026-10-07T14:59:59.912345+05:00' }),
+      unit('c', { expiresAt: '2026-10-07T10:30:00.5+00:00' }),
+    ]
+    expect(sortFefo(units).map((u) => u.id)).toEqual(['a', 'b', 'c'])
+  })
 })

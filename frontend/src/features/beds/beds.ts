@@ -1,7 +1,7 @@
-import type { Bed, BedStatus, Isolation } from '../../api/beds'
+import type { Bed, BedAction, BedStatus, Isolation } from '../../api/beds'
 import { dateKey } from '../../lib/time'
 
-export type BedAction = 'discharge' | 'markReady' | 'reserve' | 'cancelReservation' | 'outOfService' | 'returnToService'
+export type { BedAction }
 
 type Transition = { action: BedAction; label: string; next: BedStatus }
 

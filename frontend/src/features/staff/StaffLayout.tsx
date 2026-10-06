@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { hospital } from '../../config/hospital'
 import { currentShift, formatDuration } from '../../lib/time'
-import { canSee, MODULES, ROLES, type Role } from './roles'
+import { canSee, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
 import styles from './StaffLayout.module.css'
 import { StaffProvider } from './StaffProvider'
 
-/** The signed-in staff workspace: sidebar, top bar, preview banner, and the current page. */
+/** The signed-in staff workspace: sidebar, top bar, and the current page. */
 export default function StaffLayout() {
   return (
     <StaffProvider>
@@ -28,7 +28,6 @@ function StaffShell() {
       </a>
       <Sidebar />
       <div className={styles.column}>
-        <PreviewBanner />
         <TopBar title={module.label} />
         <main id="main" className={styles.main}>
           {canSee(role, module.id) ? <Outlet /> : <AccessDenied moduleLabel={module.label} />}
@@ -39,7 +38,7 @@ function StaffShell() {
 }
 
 function Sidebar() {
-  const { role } = useStaff()
+  const { user, role, signOut } = useStaff()
   const [open, setOpen] = useState(false)
   const roleLabel = ROLES.find((r) => r.id === role)?.label
 
@@ -79,36 +78,15 @@ function Sidebar() {
             </ul>
           </nav>
           <div className={styles.user}>
-            <p className={styles.userName}>Preview user</p>
+            <p className={styles.userName}>{user.fullName}</p>
             <p className={styles.userRole}>{roleLabel}</p>
-            <Link to="/login" className={styles.signOut}>
+            <button type="button" className={styles.signOut} onClick={signOut}>
               Sign out
-            </Link>
+            </button>
           </div>
         </div>
       </div>
     </aside>
-  )
-}
-
-function PreviewBanner() {
-  const { role, setRole } = useStaff()
-  return (
-    <div className={styles.banner}>
-      <p>
-        <strong>Preview:</strong> sign-in isn’t connected yet, so pick a role to see what it can do.
-      </p>
-      <label className={styles.roleField}>
-        Viewing as
-        <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-          {ROLES.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </label>
-    </div>
   )
 }
 

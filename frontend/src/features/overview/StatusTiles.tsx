@@ -82,24 +82,40 @@ function PharmacyTile({ data, now }: { data: StaffData; now: Date }) {
   )
 }
 
+function EmergencyTile({ emergency }: { emergency: StaffData['emergency'] }) {
+  if (!emergency) {
+    return (
+      <li>
+        <Link to="/#emergency" className={styles.tile}>
+          <span className={styles.tileLabel}>Emergency</span>
+          <span className={styles.tileDetail}>Live status unavailable</span>
+          <StatusBadge tone="neutral">Check with the ER desk</StatusBadge>
+        </Link>
+      </li>
+    )
+  }
+  return (
+    <Tile
+      to="/#emergency"
+      label="Emergency"
+      value={emergency.waitingCount}
+      unit="waiting"
+      detail={`About ${emergency.waitMinutes} min wait`}
+      note={
+        <StatusBadge tone={emergency.status === 'accepting' ? 'ok' : 'warning'}>
+          {ER_STATUS_LABEL[emergency.status]}
+        </StatusBadge>
+      }
+    />
+  )
+}
+
 export function StatusTiles({ data }: { data: StaffData }) {
   const { role, now } = useStaff()
-  const { emergency } = data
   return (
     <ul className={styles.tiles} aria-label="Status summary">
       {canSee(role, 'beds') && <BedsTile data={data} />}
-      <Tile
-        to="/#emergency"
-        label="Emergency"
-        value={emergency.waitingCount}
-        unit="waiting"
-        detail={`About ${emergency.waitMinutes} min wait`}
-        note={
-          <StatusBadge tone={emergency.status === 'accepting' ? 'ok' : 'warning'}>
-            {ER_STATUS_LABEL[emergency.status]}
-          </StatusBadge>
-        }
-      />
+      <EmergencyTile emergency={data.emergency} />
       {canSee(role, 'blood') && <BloodTile data={data} />}
       {canSee(role, 'pharmacy') && <PharmacyTile data={data} now={now} />}
     </ul>

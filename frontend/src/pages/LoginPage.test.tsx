@@ -1,8 +1,24 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mockApi, ok, userFor } from '../test/mockApi'
 import LoginPage from './LoginPage'
+
+function Where() {
+  return <p>at {useLocation().pathname}</p>
+}
+
+/** The login page inside a router, so we can see where a successful login lands. */
+const renderAt = (url: string) =>
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Where />} />
+      </Routes>
+    </MemoryRouter>,
+  )
 
 const renderPage = () =>
   render(
@@ -49,6 +65,19 @@ describe('LoginPage', () => {
     await userEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText(/Ask the front desk to reset it/)).toBeVisible()
+  })
+
+  it.each([
+    ['staff', 'nurse', '/login', 'at /staff'],
+    ['staff, back where they were going', 'nurse', '/login?next=%2Fstaff%2Fbeds', 'at /staff/beds'],
+    ['patients, to the home page', 'patient', '/login?next=%2Fstaff', 'at /'],
+    ['staff, ignoring a link to another site', 'admin', '/login?next=%2F%2Fevil.example', 'at /staff'],
+    ['staff, ignoring a full URL', 'admin', '/login?next=https%3A%2F%2Fevil.example', 'at /staff'],
+  ] as const)('signs in %s', async (_case, role, url, landing) => {
+    mockApi({ 'POST /auth/login/': ok(userFor(role)) })
+    renderAt(url)
+    await submitWith('someone@example.com', 'right-password-1')
+    expect(await screen.findByText(landing)).toBeInTheDocument()
   })
 
   it('links new patients to sign up', () => {

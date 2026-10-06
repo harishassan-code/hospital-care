@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { at } from '../test/clock'
+import { BLOOD_GROUPS, COMPONENTS } from '../../api/blood'
+import { at } from '../clock'
 import { sampleBedBoard } from './beds'
-import { BLOOD_GROUPS, COMPONENTS, sampleBloodUnits } from './blood'
+import { sampleBloodUnits } from './blood'
 
 const now = at('15:00')
 

@@ -1,25 +1,28 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { login } from '../api/auth'
 import { Button } from '../components/form/Button'
 import { FormAlert } from '../components/form/FormAlert'
 import { PasswordField } from '../components/form/PasswordField'
 import { TextField } from '../components/form/TextField'
 import { AuthLayout } from '../components/layout/AuthLayout'
+import { safeNext } from '../features/auth/redirect'
 import { useAuthForm } from '../features/auth/useAuthForm'
 import { validateLogin } from '../features/auth/validation'
 import styles from './AuthPages.module.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [helpOpen, setHelpOpen] = useState(false)
   const { values, errors, alert, pending, field, handleSubmit } = useAuthForm({
     initial: { email: '', password: '' },
     validate: validateLogin,
     order: ['email', 'password'],
     onValid: async (v) => {
-      await login(v)
-      navigate('/')
+      const user = await login(v)
+      // Staff go to the workspace (or back where they were going); patients to the home page.
+      navigate(user.isStaff ? (safeNext(searchParams.get('next')) ?? '/staff') : '/')
     },
   })
 

@@ -1,4 +1,16 @@
-import { ApiError, apiPost } from './client'
+import type { Role } from '../features/staff/roles'
+import { ApiError, apiGet, apiPost } from './client'
+
+/** The signed-in account, as returned by /auth/login/, /auth/signup/ and /auth/me/. */
+export interface User {
+  id: number
+  email: string
+  fullName: string
+  phone: string
+  role: Role | 'patient'
+  /** True for hospital staff (any role except patient). */
+  isStaff: boolean
+}
 
 export type AuthErrorKind = 'invalid_credentials' | 'email_taken' | 'rejected' | 'unavailable'
 
@@ -26,9 +38,9 @@ function statusOf(error: unknown): number {
   return error instanceof ApiError ? error.status : 0
 }
 
-export async function login(values: { email: string; password: string }): Promise<void> {
+export async function login(values: { email: string; password: string }): Promise<User> {
   try {
-    await apiPost('/auth/login/', { email: values.email.trim(), password: values.password })
+    return await apiPost<User>('/auth/login/', { email: values.email.trim(), password: values.password })
   } catch (error) {
     const status = statusOf(error)
     throw new AuthError(status === 400 || status === 401 ? 'invalid_credentials' : 'unavailable')
@@ -40,9 +52,9 @@ export async function signup(values: {
   email: string
   phone: string
   password: string
-}): Promise<void> {
+}): Promise<User> {
   try {
-    await apiPost('/auth/signup/', {
+    return await apiPost<User>('/auth/signup/', {
       full_name: values.fullName.trim(),
       email: values.email.trim(),
       phone: values.phone.trim(),
@@ -55,4 +67,19 @@ export async function signup(values: {
     if (status === 409 || (status === 400 && emailRejected)) throw new AuthError('email_taken')
     throw new AuthError(status === 400 ? 'rejected' : 'unavailable')
   }
+}
+
+/** Who is signed in, or null when nobody is. Throws AuthError('unavailable') if the server can't be reached. */
+export async function getMe(): Promise<User | null> {
+  try {
+    return await apiGet<User>('/auth/me/')
+  } catch (error) {
+    const status = statusOf(error)
+    if (status === 401 || status === 403) return null
+    throw new AuthError('unavailable')
+  }
+}
+
+export async function logout(): Promise<void> {
+  await apiPost('/auth/logout/', {})
 }

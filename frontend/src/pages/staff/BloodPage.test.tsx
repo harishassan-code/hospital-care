@@ -2,18 +2,23 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { at } from '../../test/clock'
+import { mockStaffApi } from '../../test/mockApi'
 import { renderStaff } from '../../test/renderStaff'
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(at('15:00'))
 })
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 const bodyRows = (table: HTMLElement) => within(table).getAllByRole('row').slice(1)
 
 describe('BloodPage', () => {
   it('shows available stock for every component and group, flagging low groups', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/blood')
     const grid = await screen.findByRole('table', { name: /Available units by component and group/ })
     expect(bodyRows(grid)).toHaveLength(4)
@@ -23,6 +28,7 @@ describe('BloodPage', () => {
   })
 
   it('finds compatible donor groups, reversing the rule for plasma', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/blood')
     const finder = await screen.findByRole('region', { name: 'Compatibility finder' })
     await userEvent.selectOptions(within(finder).getByLabelText('Patient’s blood group'), 'O−')
@@ -36,6 +42,7 @@ describe('BloodPage', () => {
   })
 
   it('lists units soonest-expiry first and filters by component', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/blood')
     const units = await screen.findByRole('region', { name: 'Units' })
     const table = within(units).getByRole('table')

@@ -2,13 +2,17 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { at } from '../../test/clock'
+import { mockStaffApi } from '../../test/mockApi'
 import { renderStaff } from '../../test/renderStaff'
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(at('15:00'))
 })
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 const medicineRows = async () => {
   const table = await screen.findByRole('table', { name: /Medicine stock/ })
@@ -19,6 +23,7 @@ const medicineRows = async () => {
 
 describe('PharmacyPage', () => {
   it('lists the formulary with high-alert and controlled-drug flags', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/pharmacy')
     expect(await medicineRows()).toHaveLength(23)
     const morphine = screen.getByRole('row', { name: /^Morphine/ })
@@ -27,6 +32,7 @@ describe('PharmacyPage', () => {
   })
 
   it('narrows to medicines that need reordering', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/pharmacy')
     await medicineRows()
     await userEvent.click(screen.getByRole('button', { name: /^Needs reorder/ }))
@@ -35,6 +41,7 @@ describe('PharmacyPage', () => {
   })
 
   it('searches by name', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/pharmacy')
     await medicineRows()
     await userEvent.type(screen.getByLabelText('Search medicines'), 'potass')
@@ -42,6 +49,7 @@ describe('PharmacyPage', () => {
   })
 
   it('shows the batches behind a medicine', async () => {
+    mockStaffApi({ role: 'admin' })
     renderStaff('/staff/pharmacy')
     await medicineRows()
     const toggle = screen.getByRole('button', { name: 'Batches for Potassium chloride' })

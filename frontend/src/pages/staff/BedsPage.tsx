@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { BedStatus, WardId } from '../../api/beds'
+import { FormAlert } from '../../components/form/FormAlert'
 import { FilterBar } from '../../components/ui/FilterBar'
 import { actionsFor, dischargesToday, STATUS_LABEL, summarize, type BedAction } from '../../features/beds/beds'
 import { BedTile } from '../../features/beds/BedTile'
@@ -18,6 +19,7 @@ export default function BedsPage() {
   const [ward, setWard] = useState<'all' | WardId>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [announcement, setAnnouncement] = useState('')
+  const [error, setError] = useState<string>()
 
   if (!data) return <StaffDataState />
 
@@ -27,10 +29,13 @@ export default function BedsPage() {
   const matches = (bedId: string, bedStatus: BedStatus) =>
     status === 'all' || (status === 'dischargeToday' ? leavingToday.has(bedId) : bedStatus === status)
 
-  const act = (bedId: string, label: string, from: BedStatus, action: BedAction) => {
+  /** Save the change, then announce it only if the server accepted it. */
+  const act = async (bedId: string, label: string, from: BedStatus, action: BedAction) => {
+    setError(undefined)
     const next = actionsFor(from).find((t) => t.action === action)?.next
-    updateBed(bedId, action)
-    if (next) setAnnouncement(`${label} is now ${STATUS_LABEL[next].toLowerCase()}`)
+    const result = await updateBed(bedId, action)
+    if (!result.ok) setError(`${label}: ${result.message}`)
+    else if (next) setAnnouncement(`${label} is now ${STATUS_LABEL[next].toLowerCase()}`)
   }
 
   const wards = ward === 'all' ? data.wards : data.wards.filter((w) => w.id === ward)
@@ -57,6 +62,7 @@ export default function BedsPage() {
         {!editable && <p className={pageStyles.note}>View only: your role can’t change bed status.</p>}
       </div>
 
+      <FormAlert>{error}</FormAlert>
       <p role="status" className="visually-hidden">
         {announcement}
       </p>

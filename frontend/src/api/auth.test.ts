@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AuthError, authErrorMessage, login, signup } from './auth'
+import { AuthError, authErrorMessage, getMe, login, logout, signup } from './auth'
 
 const json = (status: number, body: unknown = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -19,10 +19,11 @@ async function kindOf(promise: Promise<unknown>) {
 }
 
 describe('login', () => {
-  it('posts credentials as JSON with cookies and the CSRF token', async () => {
+  it('posts credentials as JSON with cookies and the CSRF token, and returns the user', async () => {
     document.cookie = 'csrftoken=abc123'
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(200))
-    await login({ email: 'a@b.co', password: 'pw' })
+    const user = { id: 3, email: 'a@b.co', fullName: 'Hina Javed', phone: '', role: 'nurse', isStaff: true }
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(200, user))
+    expect(await login({ email: 'a@b.co', password: 'pw' })).toEqual(user)
     const [url, init] = fetchMock.mock.calls[0]
     expect(String(url)).toMatch(/\/auth\/login\/$/)
     expect(init?.method).toBe('POST')
@@ -81,6 +82,35 @@ describe('signup', () => {
   it('resolves when the account is created', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(201))
     expect(await kindOf(signup(values))).toBe('resolved')
+  })
+})
+
+describe('getMe', () => {
+  it('returns the signed-in user', async () => {
+    const user = { id: 1, email: 'a@b.co', fullName: 'A', phone: '', role: 'admin', isStaff: true }
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(200, user))
+    expect(await getMe()).toEqual(user)
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/auth\/me\/$/)
+  })
+
+  it.each([401, 403])('returns null when nobody is signed in (%i)', async (status) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(status))
+    expect(await getMe()).toBeNull()
+  })
+
+  it('treats a network failure as the server being unavailable', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+    expect(await kindOf(getMe())).toBe('unavailable')
+  })
+})
+
+describe('logout', () => {
+  it('posts to the logout endpoint and accepts an empty 204 reply', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    await logout()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toMatch(/\/auth\/logout\/$/)
+    expect(init?.method).toBe('POST')
   })
 })
 
