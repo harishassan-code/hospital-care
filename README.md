@@ -53,6 +53,8 @@ docker compose up --build
 - API: http://localhost:8000/api/health/
 - Django admin: http://localhost:8000/admin/ (create a user with
   `docker compose exec backend python manage.py createsuperuser`)
+- Demo data and a login per role: `docker compose exec backend python manage.py seed_demo`
+  (see the [API reference](docs/architecture/api.md))
 
 ### Option B: Without Docker
 
