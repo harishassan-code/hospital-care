@@ -1,0 +1,120 @@
+.layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.now {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.message {
+  font-size: var(--text-lg);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+
+.icon {
+  flex: none;
+  color: var(--surface);
+  background: var(--ink);
+  padding: 3px;
+}
+
+.wait {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.waitLabel {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+/* Standalone figure: body face, proportional digits (not mono). */
+.waitValue {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.approx {
+  font-size: var(--text-lg);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-muted);
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.call {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  min-height: var(--tap);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--line-emergency);
+  border-radius: var(--radius);
+  color: var(--line-emergency);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.call:hover {
+  background: var(--line-emergency);
+  color: var(--surface);
+}
+
+.callNumber {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.triage {
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.triageTitle {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-4);
+}
+
+.levels {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.levels li::marker {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+@media (min-width: 60rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: var(--space-7);
+  }
+}

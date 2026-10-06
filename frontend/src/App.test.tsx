@@ -1,16 +1,20 @@
 import { render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from './App'
+import { MemoryRouter } from 'react-router-dom'
+import { describe, expect, it } from 'vitest'
+import { AppRoutes } from './App'
 
-describe('App', () => {
-  afterEach(() => vi.restoreAllMocks())
+function renderAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <AppRoutes />
+    </MemoryRouter>,
+  )
+}
 
-  it('renders the home page and reports API status', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ status: 'ok' }), { status: 200 }),
-    )
-    render(<App />)
-    expect(screen.getByRole('heading', { name: 'Hospital Care' })).toBeInTheDocument()
-    expect(await screen.findByText('up')).toBeInTheDocument()
+describe('routes', () => {
+  it('shows a not-found page with a link home for unknown paths', () => {
+    renderAt('/nope')
+    expect(screen.getByRole('heading', { name: 'This page doesn’t exist' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to/i })).toHaveAttribute('href', '/')
   })
 })

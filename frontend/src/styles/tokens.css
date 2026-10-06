@@ -1,0 +1,51 @@
+/*
+ * Hospital Care design tokens: "Follow the line".
+ * Components read colours, type and spacing only from here.
+ * --sign is overridden at runtime from src/config/hospital.ts (the hospital's brand colour).
+ */
+:root {
+  /* Colour */
+  --wall: #edf2ee;
+  --sign: #0f2a26;
+  --sign-text: #f3f7f4;
+  --sign-muted: #a9bdb5;
+  --ink: #14211e;
+  --ink-muted: #4d5e59;
+  --surface: #ffffff;
+  --rule: #cbd6d0;
+  --line-emergency: #c8202f;
+  --line-clinics: #1c5bb8;
+  --line-portal: #00806a;
+  --focus: #1c5bb8;
+
+  /* Type */
+  --font-display: 'Overpass Variable', 'Overpass', 'Arial Narrow', sans-serif;
+  --font-body: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono Variable', 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.625rem;
+  --text-2xl: clamp(1.875rem, 3vw, 2.375rem);
+  --text-display: clamp(2.5rem, 6.5vw, 4.75rem);
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  /* Shape */
+  --radius: 4px;
+  --stripe: 6px;
+  --gutter: 96px;
+  --content-max: 1120px;
+  --page-width: min(100% - 2 * var(--space-4), calc(var(--content-max) + var(--gutter)));
+  --tap: 44px;
+}

@@ -1,0 +1,97 @@
+.sign {
+  --focus: var(--sign-text);
+  background: var(--sign);
+  color: var(--sign-text);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--gutter) minmax(12rem, 18rem) minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 5.5rem;
+  padding-right: var(--space-5);
+  color: inherit;
+  text-decoration: none;
+}
+
+.row + .row {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sign-text) 14%, transparent);
+}
+
+/* The gutter must fill the row's full height so lines join up between rows. */
+.row > :first-child {
+  align-self: stretch;
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--sign-text) 6%, transparent);
+}
+
+.row:focus-visible {
+  outline-offset: -5px;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 2.4vw, 1.875rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-transform: uppercase;
+  padding-top: 0.15em;
+}
+
+.detail {
+  font-size: var(--text-lg);
+  color: var(--sign-muted);
+}
+
+.arrow {
+  color: var(--sign-text);
+  transition: transform 160ms ease-out;
+}
+
+.row:hover .arrow,
+.row:focus-visible .arrow {
+  transform: translateY(4px);
+}
+
+.mobileChip {
+  display: none;
+}
+
+@media (max-width: 59.99rem) {
+  .sign {
+    border-radius: 0;
+  }
+
+  .row {
+    grid-template-columns: 1.125rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      'chip label arrow'
+      'chip detail arrow';
+    column-gap: var(--space-4);
+    row-gap: var(--space-1);
+    padding: var(--space-4) var(--space-4);
+  }
+
+  .mobileChip {
+    display: block;
+    grid-area: chip;
+    align-self: stretch;
+  }
+
+  .label {
+    grid-area: label;
+  }
+
+  .detail {
+    grid-area: detail;
+    font-size: var(--text-base);
+  }
+
+  .arrow {
+    grid-area: arrow;
+  }
+}

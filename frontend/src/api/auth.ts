@@ -1,0 +1,58 @@
+import { ApiError, apiPost } from './client'
+
+export type AuthErrorKind = 'invalid_credentials' | 'email_taken' | 'rejected' | 'unavailable'
+
+export class AuthError extends Error {
+  kind: AuthErrorKind
+
+  constructor(kind: AuthErrorKind) {
+    super(kind)
+    this.kind = kind
+  }
+}
+
+const MESSAGES: Record<AuthErrorKind, string> = {
+  invalid_credentials: 'That email and password don’t match an account',
+  email_taken: 'An account with this email already exists. Log in instead.',
+  rejected: 'The hospital couldn’t accept these details. Check them and try again.',
+  unavailable: 'The hospital’s server didn’t respond. Try again in a moment.',
+}
+
+export function authErrorMessage(kind: AuthErrorKind): string {
+  return MESSAGES[kind]
+}
+
+function statusOf(error: unknown): number {
+  return error instanceof ApiError ? error.status : 0
+}
+
+export async function login(values: { email: string; password: string }): Promise<void> {
+  try {
+    await apiPost('/auth/login/', { email: values.email.trim(), password: values.password })
+  } catch (error) {
+    const status = statusOf(error)
+    throw new AuthError(status === 400 || status === 401 ? 'invalid_credentials' : 'unavailable')
+  }
+}
+
+export async function signup(values: {
+  fullName: string
+  email: string
+  phone: string
+  password: string
+}): Promise<void> {
+  try {
+    await apiPost('/auth/signup/', {
+      full_name: values.fullName.trim(),
+      email: values.email.trim(),
+      phone: values.phone.trim(),
+      password: values.password,
+    })
+  } catch (error) {
+    const status = statusOf(error)
+    const body = error instanceof ApiError ? error.body : null
+    const emailRejected = typeof body === 'object' && body !== null && 'email' in body
+    if (status === 409 || (status === 400 && emailRejected)) throw new AuthError('email_taken')
+    throw new AuthError(status === 400 ? 'rejected' : 'unavailable')
+  }
+}

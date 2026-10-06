@@ -1,0 +1,35 @@
+.options {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.option {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+@media (min-width: 40rem) {
+  .options {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .actions {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+}

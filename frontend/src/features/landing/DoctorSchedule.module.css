@@ -1,0 +1,220 @@
+.schedule {
+  --who: 17rem;
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* ── Department filter ─────────────────────────────────── */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filter:hover {
+  border-color: var(--ink-muted);
+}
+
+.filter[aria-pressed='true'] {
+  background: var(--line-clinics);
+  border-color: var(--line-clinics);
+  color: var(--surface);
+}
+
+/* ── Chart ─────────────────────────────────────────────── */
+
+.chart {
+  display: grid;
+  grid-template-columns: var(--who) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  padding: var(--space-4) var(--space-5) var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.axis {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  height: 3.25rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.tick {
+  position: absolute;
+  bottom: var(--space-2);
+  transform: translateX(-50%);
+}
+
+.tick:first-of-type {
+  transform: none;
+}
+
+.tick:last-child {
+  transform: translateX(-100%);
+}
+
+/* "You are here" for time. */
+.nowChip {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  padding: 2px var(--space-2);
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.plot {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  pointer-events: none;
+}
+
+.gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+
+.nowLine {
+  position: absolute;
+  top: calc(var(--space-2) * -1 - 2px);
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  z-index: 1;
+}
+
+.list {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--who) minmax(0, 1fr);
+  align-items: center;
+  min-height: 3.75rem;
+  border-top: 1px solid var(--rule);
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--line-clinics) 6%, transparent);
+}
+
+.who {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+}
+
+.nameLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.name {
+  font-weight: 700;
+}
+
+.tag {
+  padding: 1px 6px;
+  background: var(--line-clinics);
+  color: var(--surface);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 2px;
+}
+
+.meta {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.time {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.track {
+  position: relative;
+  height: 12px;
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--line-clinics) 30%, var(--surface));
+}
+
+.row[data-in-now='true'] .bar {
+  background: var(--line-clinics);
+}
+
+/* A shift cut at midnight keeps a square end: it continues past the edge of the day. */
+.bar[data-cut-start='true'] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.bar[data-cut-end='true'] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Narrow screens: the timeline goes; each row reads as a list entry. */
+@media (max-width: 44.99rem) {
+  .chart {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .axis,
+  .plot,
+  .track {
+    display: none;
+  }
+
+  .list {
+    grid-row: auto;
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .row:first-child {
+    border-top: 0;
+  }
+}
