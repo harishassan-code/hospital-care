@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.emergencies",
     "apps.matching",
     "apps.transfers",
+    "apps.pharmacy",
     "apps.notifications",
     "apps.audit",
 ]
@@ -107,3 +108,12 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
+
+# Session auth across domains (Vercel frontend → Render API), decided in the login story.
+# Locally (DEBUG) both run on localhost, so the default SameSite=Lax cookies work over plain http.
+if not DEBUG:
+    SESSION_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
