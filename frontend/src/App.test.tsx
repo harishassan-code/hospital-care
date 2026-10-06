@@ -1,16 +1,11 @@
 import { render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('App', () => {
-  afterEach(() => vi.restoreAllMocks())
-
-  it('renders the home page and reports API status', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ status: 'ok' }), { status: 200 }),
-    )
+  it('redirects the root URL to the login page (TC-01 entry)', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Hospital Care' })).toBeInTheDocument()
-    expect(await screen.findByText('up')).toBeInTheDocument()
+    expect(screen.getByTestId('login-page')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 })
