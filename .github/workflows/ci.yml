@@ -1,9 +1,11 @@
 name: CI
 
+# Every push to every branch is checked, so problems show up the day they're pushed, not at the weekly
+# integration. Pull requests (each developer's weekly PR, the integration PR) are checked too.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ['**']
 
 concurrency:
   group: ci-${{ github.ref }}
