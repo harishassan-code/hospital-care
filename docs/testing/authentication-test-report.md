@@ -6,7 +6,7 @@
 | **Module** | Authentication & Role-Based Access (WBS 1.1 Authentication, 1.2 Roles & Permissions) |
 | **User stories** | #7 User accounts · #8 Login, logout and session security · #10 Role-based access control |
 | **Code** | Branch `haris/frontend` (frontend + backend integrated) |
-| **Test cases from** | QA sheet by Muhammad Hassaan (PR #70), adapted to the real system |
+| **Test cases from** | QA sheet by Muhammad Hassaan (PR #70), adapted to the real system — full catalog: [qa-test-case-catalog.md](qa-test-case-catalog.md) |
 | **Date** | 7 October 2026 |
 
 ---
