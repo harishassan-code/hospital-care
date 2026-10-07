@@ -7,9 +7,21 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import LoginSerializer, SignupSerializer, UserSerializer
-from .services import EmailTaken, authenticate_by_email, register_patient
+from .services import (
+    LOCKOUT_SECONDS,
+    EmailTaken,
+    authenticate_by_email,
+    clear_failed_logins,
+    is_locked_out,
+    record_failed_login,
+    register_patient,
+)
 
 INVALID_CREDENTIALS = {"detail": "That email and password don't match an account."}
+LOCKED_OUT = {
+    "detail": f"Too many failed sign-in attempts. Wait {LOCKOUT_SECONDS // 60} minutes, "
+    "or ask your hospital administrator to reset your password."
+}
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -31,10 +43,15 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(INVALID_CREDENTIALS, status=status.HTTP_400_BAD_REQUEST)
+        email = serializer.validated_data["email"]
+        if is_locked_out(email):
+            return Response(LOCKED_OUT, status=status.HTTP_429_TOO_MANY_REQUESTS)
         user = authenticate_by_email(request, **serializer.validated_data)
         if user is None:
             # Same message whether the email exists or not, so accounts can't be discovered.
+            record_failed_login(email)
             return Response(INVALID_CREDENTIALS, status=status.HTTP_401_UNAUTHORIZED)
+        clear_failed_logins(email)
         login(request, user)
         return Response(UserSerializer(user).data)
 

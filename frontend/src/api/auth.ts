@@ -12,7 +12,7 @@ export interface User {
   isStaff: boolean
 }
 
-export type AuthErrorKind = 'invalid_credentials' | 'email_taken' | 'rejected' | 'unavailable'
+export type AuthErrorKind = 'invalid_credentials' | 'locked_out' | 'email_taken' | 'rejected' | 'unavailable'
 
 export class AuthError extends Error {
   kind: AuthErrorKind
@@ -25,6 +25,7 @@ export class AuthError extends Error {
 
 const MESSAGES: Record<AuthErrorKind, string> = {
   invalid_credentials: 'That email and password don’t match an account',
+  locked_out: 'Too many failed sign-in attempts. Wait 15 minutes, or ask your hospital administrator to reset your password.',
   email_taken: 'An account with this email already exists. Log in instead.',
   rejected: 'The hospital couldn’t accept these details. Check them and try again.',
   unavailable: 'The hospital’s server didn’t respond. Try again in a moment.',
@@ -43,6 +44,7 @@ export async function login(values: { email: string; password: string }): Promis
     return await apiPost<User>('/auth/login/', { email: values.email.trim(), password: values.password })
   } catch (error) {
     const status = statusOf(error)
+    if (status === 429) throw new AuthError('locked_out')
     throw new AuthError(status === 400 || status === 401 ? 'invalid_credentials' : 'unavailable')
   }
 }

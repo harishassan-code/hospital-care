@@ -22,6 +22,12 @@ describe('validateLogin', () => {
     expect(validateLogin({ email: 'sara@', password: 'x' }).email).toBe('Enter an email like name@example.com')
   })
 
+  it('refuses oversized input before anything is sent', () => {
+    const errors = validateLogin({ email: `${'a'.repeat(250)}@x.co`, password: 'x'.repeat(513) })
+    expect(errors.email).toBe('Use at most 254 characters')
+    expect(errors.password).toBe('Use at most 512 characters')
+  })
+
   it('accepts valid input, ignoring surrounding spaces in the email', () => {
     expect(validateLogin({ email: ' sara@example.com ', password: 'x' })).toEqual({})
   })
@@ -67,6 +73,12 @@ describe('validateSignup', () => {
     expect(validateSignup({ ...validSignup, phone: 'call me' }).phone).toBe(
       'Enter a phone number using digits, spaces, + or -',
     )
+  })
+
+  it('limits email and password length on sign-up too', () => {
+    const long = validateSignup({ ...validSignup, email: `${'a'.repeat(250)}@x.co`, password: 'Ab1'.repeat(171), confirmPassword: 'Ab1'.repeat(171) })
+    expect(long.email).toBe('Use at most 254 characters')
+    expect(long.password).toBe('Use at most 512 characters')
   })
 
   it('requires agreeing to the terms', () => {

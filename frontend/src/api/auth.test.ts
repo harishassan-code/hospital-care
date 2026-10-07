@@ -37,6 +37,11 @@ describe('login', () => {
     expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('invalid_credentials')
   })
 
+  it('treats 429 as the account being locked after too many failed attempts', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(429))
+    expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('locked_out')
+  })
+
   it.each([403, 404, 500])('treats %i as the server being unavailable', async (status) => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(status))
     expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('unavailable')
@@ -120,5 +125,8 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage('email_taken')).toBe('An account with this email already exists. Log in instead.')
     expect(authErrorMessage('rejected')).toBe('The hospital couldn’t accept these details. Check them and try again.')
     expect(authErrorMessage('unavailable')).toBe('The hospital’s server didn’t respond. Try again in a moment.')
+    expect(authErrorMessage('locked_out')).toBe(
+      'Too many failed sign-in attempts. Wait 15 minutes, or ask your hospital administrator to reset your password.',
+    )
   })
 })

@@ -1,9 +1,16 @@
 import pytest
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, User
 
 PASSWORD = "Strong-pass-123"
+
+
+@pytest.fixture(autouse=True)
+def fresh_cache():
+    """Failed-login counts live in the cache; every test starts with none."""
+    cache.clear()
 
 
 @pytest.fixture

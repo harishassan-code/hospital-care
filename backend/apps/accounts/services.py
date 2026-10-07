@@ -1,6 +1,7 @@
 """Account business rules: patient registration and email sign-in."""
 
 from django.contrib.auth import authenticate
+from django.core.cache import cache
 from django.db import transaction
 
 from .models import Role, User
@@ -47,3 +48,27 @@ def authenticate_by_email(request, email: str, password: str) -> User | None:
         User().set_password(password)
         return None
     return authenticate(request, username=user.get_username(), password=password)
+
+
+# Lockout after repeated failed sign-ins (LOGIN-N03). Counted per account, not per IP address:
+# a hospital's computers usually share one public address, so an IP limit would lock out a whole ward.
+LOCKOUT_ATTEMPTS = 5
+LOCKOUT_SECONDS = 15 * 60
+
+
+def _failed_key(email: str) -> str:
+    return f"login-failures:{email.strip().lower()}"
+
+
+def is_locked_out(email: str) -> bool:
+    return cache.get(_failed_key(email), 0) >= LOCKOUT_ATTEMPTS
+
+
+def record_failed_login(email: str) -> None:
+    key = _failed_key(email)
+    cache.add(key, 0, timeout=LOCKOUT_SECONDS)
+    cache.incr(key)
+
+
+def clear_failed_logins(email: str) -> None:
+    cache.delete(_failed_key(email))

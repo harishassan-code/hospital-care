@@ -9,8 +9,9 @@ PHONE_REGEX = r"^\+?[\d\s-]{7,20}$"
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(trim_whitespace=False)
+    # Limits stop oversized input before the password hasher runs on it (LOGIN-N14).
+    email = serializers.EmailField(max_length=254)
+    password = serializers.CharField(trim_whitespace=False, max_length=512)
 
 
 class SignupSerializer(serializers.Serializer):

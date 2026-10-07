@@ -13,16 +13,21 @@ export type SignupValues = {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE = /^\+?[\d\s-]{7,20}$/
+/** Same limits as the backend; oversized input is refused before it's sent. */
+const MAX_EMAIL = 254
+const MAX_PASSWORD = 512
 
 function emailError(email: string): string | undefined {
   const value = email.trim()
   if (!value) return 'Enter your email address'
+  if (value.length > MAX_EMAIL) return `Use at most ${MAX_EMAIL} characters`
   if (!EMAIL.test(value)) return 'Enter an email like name@example.com'
 }
 
 function newPasswordError(password: string): string | undefined {
   if (!password) return 'Create a password'
   if (password.length < 8) return 'Use at least 8 characters'
+  if (password.length > MAX_PASSWORD) return `Use at most ${MAX_PASSWORD} characters`
   if (/^\d+$/.test(password)) return 'Use letters as well as numbers'
 }
 
@@ -31,6 +36,7 @@ export function validateLogin(values: LoginValues): FieldErrors<keyof LoginValue
   const email = emailError(values.email)
   if (email) errors.email = email
   if (!values.password) errors.password = 'Enter your password'
+  else if (values.password.length > MAX_PASSWORD) errors.password = `Use at most ${MAX_PASSWORD} characters`
   return errors
 }
 

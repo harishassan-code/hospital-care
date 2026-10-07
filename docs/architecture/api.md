@@ -12,7 +12,7 @@ already does); the cookie is set by `login`, `signup`, `me` and `csrf`.
 | Method | Path | Who | Body | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/auth/csrf/` | anyone | – | 200, sets `csrftoken` cookie | – |
-| POST | `/auth/login/` | anyone | `{email, password}` | 200 `User` | 400 bad input, 401 wrong email/password (same message for both) |
+| POST | `/auth/login/` | anyone | `{email, password}` | 200 `User` | 400 bad input (email > 254 or password > 512 characters), 401 wrong email/password (same message for both), 429 after 5 failed attempts on the account (locked 15 min) |
 | POST | `/auth/logout/` | anyone | – | 204 | 403 if CSRF header missing |
 | POST | `/auth/signup/` | anyone | `{full_name, email, phone?, password}` | 201 `User` (always a patient) | 400 `{email: [...]}` taken, 400 `{password: [...]}` weak |
 | GET | `/auth/me/` | signed in | – | 200 `User` | 403 when signed out |
