@@ -15,6 +15,7 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 | Architecture & ERD | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
 | UI wireframes | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
 | Test report: Authentication & Role-Based Access module (class assignment) | [testing/authentication-test-report.md](../testing/authentication-test-report.md) | ✅ Done |
+| QA test case catalog (login + landing sheets → current app) | [testing/qa-test-case-catalog.md](../testing/qa-test-case-catalog.md) | ✅ Done |
 | Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review | ⏳ Ongoing |
 | Final report & presentation | `final/` | ⏳ Sprint 9 |
 
