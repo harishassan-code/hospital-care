@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
-import type { BedAction } from '../api/beds'
 import type { User } from '../api/auth'
+import type { BedAction, BedBoard } from '../api/beds'
+import type { PublicStatus } from '../api/publicStatus'
 import { applyAction } from '../features/beds/beds'
 import { canEdit, canSee, type Module, type Role } from '../features/staff/roles'
 import { sampleBedBoard } from './fixtures/beds'
@@ -66,16 +67,26 @@ export function userFor(role: Role | 'patient'): User {
  * The staff API as the backend behaves: /auth/me/ for the given role (or 403 when signed out),
  * modules gated by the same access table, and bed actions that change the board or answer 409.
  */
-export function mockStaffApi({ role, erDown = false }: { role: Role | 'patient' | null; erDown?: boolean }) {
+type StaffApiOptions = {
+  role: Role | 'patient' | null
+  /** Make GET /public/status/ fail. */
+  erDown?: boolean
+  /** Use this board instead of the sample one. */
+  board?: BedBoard
+  /** Use this public status instead of the sample one. */
+  publicStatus?: PublicStatus
+}
+
+export function mockStaffApi({ role, erDown = false, board: customBoard, publicStatus }: StaffApiOptions) {
   const now = new Date()
-  const board = sampleBedBoard(now)
+  const board = customBoard ?? sampleBedBoard(now)
   const gate = (module: Module, reply: () => Reply): Route => () =>
     role && role !== 'patient' && canSee(role, module) ? reply() : fail(403)
 
   const fetchMock = mockApi({
     'GET /auth/me/': role ? ok(userFor(role)) : fail(403),
     'POST /auth/logout/': { status: 204 },
-    'GET /public/status/': erDown ? fail(503) : ok(samplePublicStatus(now)),
+    'GET /public/status/': erDown ? fail(503) : ok(publicStatus ?? samplePublicStatus(now)),
     'GET /beds/': gate('beds', () => ok(board)),
     'GET /blood/units/': gate('blood', () => ok(sampleBloodUnits(now))),
     'GET /pharmacy/stock/': gate('pharmacy', () => ok(sampleMedicines(now))),
