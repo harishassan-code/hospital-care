@@ -1,0 +1,58 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0 -- .\backend\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+django: version: 6.0.8, settings: config.settings (from ini)
+rootdir: .\backend
+configfile: pyproject.toml
+plugins: django-4.14.0
+collecting ... collected 47 items
+
+apps/accounts/tests/test_auth.py::test_signup_creates_patient_with_lowercased_email PASSED [  2%]
+apps/accounts/tests/test_auth.py::test_signup_cannot_choose_a_staff_role PASSED [  4%]
+apps/accounts/tests/test_auth.py::test_signup_with_taken_email_any_case_is_rejected_on_email PASSED [  6%]
+apps/accounts/tests/test_auth.py::test_signup_rejects_weak_passwords[short1] PASSED [  8%]
+apps/accounts/tests/test_auth.py::test_signup_rejects_weak_passwords[12345678901] PASSED [ 10%]
+apps/accounts/tests/test_auth.py::test_signup_rejects_weak_passwords[password] PASSED [ 12%]
+apps/accounts/tests/test_auth.py::test_signup_rejects_bad_phone PASSED   [ 14%]
+apps/accounts/tests/test_auth.py::test_login_me_logout_round_trip PASSED [ 17%]
+apps/accounts/tests/test_auth.py::test_wrong_password_and_unknown_email_look_the_same PASSED [ 19%]
+apps/accounts/tests/test_auth.py::test_inactive_user_cannot_log_in PASSED [ 21%]
+apps/accounts/tests/test_auth.py::test_csrf_endpoint_sets_cookie PASSED  [ 23%]
+apps/accounts/tests/test_auth.py::test_superuser_acts_as_admin PASSED    [ 25%]
+apps/accounts/tests/test_login_security.py::TestLockout::test_locks_the_account_after_five_failed_attempts PASSED [ 27%]
+apps/accounts/tests/test_login_security.py::TestLockout::test_counts_the_account_whatever_the_email_case PASSED [ 29%]
+apps/accounts/tests/test_login_security.py::TestLockout::test_a_successful_login_resets_the_count PASSED [ 31%]
+apps/accounts/tests/test_login_security.py::TestLockout::test_other_accounts_are_not_affected PASSED [ 34%]
+apps/accounts/tests/test_login_security.py::test_sql_injection_payloads_are_refused_without_side_effects PASSED [ 36%]
+apps/accounts/tests/test_login_security.py::test_deactivated_accounts_cannot_sign_in PASSED [ 38%]
+apps/accounts/tests/test_login_security.py::test_oversized_credentials_are_rejected_before_checking[email over 254 characters] PASSED [ 40%]
+apps/accounts/tests/test_login_security.py::test_oversized_credentials_are_rejected_before_checking[password over 512 characters] PASSED [ 42%]
+apps/blood/tests/test_units.py::test_units_match_frontend_shape PASSED   [ 44%]
+apps/blood/tests/test_units.py::test_unit_past_expiry_shows_expired_unless_issued PASSED [ 46%]
+apps/blood/tests/test_units.py::test_blood_access_by_role[doctor-200] PASSED [ 48%]
+apps/blood/tests/test_units.py::test_blood_access_by_role[nurse-403] PASSED [ 51%]
+apps/blood/tests/test_units.py::test_blood_access_by_role[pharmacist-403] PASSED [ 53%]
+apps/core/tests/test_seed_demo.py::test_seed_demo_is_repeatable PASSED   [ 55%]
+apps/emergencies/tests/test_public_status.py::test_public_status_needs_no_login_and_matches_frontend_shape PASSED [ 57%]
+apps/emergencies/tests/test_public_status.py::test_public_status_works_on_an_empty_database PASSED [ 59%]
+apps/hospitals/tests/test_beds.py::test_board_matches_frontend_shape PASSED [ 61%]
+apps/hospitals/tests/test_beds.py::test_discharge_clears_patient_and_starts_cleaning PASSED [ 63%]
+apps/hospitals/tests/test_beds.py::test_allowed_transitions[cleaning-markReady-free] PASSED [ 65%]
+apps/hospitals/tests/test_beds.py::test_allowed_transitions[free-reserve-reserved] PASSED [ 68%]
+apps/hospitals/tests/test_beds.py::test_allowed_transitions[free-outOfService-outOfService] PASSED [ 70%]
+apps/hospitals/tests/test_beds.py::test_allowed_transitions[reserved-cancelReservation-free] PASSED [ 72%]
+apps/hospitals/tests/test_beds.py::test_allowed_transitions[outOfService-returnToService-cleaning] PASSED [ 74%]
+apps/hospitals/tests/test_beds.py::test_illegal_transition_is_refused PASSED [ 76%]
+apps/hospitals/tests/test_beds.py::test_unknown_action_and_unknown_bed PASSED [ 78%]
+apps/hospitals/tests/test_beds.py::test_doctor_can_view_but_not_change_beds PASSED [ 80%]
+apps/hospitals/tests/test_beds.py::test_roles_without_beds_access[bloodBank] PASSED [ 82%]
+apps/hospitals/tests/test_beds.py::test_roles_without_beds_access[pharmacist] PASSED [ 85%]
+apps/hospitals/tests/test_beds.py::test_roles_without_beds_access[patient] PASSED [ 87%]
+apps/hospitals/tests/test_beds.py::test_anonymous_is_refused PASSED      [ 89%]
+apps/pharmacy/tests/test_stock.py::test_stock_matches_frontend_shape PASSED [ 91%]
+apps/pharmacy/tests/test_stock.py::test_pharmacy_access_by_role[nurse-200] PASSED [ 93%]
+apps/pharmacy/tests/test_stock.py::test_pharmacy_access_by_role[bloodBank-403] PASSED [ 95%]
+apps/pharmacy/tests/test_stock.py::test_pharmacy_access_by_role[patient-403] PASSED [ 97%]
+apps/core/tests/test_health.py::test_health_returns_ok PASSED            [100%]
+
+============================= 47 passed in 34.33s =============================
