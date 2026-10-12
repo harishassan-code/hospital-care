@@ -3,10 +3,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission
+from apps.resources.state_machine import TransitionNotAllowed
 
 from .models import Bed, Ward
 from .serializers import BedActionSerializer, BedSerializer, WardSerializer
-from .services import BedActionRefused, apply_bed_action
+from .services import apply_bed_action
 
 
 class BedBoardView(APIView):
@@ -33,7 +34,7 @@ class BedActionView(APIView):
         if not Bed.objects.filter(label=label).exists():
             return Response({"detail": "No bed with that id."}, status=status.HTTP_404_NOT_FOUND)
         try:
-            bed = apply_bed_action(label, serializer.validated_data["action"])
-        except BedActionRefused as exc:
+            bed = apply_bed_action(label, serializer.validated_data["action"], actor=request.user)
+        except TransitionNotAllowed as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response(BedSerializer(bed).data)

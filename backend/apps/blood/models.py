@@ -1,6 +1,9 @@
 from django.db import models
 from django.utils import timezone
 
+from apps.resources.models import Resource
+from apps.resources.state_machine import StateMachine
+
 
 class BloodGroup(models.TextChoices):
     O_NEG = "O-", "O-"
@@ -28,7 +31,28 @@ class UnitStatus(models.TextChoices):
     EXPIRED = "expired", "Expired"
 
 
-class BloodUnit(models.Model):
+U = UnitStatus
+
+# Proposed for Sprint 3 (#17, #18): collection and testing may add statuses such as "discarded".
+BLOOD_UNIT_LIFECYCLE = StateMachine(
+    "blood unit",
+    UnitStatus,
+    {
+        (U.QUARANTINED, "release"): U.AVAILABLE,  # tests passed
+        (U.AVAILABLE, "reserve"): U.RESERVED,
+        (U.RESERVED, "cancelReservation"): U.AVAILABLE,
+        (U.AVAILABLE, "issue"): U.ISSUED,
+        (U.RESERVED, "issue"): U.ISSUED,
+        (U.QUARANTINED, "expire"): U.EXPIRED,
+        (U.AVAILABLE, "expire"): U.EXPIRED,
+        (U.RESERVED, "expire"): U.EXPIRED,
+    },
+)
+
+
+class BloodUnit(Resource):
+    machine = BLOOD_UNIT_LIFECYCLE
+
     donation_number = models.CharField(
         max_length=30, unique=True, help_text="ISBT 128 donation identification number. Also the API id."
     )

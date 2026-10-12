@@ -3,6 +3,7 @@ from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, User
+from apps.hospitals.models import Hospital
 
 PASSWORD = "Strong-pass-123"
 
@@ -29,11 +30,20 @@ def make_user(db):
 
 @pytest.fixture
 def client_as(make_user):
-    """An API client already signed in with the given role."""
+    """An API client already signed in with the given role (optionally at a hospital)."""
 
-    def signed_in(role):
+    def signed_in(role, **extra):
         client = APIClient()
-        client.force_authenticate(make_user(role))
+        client.force_authenticate(make_user(role, **extra))
         return client
 
     return signed_in
+
+
+@pytest.fixture
+def make_hospital(db):
+    def make(name="CityCare General Hospital", **extra):
+        fields = {"address": "Shahrah-e-Faisal, Karachi", "latitude": "24.860700", "longitude": "67.001100"}
+        return Hospital.objects.create(name=name, **{**fields, **extra})
+
+    return make

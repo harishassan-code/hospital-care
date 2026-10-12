@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.hospitals.models import Bed, BedStatus, Ward
 
 pytestmark = pytest.mark.django_db
@@ -89,3 +90,14 @@ def test_roles_without_beds_access(client_as, role):
 
 def test_anonymous_is_refused(api):
     assert api.get(reverse("bed-board")).status_code == 403
+
+
+def test_bed_action_is_audit_logged_with_the_signed_in_user(client_as, occupied):
+    action(client_as(Role.NURSE), "ICU-01", "discharge")
+    entry = AuditLog.objects.get(action="bed.status_changed")
+    assert entry.actor_email == "nurse@example.com" and entry.target_repr == "ICU-01"
+    assert (entry.before, entry.after, entry.reason) == (
+        {"status": "occupied"},
+        {"status": "cleaning"},
+        "discharge",
+    )
