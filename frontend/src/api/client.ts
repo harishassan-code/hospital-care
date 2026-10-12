@@ -36,9 +36,34 @@ export function apiGet<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'GET' })
 }
 
-export function apiPost<T>(path: string, data: unknown): Promise<T> {
+/** A write: sends the CSRF token Django checks on every signed-in POST, PATCH and DELETE. */
+function send<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: unknown): Promise<T> {
   const headers = new Headers({ 'Content-Type': 'application/json' })
   const token = csrfToken()
   if (token) headers.set('X-CSRFToken', token)
-  return request<T>(path, { method: 'POST', headers, body: JSON.stringify(data) })
+  return request<T>(path, { method, headers, body: data === undefined ? undefined : JSON.stringify(data) })
+}
+
+export function apiPost<T>(path: string, data: unknown): Promise<T> {
+  return send<T>('POST', path, data)
+}
+
+export function apiPatch<T>(path: string, data: unknown): Promise<T> {
+  return send<T>('PATCH', path, data)
+}
+
+export function apiDelete(path: string): Promise<void> {
+  return send<void>('DELETE', path)
+}
+
+/** First message per field from a DRF 400 body ({field: ["message"]}); a plain message comes back as `detail`. */
+export function fieldErrors(error: unknown): Record<string, string> {
+  const body = error instanceof ApiError ? error.body : null
+  if (typeof body !== 'object' || body === null) return {}
+  const errors: Record<string, string> = {}
+  for (const [key, value] of Object.entries(body)) {
+    const message = Array.isArray(value) ? value[0] : value
+    if (typeof message === 'string') errors[key] = message
+  }
+  return errors
 }

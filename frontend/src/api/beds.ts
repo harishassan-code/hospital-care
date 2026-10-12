@@ -2,7 +2,8 @@ import { apiGet, apiPost } from './client'
 
 export type BedStatus = 'occupied' | 'reserved' | 'cleaning' | 'free' | 'outOfService'
 export type Isolation = 'contact' | 'droplet' | 'airborne'
-export type WardId = 'icu' | 'hdu' | 'medA' | 'surgB' | 'paeds' | 'maternity' | 'isolation'
+/** A ward's code, e.g. 'icu'. Wards are added per hospital, so any string. */
+export type WardId = string
 
 export interface Ward {
   id: WardId

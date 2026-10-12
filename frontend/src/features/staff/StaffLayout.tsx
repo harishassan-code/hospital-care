@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { hospital } from '../../config/hospital'
 import { currentShift, formatDuration } from '../../lib/time'
-import { canSee, MODULES, ROLES } from './roles'
+import { AccessDenied } from './AccessDenied'
+import { canSee, moduleForPath, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
 import styles from './StaffLayout.module.css'
 import { StaffProvider } from './StaffProvider'
@@ -19,7 +20,7 @@ export default function StaffLayout() {
 function StaffShell() {
   const { role } = useStaff()
   const { pathname } = useLocation()
-  const module = MODULES.find((m) => m.path === pathname.replace(/\/$/, '')) ?? MODULES[0]
+  const module = moduleForPath(pathname)
 
   return (
     <div className={styles.shell}>
@@ -30,7 +31,7 @@ function StaffShell() {
       <div className={styles.column}>
         <TopBar title={module.label} />
         <main id="main" className={styles.main}>
-          {canSee(role, module.id) ? <Outlet /> : <AccessDenied moduleLabel={module.label} />}
+          {canSee(role, module.id) ? <Outlet /> : <AccessDenied what={module.label} />}
         </main>
       </div>
     </div>
@@ -80,6 +81,7 @@ function Sidebar() {
           <div className={styles.user}>
             <p className={styles.userName}>{user.fullName}</p>
             <p className={styles.userRole}>{roleLabel}</p>
+            {user.hospital && <p className={styles.userRole}>{user.hospital.name}</p>}
             <button type="button" className={styles.signOut} onClick={signOut}>
               Sign out
             </button>
@@ -114,19 +116,5 @@ function TopBar({ title }: { title: string }) {
         </Link>
       </div>
     </header>
-  )
-}
-
-function AccessDenied({ moduleLabel }: { moduleLabel: string }) {
-  const { role } = useStaff()
-  const roleLabel = ROLES.find((r) => r.id === role)?.label
-  return (
-    <div className={styles.denied}>
-      <h2>You don’t have access to this page</h2>
-      <p>
-        The {roleLabel} role can’t open {moduleLabel}. Ask an administrator if you need it for your work.
-      </p>
-      <Link to="/staff">Go to Overview</Link>
-    </div>
   )
 }

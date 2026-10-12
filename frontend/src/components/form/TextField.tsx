@@ -7,9 +7,10 @@ type TextFieldProps = FieldProps & {
   onChange: (value: string) => void
   type?: 'text' | 'email' | 'tel'
   autoComplete?: string
+  inputMode?: 'decimal' | 'text'
 }
 
-export function TextField({ value, onChange, type = 'text', autoComplete, ...field }: TextFieldProps) {
+export function TextField({ value, onChange, type = 'text', autoComplete, inputMode, ...field }: TextFieldProps) {
   return (
     <Field {...field}>
       <input
@@ -19,6 +20,7 @@ export function TextField({ value, onChange, type = 'text', autoComplete, ...fie
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
+        inputMode={inputMode}
         aria-invalid={field.error ? true : undefined}
         aria-describedby={describedBy(field)}
       />

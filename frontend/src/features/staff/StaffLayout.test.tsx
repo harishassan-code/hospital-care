@@ -31,6 +31,8 @@ function renderAt(path: string) {
           <Route path="beds" element={<p>beds content</p>} />
           <Route path="blood" element={<p>blood content</p>} />
           <Route path="pharmacy" element={<p>pharmacy content</p>} />
+          <Route path="hospitals/*" element={<p>hospitals content</p>} />
+          <Route path="users" element={<p>users content</p>} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -63,7 +65,7 @@ describe('StaffLayout', () => {
     mockStaffApi({ role: 'admin' })
     renderAt('/staff/beds')
     expect(await screen.findByText('beds content')).toBeInTheDocument()
-    expect(navLinks()).toEqual(['Overview', 'Beds', 'Blood bank', 'Pharmacy'])
+    expect(navLinks()).toEqual(['Overview', 'Beds', 'Blood bank', 'Pharmacy', 'Hospitals', 'Users and roles'])
     expect(screen.getByRole('link', { name: 'Beds' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Sadia Admin')).toBeInTheDocument()
   })
@@ -72,7 +74,7 @@ describe('StaffLayout', () => {
     const { fetchMock } = mockStaffApi({ role: 'pharmacist' })
     renderAt('/staff')
     expect(await screen.findByText('overview content')).toBeInTheDocument()
-    expect(navLinks()).toEqual(['Overview', 'Pharmacy'])
+    expect(navLinks()).toEqual(['Overview', 'Pharmacy', 'Hospitals'])
     expect(requested(fetchMock)).toContain('/api/pharmacy/stock/')
     expect(requested(fetchMock)).not.toContain('/api/beds/')
     expect(requested(fetchMock)).not.toContain('/api/blood/units/')
@@ -83,6 +85,28 @@ describe('StaffLayout', () => {
     renderAt('/staff/blood')
     expect(await screen.findByRole('heading', { name: 'You don’t have access to this page' })).toBeInTheDocument()
     expect(screen.queryByText('blood content')).toBeNull()
+  })
+
+  it.each(['doctor', 'nurse', 'bloodBank', 'pharmacist'] as const)('hides Users and roles from %s and blocks it', async (role) => {
+    mockStaffApi({ role })
+    renderAt('/staff/users')
+    expect(await screen.findByRole('heading', { name: 'You don’t have access to this page' })).toBeInTheDocument()
+    expect(screen.queryByText('users content')).toBeNull()
+    expect(navLinks()).not.toContain('Users and roles')
+    expect(navLinks()).toContain('Hospitals')
+  })
+
+  it('treats pages under a module as that module', async () => {
+    mockStaffApi({ role: 'admin' })
+    renderAt('/staff/hospitals/1/edit')
+    expect(await screen.findByText('hospitals content')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Hospitals' })).toBeInTheDocument()
+  })
+
+  it('shows the hospital the signed-in user works at', async () => {
+    mockStaffApi({ role: 'nurse' })
+    renderAt('/staff')
+    expect(await screen.findByText('CityCare General Hospital')).toBeInTheDocument()
   })
 
   it('explains when the hospital system cannot be reached', async () => {

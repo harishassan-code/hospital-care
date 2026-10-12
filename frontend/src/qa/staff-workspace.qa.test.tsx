@@ -39,7 +39,7 @@ describe('Staff workspace: negative cases (LAND-N)', () => {
     const { fetchMock } = mockStaffApi({ role: 'nurse' })
     renderStaff('/staff')
     await tiles()
-    expect(navLinks().map((a) => a.textContent)).toEqual(['Overview', 'Beds', 'Pharmacy'])
+    expect(navLinks().map((a) => a.textContent)).toEqual(['Overview', 'Beds', 'Pharmacy', 'Hospitals'])
     expect(requested(fetchMock)).not.toContain('GET /api/blood/units/')
     expect(screen.queryByText(/Blood bank/i, { selector: 'span' })).toBeNull()
   })
@@ -68,11 +68,20 @@ describe('Staff workspace: negative cases (LAND-N)', () => {
     mockStaffApi({ role: 'admin' })
     renderStaff('/staff')
     await tiles()
-    expect(navLinks().map((a) => a.getAttribute('href'))).toEqual(['/staff', '/staff/beds', '/staff/blood', '/staff/pharmacy'])
+    expect(navLinks().map((a) => a.getAttribute('href'))).toEqual([
+      '/staff',
+      '/staff/beds',
+      '/staff/blood',
+      '/staff/pharmacy',
+      '/staff/hospitals',
+      '/staff/users',
+    ])
     for (const [name, heading] of [
       ['Beds', 'Beds'],
       ['Blood bank', 'Blood bank'],
       ['Pharmacy', 'Pharmacy'],
+      ['Hospitals', 'Hospitals'],
+      ['Users and roles', 'Users and roles'],
       ['Overview', 'Overview'],
     ]) {
       await userEvent.click(screen.getByRole('link', { name }))

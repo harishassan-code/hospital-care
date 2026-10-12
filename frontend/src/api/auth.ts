@@ -10,6 +10,8 @@ export interface User {
   role: Role | 'patient'
   /** True for hospital staff (any role except patient). */
   isStaff: boolean
+  /** The hospital the account works at; null for patients and network-wide admins. */
+  hospital: { id: number; name: string } | null
 }
 
 export type AuthErrorKind = 'invalid_credentials' | 'locked_out' | 'email_taken' | 'rejected' | 'unavailable'
