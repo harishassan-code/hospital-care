@@ -21,7 +21,7 @@ def api_views(patterns=None, prefix=""):
 
 def test_every_api_endpoint_declares_its_permission_classes():
     views = list(api_views())
-    assert len(views) >= 13
+    assert len(views) >= 18
     for route, callback in views:
         view_class = callback.cls
         assert "permission_classes" in vars(view_class), f"{route} relies on the default permission"
@@ -32,6 +32,9 @@ ENDPOINTS = [
     ("beds", "get", "bed-board", [], None),
     ("blood", "get", "blood-units", [], None),
     ("pharmacy", "get", "pharmacy-stock", [], None),
+    ("hospitals", "get", "hospital-list", [], None),
+    ("hospitals", "get", "capability-list", [], None),
+    ("hospitals", "post", "hospital-list", [], {}),
     ("users", "get", "user-list", [], None),
     ("users", "patch", "user-role", [999], {"role": "doctor"}),
 ]
