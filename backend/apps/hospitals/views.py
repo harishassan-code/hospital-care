@@ -11,13 +11,19 @@ from .services import apply_bed_action
 
 
 class BedBoardView(APIView):
-    """GET /api/beds/ → {wards, beds}, the shape of `BedBoard` in frontend/src/api/beds.ts."""
+    """
+    GET /api/beds/ → {wards, beds}, the shape of `BedBoard` in frontend/src/api/beds.ts.
+    Limited to the user's hospital when they have one.
+    """
 
     permission_classes = [module_permission("beds")]
 
     def get(self, request):
         wards = Ward.objects.all()
         beds = Bed.objects.select_related("ward")
+        if request.user.hospital_id:
+            wards = wards.filter(hospital_id=request.user.hospital_id)
+            beds = beds.filter(ward__hospital_id=request.user.hospital_id)
         return Response(
             {"wards": WardSerializer(wards, many=True).data, "beds": BedSerializer(beds, many=True).data}
         )

@@ -1,4 +1,5 @@
 from django.contrib.auth import login, logout
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -6,11 +7,21 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, SignupSerializer, UserSerializer
+from .models import User
+from .permissions import module_permission
+from .serializers import (
+    LoginSerializer,
+    RoleChangeSerializer,
+    SignupSerializer,
+    UserSerializer,
+    UserSummarySerializer,
+)
 from .services import (
     LOCKOUT_SECONDS,
     EmailTaken,
+    RoleLocked,
     authenticate_by_email,
+    change_role,
     clear_failed_logins,
     is_locked_out,
     record_failed_login,
@@ -86,3 +97,29 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class UserListView(APIView):
+    """GET /api/users/: every account with its role (admins only)."""
+
+    permission_classes = [module_permission("users")]
+
+    def get(self, request):
+        users = User.objects.select_related("hospital").order_by("email")
+        return Response(UserSummarySerializer(users, many=True, context={"request": request}).data)
+
+
+class UserRoleView(APIView):
+    """PATCH /api/users/<id>/ {"role": "doctor"}: change someone's role (admins only). Audit-logged."""
+
+    permission_classes = [module_permission("users")]
+
+    def patch(self, request, pk):
+        user = get_object_or_404(User.objects.select_related("hospital"), pk=pk)
+        serializer = RoleChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            change_role(request.user, user, serializer.validated_data["role"])
+        except RoleLocked as exc:
+            return Response({"role": [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(UserSummarySerializer(user, context={"request": request}).data)

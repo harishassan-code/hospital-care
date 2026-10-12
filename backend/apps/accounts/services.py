@@ -4,11 +4,32 @@ from django.contrib.auth import authenticate
 from django.core.cache import cache
 from django.db import transaction
 
+from apps.audit.services import record
+
 from .models import Role, User
 
 
 class EmailTaken(Exception):
     pass
+
+
+class RoleLocked(Exception):
+    """This account's role can't be changed here. The message says why."""
+
+
+@transaction.atomic
+def change_role(actor: User, user: User, role: str) -> User:
+    """Change someone's role and log it. Takes effect on their next request (roles are read per request)."""
+    if user.pk == actor.pk:
+        raise RoleLocked("You can't change your own role.")
+    if user.is_superuser:
+        raise RoleLocked("This account is a superuser. Change it in Django admin.")
+    before = user.role
+    if role != before:
+        user.role = role
+        user.save(update_fields=["role"])
+        record(actor, "user.role_changed", user, before={"role": before}, after={"role": role})
+    return user
 
 
 def email_in_use(email: str) -> bool:

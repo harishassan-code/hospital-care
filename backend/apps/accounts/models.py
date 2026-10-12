@@ -22,6 +22,14 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PATIENT)
     phone = models.CharField(max_length=20, blank=True)
+    hospital = models.ForeignKey(
+        "hospitals.Hospital",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="staff",
+        help_text="Where the person works. Non-admin staff only change their own hospital's resources.",
+    )
 
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"
