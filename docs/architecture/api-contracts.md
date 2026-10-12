@@ -70,7 +70,7 @@ HospitalInput = {
   longitude: number,         // required, -180 … 180, up to 6 decimals
   phone?: string,            // optional, digits, spaces, + or -, 7–20 characters
   isActive?: boolean,        // default true; PATCH {isActive: false} deactivates
-  capabilities?: string[]    // Capability codes
+  capabilities?: string[]    // Capability codes; responses list them in the managed list's order (by name)
 }
 Hospital = HospitalInput & { id: number, phone: string, isActive: boolean, capabilities: string[] }
 Capability = { code: string, name: string }

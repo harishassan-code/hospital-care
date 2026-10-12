@@ -51,13 +51,16 @@ not circular imports.
 |---|---|---|---|
 | ADR-1 | Monorepo: Django REST API + React SPA, Postgres | 1 | Accepted |
 | ADR-2 | Custom `accounts.User` model from day one | 1 | Accepted |
-| ADR-3 | Shared abstract Resource model for all resource types | 2 | Proposed |
+| ADR-3 | Shared abstract Resource model for all resource types ([resources.md](resources.md)) | 2 | Built, team to confirm |
 | ADR-4 | Reservations use `select_for_update()` inside `transaction.atomic()` | 7 | Proposed |
 | ADR-5 | Matching/scoring as interchangeable strategy classes | 6 | Proposed |
 | ADR-6 | Session vs token auth across Vercel/Render domains | 1 | Open |
+| ADR-7 | Audit log doubles as resource status history ([resources.md](resources.md#audit-log-story-81-adr-7)) | 2 | Proposed |
 
-## To add in Sprint 1
+## Diagrams and design notes
 
-- `erd.png` + source (dbdiagram.io / draw.io) → *Domain model and ERD* task
+- ERD → [erd.md](erd.md) (Mermaid source, rendered by GitHub; matches the models at the end of Sprint 2)
 - Wireframes → [docs/product/wireframes.md](../product/wireframes.md) (text wireframes and the navigation map per role)
-- State diagrams for BloodUnit, EmergencyRequest, Reservation, Transfer
+- Resource model, bed and blood unit state diagrams, own-hospital rule, audit log → [resources.md](resources.md).
+  EmergencyRequest, Reservation and Transfer state diagrams are added with those stories (Sprints 5–7).
+- Blood compatibility rules → [docs/domain/blood-compatibility.md](../domain/blood-compatibility.md)
