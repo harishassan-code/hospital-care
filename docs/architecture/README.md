@@ -21,6 +21,8 @@ flowchart TD
     ORM --> DB[(PostgreSQL)]
 ```
 
+API contracts agreed before building: [api.md](api.md) (Sprint 1), [api-contracts.md](api-contracts.md) (Sprint 2).
+
 Rule of thumb: **views stay thin**. Business rules live in `services.py` and domain classes, so they
 can be unit-tested without HTTP.
 
@@ -57,5 +59,5 @@ not circular imports.
 ## To add in Sprint 1
 
 - `erd.png` + source (dbdiagram.io / draw.io) → *Domain model and ERD* task
-- Wireframes (Figma link or images) → *UI wireframes* task
+- Wireframes → [docs/product/wireframes.md](../product/wireframes.md) (text wireframes and the navigation map per role)
 - State diagrams for BloodUnit, EmergencyRequest, Reservation, Transfer
