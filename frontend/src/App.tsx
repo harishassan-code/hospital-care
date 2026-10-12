@@ -6,6 +6,9 @@ import NotFoundPage from './pages/NotFoundPage'
 import SignupPage from './pages/SignupPage'
 import BedsPage from './pages/staff/BedsPage'
 import BloodPage from './pages/staff/BloodPage'
+import HospitalDetailPage from './pages/staff/HospitalDetailPage'
+import HospitalFormPage from './pages/staff/HospitalFormPage'
+import HospitalsPage from './pages/staff/HospitalsPage'
 import OverviewPage from './pages/staff/OverviewPage'
 import PharmacyPage from './pages/staff/PharmacyPage'
 import UsersPage from './pages/staff/UsersPage'
@@ -21,6 +24,10 @@ export function AppRoutes() {
         <Route path="beds" element={<BedsPage />} />
         <Route path="blood" element={<BloodPage />} />
         <Route path="pharmacy" element={<PharmacyPage />} />
+        <Route path="hospitals" element={<HospitalsPage />} />
+        <Route path="hospitals/new" element={<HospitalFormPage />} />
+        <Route path="hospitals/:id" element={<HospitalDetailPage />} />
+        <Route path="hospitals/:id/edit" element={<HospitalFormPage />} />
         <Route path="users" element={<UsersPage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
