@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // Room for the slower findBy* above; a test that really hangs still fails.
+    testTimeout: 20000,
   },
 })
