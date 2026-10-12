@@ -1,5 +1,7 @@
 # Backend API (Sprint 1)
 
+Sprint 2 endpoints (users, hospitals, structure) are in [api-contracts.md](api-contracts.md).
+
 Base URL: `http://localhost:8000/api` locally. All bodies are JSON. Field names match the TypeScript types in
 `frontend/src/api/`, so each frontend `get…()` function can switch from sample data to the real call unchanged.
 
@@ -48,6 +50,7 @@ docker compose exec backend python manage.py seed_demo          # safe to re-run
 docker compose exec backend python manage.py seed_demo --reset  # start the demo data over
 ```
 
-Creates 7 wards / 106 beds, 320 blood units, 23 medicines, 14 doctor shifts, the ER status, and one login per
+Creates 3 hospitals (CityCare General, Seaview, Northside Children's) with 9 departments, 11 wards / 154 beds
+and 10 storage locations, plus 320 blood units, 23 medicines, 14 doctor shifts, the ER status, and one login per
 role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@demo.citycare.pk`, password
 `CityCare-demo-1`). Demo only: never run it against real data.

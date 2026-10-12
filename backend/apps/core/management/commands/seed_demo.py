@@ -1,9 +1,11 @@
 """
-Fill the database with demo data matching the frontend's sample data, plus one login per staff role.
+Fill the database with synthetic demo data: 3 hospitals with departments, wards, storage locations and beds,
+blood units, medicines, doctors, and one login per role. Every name, patient and unit is made up.
 
-    python manage.py seed_demo            # adds data only if the tables are empty
-    python manage.py seed_demo --reset    # wipes beds, blood, pharmacy, doctors first
+    python manage.py seed_demo            # safe to re-run: adds only what's missing, never duplicates
+    python manage.py seed_demo --reset    # wipes the demo hospitals, beds, blood, pharmacy, doctors first
 
+Also links data from before Sprint 2 (wards, beds, units and staff with no hospital) to the first hospital.
 Demo data only: never run against a database with real patients.
 """
 
@@ -17,7 +19,16 @@ from django.utils import timezone
 from apps.accounts.models import Role, User
 from apps.blood.models import BloodUnit, Component, UnitStatus
 from apps.emergencies.models import EmergencyStatus, ErStatus
-from apps.hospitals.models import Bed, BedStatus, DoctorShift, Ward
+from apps.hospitals.models import (
+    Bed,
+    BedStatus,
+    Capability,
+    Department,
+    DoctorShift,
+    Hospital,
+    StorageLocation,
+    Ward,
+)
 from apps.pharmacy.models import Batch, Medicine
 
 DEMO_PASSWORD = "CityCare-demo-1"
@@ -30,15 +41,69 @@ DEMO_USERS = [
     ("patient@demo.citycare.pk", "Ali", "Patient", Role.PATIENT),
 ]
 
-# code, name, kind, label prefix, size, occupancy, (min age, max age)
+# code, name, kind, label prefix, size, occupancy, (min age, max age), department
 WARDS = [
-    ("icu", "ICU", "Intensive care", "ICU", 10, 0.9, (18, 85)),
-    ("hdu", "HDU", "High dependency", "HDU", 8, 0.85, (18, 85)),
-    ("medA", "Medical A", "General medicine", "MA", 24, 0.8, (18, 92)),
-    ("surgB", "Surgical B", "General surgery", "SB", 24, 0.75, (16, 88)),
-    ("paeds", "Paediatrics", "Children", "PD", 16, 0.62, (1, 14)),
-    ("maternity", "Maternity", "Obstetrics", "MT", 18, 0.7, (18, 42)),
-    ("isolation", "Isolation", "Infection control", "ISO", 6, 0.67, (18, 80)),
+    ("icu", "ICU", "Intensive care", "ICU", 10, 0.9, (18, 85), "Emergency medicine"),
+    ("hdu", "HDU", "High dependency", "HDU", 8, 0.85, (18, 85), "Emergency medicine"),
+    ("medA", "Medical A", "General medicine", "MA", 24, 0.8, (18, 92), "General medicine"),
+    ("surgB", "Surgical B", "General surgery", "SB", 24, 0.75, (16, 88), "Surgery"),
+    ("paeds", "Paediatrics", "Children", "PD", 16, 0.62, (1, 14), "Paediatrics"),
+    ("maternity", "Maternity", "Obstetrics", "MT", 18, 0.7, (18, 42), "Obstetrics"),
+    ("isolation", "Isolation", "Infection control", "ISO", 6, 0.67, (18, 80), "General medicine"),
+]
+
+# Synthetic hospitals; addresses are real Karachi areas, the hospitals are made up.
+# name, type, address, latitude, longitude, phone, capabilities, departments, storage locations, wards
+HOSPITALS = [
+    (
+        "CityCare General Hospital",
+        "hospital",
+        "Shahrah-e-Faisal, Karachi",
+        "24.860700",
+        "67.001100",
+        "+92 21 111 000 111",
+        ["trauma", "icu", "bloodBank", "maternity", "ct", "paediatrics"],
+        ["Emergency medicine", "General medicine", "Surgery", "Paediatrics", "Obstetrics"],
+        [
+            "Blood fridge 1",
+            "Blood fridge 2",
+            "Plasma freezer A",
+            "Plasma freezer B",
+            "Platelet agitator",
+            "Main store",
+        ],
+        WARDS,
+    ),
+    (
+        "Seaview Hospital",
+        "hospital",
+        "Clifton Block 5, Karachi",
+        "24.813800",
+        "67.029900",
+        "+92 21 111 000 222",
+        ["icu", "cathLab", "stroke", "mri"],
+        ["Cardiology", "General medicine"],
+        ["Blood fridge", "Main store"],
+        [
+            ("sv-ccu", "CCU", "Coronary care", "SV-CCU", 8, 0.75, (35, 85), "Cardiology"),
+            ("sv-med", "Medical", "General medicine", "SV-MED", 16, 0.8, (18, 90), "General medicine"),
+        ],
+    ),
+    (
+        "Northside Children's Hospital",
+        "hospital",
+        "North Nazimabad, Karachi",
+        "24.942000",
+        "67.034700",
+        "+92 21 111 000 333",
+        ["nicu", "paediatrics", "burns"],
+        ["Neonatology", "Paediatrics"],
+        ["Blood fridge", "Main store"],
+        [
+            ("ns-nicu", "NICU", "Neonatal intensive care", "NS-NICU", 8, 0.7, (0, 0), "Neonatology"),
+            ("ns-paeds", "Children's ward", "Children", "NS-PD", 16, 0.6, (1, 14), "Paediatrics"),
+        ],
+    ),
 ]
 
 DOCTORS = [
@@ -110,7 +175,7 @@ FORMULARY = [
     ),
     (
         "coamox",
-        "Amoxicillin–clavulanate",
+        "Amoxicillinâ€“clavulanate",
         "625 mg",
         "Tablet",
         "Antibiotic",
@@ -159,7 +224,7 @@ FORMULARY = [
         "pens",
         60,
         14,
-        "Pharmacy fridge 1 (2–8 °C)",
+        "Pharmacy fridge 1 (2â€“8 Â°C)",
         [("GLA-2407", 190, 21)],
         True,
         False,
@@ -173,7 +238,7 @@ FORMULARY = [
         "vials",
         40,
         9,
-        "Pharmacy fridge 1 (2–8 °C)",
+        "Pharmacy fridge 1 (2â€“8 Â°C)",
         [("INS-2405", 150, 95)],
         True,
         False,
@@ -285,7 +350,7 @@ FORMULARY = [
         "ampoules",
         100,
         25,
-        "Pharmacy fridge 2 (2–8 °C)",
+        "Pharmacy fridge 2 (2â€“8 Â°C)",
         [("OXY-2406", 40, 130), ("OXY-2408", 210, 200)],
         True,
         False,
@@ -423,14 +488,31 @@ class Command(BaseCommand):
         rand = random.Random(seed)
         now = timezone.now()
         if reset:
-            for model in (Bed, Ward, BloodUnit, Batch, Medicine, DoctorShift):
+            models = (
+                Bed,
+                BloodUnit,
+                Ward,
+                Department,
+                StorageLocation,
+                Batch,
+                Medicine,
+                DoctorShift,
+                Hospital,
+            )
+            for model in models:
                 model.objects.all().delete()
 
-        self.seed_users()
-        if not Ward.objects.exists():
-            self.seed_beds(rand, now)
+        hospitals = []
+        for index, spec in enumerate(HOSPITALS):
+            # The first hospital keeps the Sprint 1 random sequence, so its beds and blood look as before.
+            hospital_rand = rand if index == 0 else random.Random(seed * 100 + index)
+            hospitals.append(self.seed_hospital(spec, hospital_rand, now))
+        main = hospitals[0]
+
+        self.seed_users(main)
         if not BloodUnit.objects.exists():
-            self.seed_blood(rand, now)
+            self.seed_blood(rand, now, main)
+        BloodUnit.objects.filter(hospital=None).update(hospital=main)
         if not Medicine.objects.exists():
             self.seed_pharmacy(now)
         if not DoctorShift.objects.exists():
@@ -444,11 +526,14 @@ class Command(BaseCommand):
             er.save()
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
+        for hospital in hospitals:
+            self.stdout.write(f"  {hospital.name}: {Bed.objects.filter(hospital=hospital).count()} beds")
         self.stdout.write(f"Demo logins (password for all: {DEMO_PASSWORD}):")
         for email, *_, role in DEMO_USERS:
             self.stdout.write(f"  {role:<11} {email}")
 
-    def seed_users(self):
+    def seed_users(self, hospital: Hospital):
+        """One login per role; staff work at `hospital`."""
         for email, first, last, role in DEMO_USERS:
             user, created = User.objects.get_or_create(
                 username=email,
@@ -458,41 +543,77 @@ class Command(BaseCommand):
                 user.set_password(DEMO_PASSWORD)
                 user.is_staff = role == Role.ADMIN  # demo admin can open /admin/ too
                 user.is_superuser = role == Role.ADMIN
+            if created or (user.hospital_id is None and role != Role.PATIENT):
+                user.hospital = None if role == Role.PATIENT else hospital
                 user.save()
 
-    def seed_beds(self, rand: random.Random, now):
+    def seed_hospital(self, spec, rand: random.Random, now) -> Hospital:
+        """Create (or complete) one hospital with its structure. Reuses existing rows, never duplicates."""
+        name, type_, address, lat, lng, phone, capabilities, departments, locations, wards = spec
+        hospital, created = Hospital.objects.get_or_create(
+            name=name,
+            defaults={"type": type_, "address": address, "latitude": lat, "longitude": lng, "phone": phone},
+        )
+        if created:
+            hospital.capabilities.set(Capability.objects.filter(code__in=capabilities))
+        for department in departments:
+            Department.objects.get_or_create(hospital=hospital, name=department)
+        for location in locations:
+            StorageLocation.objects.get_or_create(hospital=hospital, name=location)
+
+        for order, (code, ward_name, kind, prefix, size, occupancy, ages, department) in enumerate(wards):
+            dept = Department.objects.get(hospital=hospital, name=department)
+            ward, ward_created = Ward.objects.get_or_create(
+                code=code,
+                defaults={
+                    "name": ward_name,
+                    "kind": kind,
+                    "sort_order": order,
+                    "hospital": hospital,
+                    "department": dept,
+                },
+            )
+            if ward.hospital_id is None:  # a ward from before Sprint 2
+                ward.hospital, ward.department = hospital, dept
+                ward.save()
+            Bed.objects.filter(ward=ward, hospital=None).update(hospital=hospital)
+            if ward_created:
+                self.seed_beds(ward, hospital, prefix, size, occupancy, ages, rand, now)
+        return hospital
+
+    def seed_beds(self, ward, hospital, prefix, size, occupancy, ages, rand: random.Random, now):
+        code, (lo, hi) = ward.code, ages
         beds = []
-        for order, (code, name, kind, prefix, size, occupancy, (lo, hi)) in enumerate(WARDS):
-            ward = Ward.objects.create(code=code, name=name, kind=kind, sort_order=order)
-            for n in range(1, size + 1):
-                bed = Bed(ward=ward, label=f"{prefix}-{n:02d}", status=BedStatus.FREE)
-                bed.status_since = now - timedelta(minutes=rand.randint(10, 600))
-                if rand.random() < occupancy:
-                    stay = timedelta(minutes=rand.randint(120, 60 * 24 * 12))
-                    bed.status = BedStatus.OCCUPIED
-                    bed.status_since = bed.admitted_at = now - stay
-                    bed.patient_initials = f"{rand.choice(LETTERS)}.{rand.choice(LETTERS)}."
-                    bed.patient_age = rand.randint(lo, hi)
-                    bed.patient_sex = "F" if code == "maternity" else rand.choice("FM")
-                    days = rand.choice([0, 0, 1, 1, 2, 3, 5])
-                    bed.expected_discharge = timezone.localdate(now) + timedelta(days=days)
-                    if code == "isolation":
-                        bed.isolation = rand.choice(["airborne", "droplet", "contact"])
-                    elif rand.random() < 0.08:
-                        bed.isolation = "contact"
-                else:
-                    roll = rand.random()
-                    if roll < 0.3:
-                        bed.status = BedStatus.CLEANING
-                        bed.status_since = now - timedelta(minutes=rand.randint(5, 75))
-                    elif roll < 0.5:
-                        bed.status = BedStatus.RESERVED
-                    elif roll >= 0.95:
-                        bed.status = BedStatus.OUT_OF_SERVICE
-                beds.append(bed)
+        for n in range(1, size + 1):
+            bed = Bed(ward=ward, hospital=hospital, label=f"{prefix}-{n:02d}", status=BedStatus.FREE)
+            bed.status_since = now - timedelta(minutes=rand.randint(10, 600))
+            if rand.random() < occupancy:
+                stay = timedelta(minutes=rand.randint(120, 60 * 24 * 12))
+                bed.status = BedStatus.OCCUPIED
+                bed.status_since = bed.admitted_at = now - stay
+                bed.patient_initials = f"{rand.choice(LETTERS)}.{rand.choice(LETTERS)}."
+                bed.patient_age = rand.randint(lo, hi)
+                bed.patient_sex = "F" if code == "maternity" else rand.choice("FM")
+                days = rand.choice([0, 0, 1, 1, 2, 3, 5])
+                bed.expected_discharge = timezone.localdate(now) + timedelta(days=days)
+                if code == "isolation":
+                    bed.isolation = rand.choice(["airborne", "droplet", "contact"])
+                elif rand.random() < 0.08:
+                    bed.isolation = "contact"
+            else:
+                roll = rand.random()
+                if roll < 0.3:
+                    bed.status = BedStatus.CLEANING
+                    bed.status_since = now - timedelta(minutes=rand.randint(5, 75))
+                elif roll < 0.5:
+                    bed.status = BedStatus.RESERVED
+                elif roll >= 0.95:
+                    bed.status = BedStatus.OUT_OF_SERVICE
+            beds.append(bed)
         Bed.objects.bulk_create(beds)
 
-    def seed_blood(self, rand: random.Random, now, count=320):
+    def seed_blood(self, rand: random.Random, now, hospital: Hospital, count=320):
+        storage = {loc.name: loc for loc in StorageLocation.objects.filter(hospital=hospital)}
         shares = {c: share for c, (_, _, share) in COMPONENTS.items()}
         units = []
         for i in range(count):
@@ -512,15 +633,19 @@ class Command(BaseCommand):
                 status = UnitStatus.ISSUED
             else:
                 status = UnitStatus.AVAILABLE
+            group = weighted(rand, GROUP_SHARE)
+            location = rand.choice(locations)  # same draw order as Sprint 1, so the demo units don't change
             units.append(
                 BloodUnit(
+                    hospital=hospital,
+                    storage_location=storage.get(location),
                     donation_number=f"G7731 26 {100_000 + i * 37:06d}",
-                    group=weighted(rand, GROUP_SHARE),
+                    group=group,
                     component=component,
                     collected_at=collected,
                     expires_at=expires,
                     status=status,
-                    location=rand.choice(locations),
+                    location=location,
                 )
             )
         BloodUnit.objects.bulk_create(units)
