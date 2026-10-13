@@ -6,7 +6,7 @@ import { renderStaff } from '../../test/renderStaff'
 
 afterEach(() => vi.restoreAllMocks())
 
-const row = async (name: string) => (await screen.findByRole('cell', { name })).closest('tr') as HTMLElement
+const row = async (name: string | RegExp) => (await screen.findByRole('cell', { name })).closest('tr') as HTMLElement
 
 describe('UsersPage (story 1.2 Role management)', () => {
   it('lists every account with its hospital and role', async () => {
@@ -16,6 +16,7 @@ describe('UsersPage (story 1.2 Role management)', () => {
     expect(within(await row('Hina Javed')).getByRole('combobox', { name: 'Role for Hina Javed' })).toHaveValue('nurse')
     expect(within(await row('Hina Javed')).getByText('CityCare General Hospital')).toBeInTheDocument()
     expect(within(await row('Root Admin')).getByText('All hospitals')).toBeInTheDocument()
+    expect(within(await row(/^Sara Ahmed/)).getByText('No hospital')).toBeInTheDocument()
     expect(screen.getByText('5 accounts')).toBeInTheDocument()
   })
 

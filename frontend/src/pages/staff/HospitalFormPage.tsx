@@ -95,7 +95,11 @@ function HospitalForm({ capabilities, hospitalId, initial, title }: HospitalForm
     setAlert(undefined)
     const found = validateHospital(values)
     setErrors(found)
-    if (focusFirst(found)) return
+    if (focusFirst(found)) {
+      const count = Object.values(found).filter(Boolean).length
+      setAlert(`The hospital wasn’t saved. Fix the ${count === 1 ? 'field' : `${count} fields`} marked above.`)
+      return
+    }
 
     setPending(true)
     try {
@@ -109,7 +113,7 @@ function HospitalForm({ capabilities, hospitalId, initial, title }: HospitalForm
       for (const key of HOSPITAL_FIELD_ORDER) if (server[key]) onFields[key] = server[key]
       setErrors(onFields)
       if (status === 400 && focusFirst(onFields)) {
-        setAlert('The hospital wasn’t saved. Fix the fields marked below.')
+        setAlert('The hospital wasn’t saved. Fix the fields marked above.')
       } else if (status === 403) {
         setAlert('Your role can’t register or change hospitals.')
       } else {

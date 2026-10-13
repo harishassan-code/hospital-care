@@ -105,7 +105,7 @@ function UserRow({ user, onSaved, onFailed }: UserRowProps) {
         )}
       </td>
       <td>{user.email}</td>
-      <td>{user.hospital?.name ?? 'All hospitals'}</td>
+      <td>{user.hospital?.name ?? (user.role === 'admin' ? 'All hospitals' : 'No hospital')}</td>
       <td>
         {user.roleLocked ? (
           <span>

@@ -22,6 +22,7 @@ describe('HospitalFormPage (story 1.3 Hospital registration and capability profi
     expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Enter the hospital’s name')
     expect(screen.getByLabelText('Latitude')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText('Enter the longitude')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('The hospital wasn’t saved. Fix the 4 fields marked above.')
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
   })
 
@@ -68,7 +69,7 @@ describe('HospitalFormPage (story 1.3 Hospital registration and capability profi
     await userEvent.click(screen.getByRole('button', { name: 'Save hospital' }))
     expect(await screen.findByText('A hospital with this name is already registered.')).toBeInTheDocument()
     expect(screen.getByLabelText('Name')).toHaveFocus()
-    expect(screen.getByRole('alert')).toHaveTextContent('The hospital wasn’t saved. Fix the fields marked below.')
+    expect(screen.getByRole('alert')).toHaveTextContent('The hospital wasn’t saved. Fix the fields marked above.')
   })
 
   it('edits a hospital, deactivates it, and keeps unchanged fields', async () => {

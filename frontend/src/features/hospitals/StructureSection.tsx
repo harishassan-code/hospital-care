@@ -147,7 +147,7 @@ export function StructureSection<T extends Item>(props: StructureSectionProps<T>
                   )}
                 </label>
                 {error && (
-                  <p id={`${id}-error`} className={styles.fieldError}>
+                  <p id={`${id}-error`} className={styles.fieldError} role="alert">
                     {error}
                   </p>
                 )}
