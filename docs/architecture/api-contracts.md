@@ -23,7 +23,8 @@ identical. Reads need *view*, writes need *edit*.
 
 **Own hospital only:** a user who isn't an admin may change a resource only if it belongs to their own
 hospital (`resource.hospital == user.hospital`); otherwise **403**. Admins manage the whole network.
-Reads of a module are limited to the user's hospital when they have one.
+The bed board (`GET /beds/`) and blood list (`GET /blood/units/`) only return the user's hospital when they
+have one. Pharmacy has no hospital yet.
 
 `User` (from `/auth/me/`, `/auth/login/`) gains `hospital: {id, name} | null`.
 
@@ -104,6 +105,12 @@ LocationItem = { id: number, name: string }
   resource is stored in. Deleting a department leaves its wards without a department.
 - `code` is generated (the bed board's ward id) and never changes.
 - Audit actions: `department.created`/`deleted`, `ward.created`/`deleted`, `location.created`/`deleted`.
+
+## Bed types (story 2.1 Bed registry, #23)
+
+Each `Bed` in `GET /beds/` gains `type`: `'icu' | 'emergency' | 'general' | 'isolation' | 'nicu'`.
+Occupancy per type and the alert threshold (`occupancyAlertPercent` in `frontend/src/config/hospital.ts`) are
+worked out in the browser from the board. There's no new endpoint.
 
 ## Resource status (task 2.0)
 

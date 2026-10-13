@@ -1,8 +1,9 @@
 # Wireframes (text, low fidelity)
 
-There's no Figma file. These text wireframes are the agreed layout for every staff screen up to Sprint 2.
-Visual style comes from `frontend/src/styles/tokens.css` and the specs in `docs/superpowers/specs/`.
-Later sprints add their screens here before building them.
+There's no Figma file. These text wireframes are the agreed layout for every staff screen up to Sprint 2, plus
+low-fidelity drafts of the core journeys still to come (emergency request, matching results, transfer tracking)
+for refinement before those sprints. Visual style comes from `frontend/src/styles/tokens.css` (light and dark,
+following the system setting) and the specs in `docs/superpowers/specs/`.
 
 ## Navigation map
 
@@ -21,10 +22,23 @@ modules the signed-in role can open (`ACCESS` in [api-contracts.md](../architect
 | Hospital detail | `/staff/hospitals/:id` | edit | view | view | view | view | – |
 | Register / edit hospital | `/staff/hospitals/new`, `/:id/edit` | ✓ | – | – | – | – | – |
 | Users and roles | `/staff/users` | ✓ | – | – | – | – | – |
+| Planned modules (placeholder) | `/staff/emergencies`, `/matching`, `/transfers`, … | ✓ | ✓ | ✓ | ✓ | ✓ | – |
 
 "–" means the link is hidden. Opening the path directly shows **"You don't have access to this page"** with a
 link to Overview, and the API answers 403. A patient opening any `/staff` path sees "This area is for hospital
 staff".
+
+### Proposal roles and app roles
+
+The proposal (§6) names five roles. The app has six (`accounts.Role`). Until #9 settles it, they map like this:
+
+| Proposal role | App role today | Sees |
+|---|---|---|
+| System Administrator | `admin` | Everything, including Users and roles |
+| Hospital/Blood-Bank Staff | `nurse`, `bloodBank`, `pharmacist`, `doctor` | Their module(s), their own hospital |
+| Emergency/Clinical Coordinator | `doctor` for now. **A `coordinator` role is an open decision (#9).** | Will need Emergency requests and Matching (Sprints 5–6) |
+| Hospital Management | **No role yet (open decision, #9)**. A view-only `management` role would see Overview and reports. | Overview; reports (#66) |
+| Participating Hospitals | Each hospital's own staff accounts | Their hospital's resources |
 
 ## States every staff screen has
 
@@ -90,6 +104,51 @@ Errors appear under each field. Focus moves to the first invalid field, and serv
 ```
 Locked rows (your own account, superusers) show the role as text with the reason. States: loading, failed, and a
 failed save (message in `role="alert"`, select reverts).
+
+## Beds additions (Sprint 2: #23, #25)
+
+The bed board gets a line above the wards: "Occupancy by bed type: ICU 89% · 0 free of 18, General 71% · …".
+Each ward header shows "⚠ At or above 90%" when its occupancy reaches `occupancyAlertPercent` in
+`src/config/hospital.ts`. The overview's occupancy chart flags the same wards.
+
+## Planned journeys (drafts for refinement)
+
+### Emergency request: create and track (`/staff/emergencies`, Sprint 5)
+
+```
+┌ NEW EMERGENCY REQUEST
+│ Severity*        (•) Critical  ( ) Urgent  ( ) Routine
+│ Needed*          [Blood ▾]  Group* [O- ▾]  Component* [Red cells ▾]  Quantity* [4]
+│                  + Add another requirement (bed, equipment…)
+│ Patient ref      [__________] (optional, no names)
+│ [Submit request]
+└───────────────────────────────────────────────────────────
+┌ REQUEST #2026-0142 · CRITICAL · ● Partially fulfilled (2 of 4 units)
+│ Timeline: 14:02 Open → 14:02 Matching → 14:09 Partially fulfilled (reserved 2 at Seaview)
+│ [Find more]  [Escalate]  [Close…] (asks for an outcome note)
+```
+States: validation errors on the fields, and an escalation banner (role="alert") when the timer fires.
+
+### Matching results (Sprint 6)
+
+```
+┌ CANDIDATES FOR O- RED CELLS × 4                         sorted by: score ▾
+│ #1 Seaview Hospital  · 3 units · 6.2 km · ~14 min · expiring soonest first   [Reserve 3]
+│     Why: compatible (O- for O-), 3 tested units, nearest with stock
+│ #2 Northside Children's · 1 unit · 9.8 km · ~22 min                           [Reserve 1]
+│ Deactivated hospitals and units already reserved are never listed.
+```
+States: no matches ("No compatible units in the network. Escalate?"), loading, a reservation conflict
+("Someone reserved these first; the list is refreshed").
+
+### Transfer tracking (Sprint 7)
+
+```
+┌ TRANSFER T-0031 · Seaview Hospital → CityCare General · 3 × O- red cells
+│ ✓ Requested 14:10 · ✓ Approved 14:12 (Tariq L.) · ● Dispatched 14:20 · ○ In transit · ○ Delivered
+│ Supplier: [Approve] [Reject…] (reason required)    Receiver: [Confirm delivery]
+```
+States: rejected (shows the reason), cancelled, delivered (inventory updated on both sides).
 
 ## Existing Sprint 1 screens
 

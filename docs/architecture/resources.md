@@ -62,21 +62,84 @@ stateDiagram-v2
     quarantined --> expired: expire
     available --> expired: expire
     reserved --> expired: expire
+    quarantined --> discarded: discard (a test failed, Sprint 3)
     issued --> [*]
+    expired --> [*]
+    discarded --> [*]
+```
+
+`discarded` comes from #18 ("A failed test moves the unit to 'discarded' with a reason"). Sprint 3 adds it to
+`UnitStatus` and to `BLOOD_UNIT_LIFECYCLE`; it isn't in the code yet. A unit past its
+expiry date already *reads* as expired (`BloodUnit.effective_status`) before anyone records the `expire` move.
+
+### Planned lifecycles (proposed)
+
+The **states** are copied from the backlog's acceptance criteria. The **moves between them** are a proposal
+for the team to confirm when each story is refined. Each becomes a `StateMachine` like the two above.
+
+**Emergency request** (#34, #35). States: open, matching, partially fulfilled, fulfilled, escalated, closed,
+cancelled. Closing needs an outcome note; critical requests unfulfilled after a configurable time escalate.
+
+```mermaid
+stateDiagram-v2
+    [*] --> open
+    open --> matching: start matching
+    matching --> partiallyFulfilled: some units allocated
+    matching --> fulfilled: all units allocated
+    partiallyFulfilled --> fulfilled: rest allocated
+    open --> escalated: timer (critical only)
+    matching --> escalated: timer (critical only)
+    partiallyFulfilled --> escalated: timer (critical only)
+    escalated --> matching: retry wider search
+    fulfilled --> closed: close (outcome note)
+    escalated --> closed: close (outcome note)
+    open --> cancelled: cancel
+    matching --> cancelled: cancel
+    closed --> [*]
+    cancelled --> [*]
+```
+
+**Reservation** (#43, #45). Created inside `transaction.atomic()` with `select_for_update()`. Expires after a
+configurable hold time and releases the resource.
+
+```mermaid
+stateDiagram-v2
+    [*] --> held: reserve
+    held --> allocated: confirm (creates Allocation)
+    held --> released: cancel or transfer rejected
+    held --> expired: hold time passes
+    allocated --> [*]
+    released --> [*]
     expired --> [*]
 ```
 
-Sprint 3's collection and testing story (#18) may add a `discarded` status for failed tests. A unit past its
-expiry date already *reads* as expired (`BloodUnit.effective_status`) before anyone records the `expire` move.
+**Transfer** (#47–#49). States: requested, approved, dispatched, in transit, delivered, rejected, cancelled.
+Approval reserves the units and rejection (with a reason) releases them. Delivery moves the units to the
+receiving hospital in one transaction.
 
-The emergency request, reservation and transfer lifecycles get their own machines in Sprints 5–7, built the
-same way.
+```mermaid
+stateDiagram-v2
+    [*] --> requested
+    requested --> approved: supplier approves
+    requested --> rejected: supplier rejects (reason)
+    requested --> cancelled: requester cancels
+    approved --> dispatched: dispatch
+    approved --> cancelled: requester cancels
+    dispatched --> inTransit: picked up
+    inTransit --> delivered: receiver confirms
+    delivered --> [*]
+    rejected --> [*]
+    cancelled --> [*]
+```
+
+**Ambulance trip** (#51): dispatched → en route → arrived → completed.
+**Equipment** (#27): available ↔ in use; available → maintenance → available; any → out of service.
 
 ## Own-hospital rule (story 1.2)
 
 `apps.accounts.permissions.may_change(user, resource)`: admins may change any hospital's resources. Everyone else
 may change only resources whose `hospital` is their own (`User.hospital`). Otherwise the API answers **403**.
-Reads are limited to the user's hospital where a module lists resources (the bed board).
+Reads are limited to the user's hospital where a module lists resources (the bed board and the blood list).
 
 ## Audit log (story 8.1, ADR-7)
 
