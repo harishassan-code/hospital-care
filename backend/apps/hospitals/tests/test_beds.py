@@ -39,6 +39,7 @@ def test_board_matches_frontend_shape(client_as, occupied, ward):
     assert data["wards"] == [{"id": "icu", "name": "ICU", "kind": "Intensive care"}]
     full, empty = data["beds"]
     assert full["id"] == "ICU-01" and full["ward"] == "icu" and full["status"] == "occupied"
+    assert full["type"] == "general"  # the default; seed_demo and the migration set real types
     assert full["patient"] == {"initials": "A.B.", "age": 40, "sex": "F"}
     assert {"statusSince", "admittedAt", "expectedDischarge", "isolation"} <= full.keys()
     assert "patient" not in empty and "isolation" not in empty

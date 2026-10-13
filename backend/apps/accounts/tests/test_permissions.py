@@ -1,10 +1,14 @@
 """Story 1.2 Access control: every endpoint declares its permissions; each role gets exactly its access."""
 
+from datetime import timedelta
+
 import pytest
 from django.urls import URLPattern, URLResolver, get_resolver, reverse
+from django.utils import timezone
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import ACCESS, EDIT
+from apps.blood.models import BloodUnit
 from apps.hospitals.models import Bed, BedStatus, Ward
 
 pytestmark = pytest.mark.django_db
@@ -85,6 +89,22 @@ class TestOwnHospitalOnly:
         here, _ = beds
         admin = client_as(Role.ADMIN, hospital=here)
         assert self.act(admin, "T-01").status_code == 200
+
+    def test_blood_list_shows_only_the_users_hospital(self, client_as, beds):
+        here, there = beds
+        now = timezone.now()
+        for hospital, number in ((here, "G0001"), (there, "G0002")):
+            BloodUnit.objects.create(
+                donation_number=number,
+                group="O+",
+                component="redCells",
+                collected_at=now,
+                expires_at=now + timedelta(days=42),
+                location="Fridge",
+                hospital=hospital,
+            )
+        units = client_as(Role.BLOOD_BANK, hospital=here).get(reverse("blood-units")).json()
+        assert [u["id"] for u in units] == ["G0001"]
 
     def test_bed_board_shows_only_the_users_hospital(self, client_as, beds):
         here, _ = beds

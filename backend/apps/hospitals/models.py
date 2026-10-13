@@ -110,6 +110,16 @@ class BedStatus(models.TextChoices):
     OUT_OF_SERVICE = "outOfService", "Out of service"
 
 
+class BedType(models.TextChoices):
+    """What a bed is equipped for (story 2.1 Bed registry)."""
+
+    ICU = "icu", "ICU"
+    EMERGENCY = "emergency", "Emergency"
+    GENERAL = "general", "General"
+    ISOLATION = "isolation", "Isolation"
+    NICU = "nicu", "NICU"
+
+
 class Isolation(models.TextChoices):
     CONTACT = "contact", "Contact precautions"
     DROPLET = "droplet", "Droplet precautions"
@@ -148,6 +158,7 @@ class Bed(Resource):
 
     label = models.CharField(max_length=20, unique=True, help_text="e.g. ICU-01. Also the bed's API id.")
     ward = models.ForeignKey(Ward, on_delete=models.PROTECT, related_name="beds")
+    bed_type = models.CharField(max_length=12, choices=BedType.choices, default=BedType.GENERAL)
     status = models.CharField(max_length=20, choices=BedStatus.choices, default=BedStatus.FREE)
 
     patient_initials = models.CharField(max_length=10, blank=True)

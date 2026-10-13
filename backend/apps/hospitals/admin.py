@@ -47,7 +47,7 @@ class BedAdmin(admin.ModelAdmin):
         "patient_initials",
         "expected_discharge",
     ]
-    list_filter = ["hospital", "ward", "status", "isolation"]
+    list_filter = ["hospital", "ward", "bed_type", "status", "isolation"]
     search_fields = ["label"]
 
 

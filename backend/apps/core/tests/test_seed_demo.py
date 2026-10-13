@@ -3,7 +3,7 @@ from django.core.management import call_command
 
 from apps.accounts.models import Role, User
 from apps.blood.models import BloodUnit
-from apps.hospitals.models import Bed, Department, Hospital, StorageLocation, Ward
+from apps.hospitals.models import Bed, BedType, Department, Hospital, StorageLocation, Ward
 from apps.pharmacy.models import Medicine
 
 pytestmark = pytest.mark.django_db
@@ -20,10 +20,10 @@ def test_seed_demo_is_repeatable():
     call_command("seed_demo", stdout=None)
     assert first == {
         "Hospital": 3,
-        "Department": 9,
-        "Ward": 11,
+        "Department": 10,
+        "Ward": 12,
         "StorageLocation": 10,
-        "Bed": 154,
+        "Bed": 164,
         "BloodUnit": 320,
         "Medicine": 23,
         "User": 6,
@@ -40,6 +40,13 @@ def test_every_hospital_has_structure_and_resources():
     assert not Bed.objects.filter(hospital=None).exists()
     assert not BloodUnit.objects.filter(hospital=None).exists()
     assert not BloodUnit.objects.filter(storage_location=None).exists()
+
+
+def test_beds_cover_every_bed_type():
+    """Story 2.1 Bed registry: bed types include ICU, emergency, general, isolation and NICU."""
+    call_command("seed_demo", stdout=None)
+    assert set(Bed.objects.values_list("bed_type", flat=True)) == set(BedType.values)
+    assert set(Bed.objects.filter(ward__code="icu").values_list("bed_type", flat=True)) == {BedType.ICU}
 
 
 def test_one_login_per_role_and_staff_work_at_a_hospital():
@@ -69,4 +76,4 @@ def test_reset_starts_over():
     call_command("seed_demo", stdout=None)
     Department.objects.create(hospital=Hospital.objects.first(), name="Extra")
     call_command("seed_demo", "--reset", stdout=None)
-    assert counts()["Department"] == 9
+    assert counts()["Department"] == 10

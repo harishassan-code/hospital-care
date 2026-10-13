@@ -20,11 +20,12 @@ class BedSerializer(serializers.ModelSerializer):
 
     id = serializers.CharField(source="label")
     ward = serializers.CharField(source="ward.code")
+    type = serializers.CharField(source="bed_type")
     statusSince = serializers.DateTimeField(source="status_since")
 
     class Meta:
         model = Bed
-        fields = ["id", "ward", "label", "status", "statusSince"]
+        fields = ["id", "ward", "label", "type", "status", "statusSince"]
 
     def to_representation(self, bed):
         data = super().to_representation(bed)

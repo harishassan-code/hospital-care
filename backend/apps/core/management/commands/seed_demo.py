@@ -22,6 +22,7 @@ from apps.emergencies.models import EmergencyStatus, ErStatus
 from apps.hospitals.models import (
     Bed,
     BedStatus,
+    BedType,
     Capability,
     Department,
     DoctorShift,
@@ -51,6 +52,16 @@ WARDS = [
     ("maternity", "Maternity", "Obstetrics", "MT", 18, 0.7, (18, 42), "Obstetrics"),
     ("isolation", "Isolation", "Infection control", "ISO", 6, 0.67, (18, 80), "General medicine"),
 ]
+
+# Bed type per ward code; every other ward's beds are general.
+WARD_BED_TYPES = {
+    "icu": BedType.ICU,
+    "hdu": BedType.ICU,
+    "isolation": BedType.ISOLATION,
+    "sv-er": BedType.EMERGENCY,
+    "sv-ccu": BedType.ICU,
+    "ns-nicu": BedType.NICU,
+}
 
 # Synthetic hospitals; addresses are real Karachi areas, the hospitals are made up.
 # name, type, address, latitude, longitude, phone, capabilities, departments, storage locations, wards
@@ -82,9 +93,10 @@ HOSPITALS = [
         "67.029900",
         "+92 21 111 000 222",
         ["icu", "cathLab", "stroke", "mri"],
-        ["Cardiology", "General medicine"],
+        ["Cardiology", "Emergency medicine", "General medicine"],
         ["Blood fridge", "Main store"],
         [
+            ("sv-er", "Emergency", "Emergency department", "SV-ER", 10, 0.6, (16, 90), "Emergency medicine"),
             ("sv-ccu", "CCU", "Coronary care", "SV-CCU", 8, 0.75, (35, 85), "Cardiology"),
             ("sv-med", "Medical", "General medicine", "SV-MED", 16, 0.8, (18, 90), "General medicine"),
         ],
@@ -585,7 +597,13 @@ class Command(BaseCommand):
         code, (lo, hi) = ward.code, ages
         beds = []
         for n in range(1, size + 1):
-            bed = Bed(ward=ward, hospital=hospital, label=f"{prefix}-{n:02d}", status=BedStatus.FREE)
+            bed = Bed(
+                ward=ward,
+                hospital=hospital,
+                label=f"{prefix}-{n:02d}",
+                bed_type=WARD_BED_TYPES.get(code, BedType.GENERAL),
+                status=BedStatus.FREE,
+            )
             bed.status_since = now - timedelta(minutes=rand.randint(10, 600))
             if rand.random() < occupancy:
                 stay = timedelta(minutes=rand.randint(120, 60 * 24 * 12))
