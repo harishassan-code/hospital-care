@@ -1,6 +1,8 @@
 import type { BedStatus } from '../../api/beds'
 import { Panel } from '../../components/ui/Panel'
-import { STATUS_LABEL, summarize } from '../beds/beds'
+import { StatusBadge } from '../../components/ui/StatusBadge'
+import { hospital } from '../../config/hospital'
+import { occupancyPercent, STATUS_LABEL, summarize } from '../beds/beds'
 import type { StaffData } from '../staff/staffContext'
 import styles from './Overview.module.css'
 
@@ -31,9 +33,9 @@ export function OccupancyChart({ data }: { data: StaffData }) {
     <Panel title="Bed occupancy by ward" aside={<Legend />}>
       <ul className={styles.bars} aria-label="Wards">
         {data.wards.map((ward) => {
-          const counts = summarize(data.beds.filter((b) => b.ward === ward.id))
-          const inService = counts.total - counts.outOfService
-          const occupancy = inService ? Math.round((counts.occupied / inService) * 100) : 0
+          const wardBeds = data.beds.filter((b) => b.ward === ward.id)
+          const counts = summarize(wardBeds)
+          const occupancy = occupancyPercent(wardBeds)
           const breakdown = SEGMENTS.map((s) => `${STATUS_LABEL[s.status]} ${counts[s.status]}`).join(', ')
           return (
             <li key={ward.id} className={styles.barRow}>
@@ -50,6 +52,12 @@ export function OccupancyChart({ data }: { data: StaffData }) {
               </span>
               <span className={styles.barValue}>
                 {occupancy}% · {counts.free} free
+                {occupancy >= hospital.occupancyAlertPercent && (
+                  <>
+                    {' '}
+                    <StatusBadge tone="warning">Nearly full</StatusBadge>
+                  </>
+                )}
               </span>
               <span className="visually-hidden">{breakdown}</span>
             </li>

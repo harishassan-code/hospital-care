@@ -1,4 +1,4 @@
-import type { Bed, BedAction, BedStatus, Isolation } from '../../api/beds'
+import type { Bed, BedAction, BedStatus, BedType, Isolation } from '../../api/beds'
 import { dateKey } from '../../lib/time'
 
 export type { BedAction }
@@ -11,6 +11,14 @@ export const STATUS_LABEL: Record<BedStatus, string> = {
   cleaning: 'Cleaning',
   free: 'Free',
   outOfService: 'Out of service',
+}
+
+export const TYPE_LABEL: Record<BedType, string> = {
+  icu: 'ICU',
+  emergency: 'Emergency',
+  general: 'General',
+  isolation: 'Isolation',
+  nicu: 'NICU',
 }
 
 export const ISOLATION_LABEL: Record<Isolation, string> = {
@@ -75,4 +83,20 @@ export function summarize(beds: Bed[]): Record<BedStatus, number> & { total: num
 export function dischargesToday(beds: Bed[], now: Date): Bed[] {
   const today = dateKey(now)
   return beds.filter((b) => b.status === 'occupied' && b.expectedDischarge === today)
+}
+
+/** Occupied share of the beds that are in service, as a whole percentage (0 when none are). */
+export function occupancyPercent(beds: Bed[]): number {
+  const counts = summarize(beds)
+  const inService = counts.total - counts.outOfService
+  return inService ? Math.round((counts.occupied / inService) * 100) : 0
+}
+
+/** Occupancy per bed type, in TYPE_LABEL order, for the types this board has. */
+export function occupancyByType(beds: Bed[]): { type: BedType; percent: number; free: number; total: number }[] {
+  return (Object.keys(TYPE_LABEL) as BedType[]).flatMap((type) => {
+    const ofType = beds.filter((b) => b.type === type)
+    if (!ofType.length) return []
+    return [{ type, percent: occupancyPercent(ofType), free: summarize(ofType).free, total: ofType.length }]
+  })
 }

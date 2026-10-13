@@ -8,6 +8,8 @@ import {
   dischargesToday,
   isCleaningOverdue,
   minutesInStatus,
+  occupancyByType,
+  occupancyPercent,
   summarize,
 } from './beds'
 
@@ -17,6 +19,7 @@ const bed = (overrides: Partial<Bed>): Bed => ({
   id: 'b1',
   ward: 'medA',
   label: 'MA-01',
+  type: 'general',
   status: 'free',
   statusSince: minutesFrom(now, -30),
   ...overrides,
@@ -86,5 +89,33 @@ describe('bed lists', () => {
   it('finds occupied beds expected to be discharged today', () => {
     const later = { ...occupied, id: 'b2', expectedDischarge: '2026-10-07' }
     expect(dischargesToday([occupied, later, bed({})], now).map((b) => b.id)).toEqual(['b1'])
+  })
+})
+
+describe('occupancy (story 2.1 Capacity monitoring)', () => {
+  it('counts occupied beds among those in service', () => {
+    const beds = [
+      bed({ id: '1', status: 'occupied' }),
+      bed({ id: '2', status: 'occupied' }),
+      bed({ id: '3', status: 'free' }),
+      bed({ id: '4', status: 'outOfService' }),
+    ]
+    expect(occupancyPercent(beds)).toBe(67)
+    expect(occupancyPercent([])).toBe(0)
+    expect(occupancyPercent([bed({ status: 'outOfService' })])).toBe(0)
+  })
+
+  it('gives occupancy per bed type, only for types present', () => {
+    const beds = [
+      bed({ id: '1', type: 'icu', status: 'occupied' }),
+      bed({ id: '2', type: 'icu', status: 'free' }),
+      bed({ id: '3', type: 'general', status: 'occupied' }),
+      bed({ id: '4', type: 'nicu', status: 'reserved' }),
+    ]
+    expect(occupancyByType(beds)).toEqual([
+      { type: 'icu', percent: 50, free: 1, total: 2 },
+      { type: 'general', percent: 100, free: 0, total: 1 },
+      { type: 'nicu', percent: 0, free: 0, total: 1 },
+    ])
   })
 })

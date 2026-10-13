@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './client'
 
 export type BedStatus = 'occupied' | 'reserved' | 'cleaning' | 'free' | 'outOfService'
+export type BedType = 'icu' | 'emergency' | 'general' | 'isolation' | 'nicu'
 export type Isolation = 'contact' | 'droplet' | 'airborne'
 /** A ward's code, e.g. 'icu'. Wards are added per hospital, so any string. */
 export type WardId = string
@@ -23,6 +24,8 @@ export interface Bed {
   id: string
   ward: WardId
   label: string
+  /** What the bed is equipped for. */
+  type: BedType
   status: BedStatus
   /** ISO time the bed entered its current status. */
   statusSince: string

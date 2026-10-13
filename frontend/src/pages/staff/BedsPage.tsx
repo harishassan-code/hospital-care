@@ -2,7 +2,18 @@ import { useState } from 'react'
 import type { BedStatus, WardId } from '../../api/beds'
 import { FormAlert } from '../../components/form/FormAlert'
 import { FilterBar } from '../../components/ui/FilterBar'
-import { actionsFor, dischargesToday, STATUS_LABEL, summarize, type BedAction } from '../../features/beds/beds'
+import { StatusBadge } from '../../components/ui/StatusBadge'
+import { hospital } from '../../config/hospital'
+import {
+  actionsFor,
+  dischargesToday,
+  occupancyByType,
+  occupancyPercent,
+  STATUS_LABEL,
+  summarize,
+  TYPE_LABEL,
+  type BedAction,
+} from '../../features/beds/beds'
 import { BedTile } from '../../features/beds/BedTile'
 import styles from '../../features/beds/Beds.module.css'
 import { canEdit } from '../../features/staff/roles'
@@ -62,6 +73,23 @@ export default function BedsPage() {
         {!editable && <p className={pageStyles.note}>View only: your role can’t change bed status.</p>}
       </div>
 
+      <section className={styles.types} aria-labelledby="bed-types-title">
+        <h2 id="bed-types-title" className={styles.typesTitle}>
+          Occupancy by bed type
+        </h2>
+        <ul className={styles.typeList}>
+          {occupancyByType(data.beds).map((t) => (
+            <li key={t.type}>
+              <span className={styles.typeName}>{TYPE_LABEL[t.type]}</span>
+              <span className={styles.wardStats}>
+                {t.percent}% occupied · {t.free} free of {t.total}
+              </span>
+              {t.percent >= hospital.occupancyAlertPercent && <StatusBadge tone="warning">Nearly full</StatusBadge>}
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <FormAlert>{error}</FormAlert>
       <p role="status" className="visually-hidden">
         {announcement}
@@ -72,8 +100,7 @@ export default function BedsPage() {
         const shown = wardBeds.filter((b) => matches(b.id, b.status))
         if (status !== 'all' && shown.length === 0) return null
         const c = summarize(wardBeds)
-        const inService = c.total - c.outOfService
-        const occupancy = inService ? Math.round((c.occupied / inService) * 100) : 0
+        const occupancy = occupancyPercent(wardBeds)
         return (
           <section key={w.id} className={styles.ward} aria-labelledby={`ward-${w.id}`}>
             <header className={styles.wardHead}>
@@ -82,6 +109,12 @@ export default function BedsPage() {
               </h2>
               <p className={styles.wardStats}>
                 {occupancy}% occupied · {c.free} free · {c.total} beds
+                {occupancy >= hospital.occupancyAlertPercent && (
+                  <>
+                    {' '}
+                    <StatusBadge tone="warning">{`At or above ${hospital.occupancyAlertPercent}%`}</StatusBadge>
+                  </>
+                )}
               </p>
             </header>
             <ul className={styles.grid}>

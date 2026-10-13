@@ -167,3 +167,34 @@
   font-size: var(--text-sm);
   font-weight: 700;
 }
+
+/* Occupancy by bed type (story 2.1 Capacity monitoring). */
+.types {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.typesTitle {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+}
+
+.typeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.typeList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.typeName {
+  font-weight: 700;
+}

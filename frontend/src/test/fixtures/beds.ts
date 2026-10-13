@@ -1,4 +1,4 @@
-import type { Bed, BedBoard, Patient, Ward } from '../../api/beds'
+import type { Bed, BedBoard, BedType, Patient, Ward } from '../../api/beds'
 import { seededRandom, type Random } from '../random'
 import { dateKey } from '../../lib/time'
 
@@ -15,6 +15,8 @@ const PLAN: WardPlan[] = [
 ]
 
 const LETTERS = 'ABDFGHIKMNORSTUYZ'
+/** Same as WARD_BED_TYPES in seed_demo: every other ward's beds are general. */
+const TYPES: Partial<Record<string, BedType>> = { icu: 'icu', hdu: 'icu', isolation: 'isolation' }
 const minutesAgo = (now: Date, minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString()
 
 function patient(rand: Random, plan: WardPlan): Patient {
@@ -52,7 +54,14 @@ export function sampleBedBoard(now: Date, seed = 7): BedBoard {
   for (const plan of PLAN) {
     for (let n = 1; n <= plan.size; n++) {
       const label = `${plan.prefix}-${String(n).padStart(2, '0')}`
-      const base: Bed = { id: label, ward: plan.id, label, status: 'free', statusSince: minutesAgo(now, rand.int(10, 600)) }
+      const base: Bed = {
+        id: label,
+        ward: plan.id,
+        label,
+        type: TYPES[plan.id] ?? 'general',
+        status: 'free',
+        statusSince: minutesAgo(now, rand.int(10, 600)),
+      }
       if (rand.chance(plan.occupancy)) {
         beds.push(occupiedBed(rand, plan, base, now))
         continue

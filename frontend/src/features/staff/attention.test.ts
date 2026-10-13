@@ -67,7 +67,7 @@ describe('buildAttention', () => {
   })
 
   it('flags beds cleaning past the target', () => {
-    const bed: Bed = { id: 'SB-12', ward: 'surgB', label: 'SB-12', status: 'cleaning', statusSince: minutesFrom(now, -52) }
+    const bed: Bed = { id: 'SB-12', ward: 'surgB', label: 'SB-12', type: 'general', status: 'cleaning', statusSince: minutesFrom(now, -52) }
     const items = build({ beds: [bed] })
     expect(items).toEqual([
       expect.objectContaining({

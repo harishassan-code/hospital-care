@@ -10,6 +10,8 @@ export const hospital = {
   mainPhone: '(021) 3400 0000',
   address: 'Plot 14, Shahrah-e-Faisal, Karachi',
   visitingHours: '11:00–13:00 and 17:00–20:00 daily',
+  /** Wards and bed types at or above this occupancy (%) are flagged on the bed board and overview. */
+  occupancyAlertPercent: 90,
   /** Overhead sign and header colour. Keep it dark: white text sits on it. */
   brandColor: '#0F2A26',
   /** Staff shifts; together they must cover all 24 hours. */
