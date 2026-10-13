@@ -2,8 +2,11 @@
  * Hospital Care design tokens: "Follow the line".
  * Components read colours, type and spacing only from here.
  * --sign is overridden at runtime from src/config/hospital.ts (the hospital's brand colour).
+ * Dark mode follows the system setting: the colour tokens are redefined at the end of this file.
  */
 :root {
+  color-scheme: light dark;
+
   /* Colour */
   --wall: #edf2ee;
   --sign: #0f2a26;
@@ -63,4 +66,33 @@
   --content-max: 1120px;
   --page-width: min(100% - 2 * var(--space-4), calc(var(--content-max) + var(--gutter)));
   --tap: 44px;
+}
+
+/*
+ * Dark mode. Every pairing meets WCAG AA (4.5:1 text, 3:1 chart fills and focus) against --wall and --surface.
+ * Coloured fills get lighter, so text on them uses --surface (dark here, white in light mode).
+ * The overhead sign (--sign, --sign-text, --sign-muted) is already dark and stays as it is.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wall: #0d1513;
+    --ink: #e4ece8;
+    --ink-muted: #a7b8b1;
+    --surface: #15201d;
+    --rule: #3a4c46;
+    --line-emergency: #ff8a8f;
+    --line-clinics: #8fb6ff;
+    --line-portal: #4fd1b2;
+    --focus: #8fb6ff;
+
+    --status-critical: #ff8a8f;
+    --status-warning: #f2c14e;
+    --status-ok: #6fd391;
+
+    --bed-occupied: #6f9ee8;
+    --bed-reserved: #de86bb;
+    --bed-cleaning: #e0a93a;
+    --bed-free: #5cbf80;
+    --bed-out: #8d9a95;
+  }
 }

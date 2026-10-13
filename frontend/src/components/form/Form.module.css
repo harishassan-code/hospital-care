@@ -127,7 +127,7 @@
 }
 
 .button:hover {
-  background: color-mix(in srgb, var(--line-portal) 82%, black);
+  background: color-mix(in srgb, var(--line-portal) 82%, var(--ink));
 }
 
 .button:disabled {

@@ -9,13 +9,13 @@ const ICON: Record<Tone, ReactNode> = {
   warning: (
     <>
       <path d="M8 1.8 15 14.2H1Z" fill="currentColor" />
-      <path d="M8 6v4m0 1.6v.6" stroke="#fff" strokeWidth="1.8" />
+      <path d="M8 6v4m0 1.6v.6" style={{ stroke: 'var(--surface)' }} strokeWidth="1.8" />
     </>
   ),
   critical: (
     <>
       <path d="M5 1h6l4 4v6l-4 4H5l-4-4V5Z" fill="currentColor" />
-      <path d="M8 4.2v4.6m0 1.8v.8" stroke="#fff" strokeWidth="1.9" />
+      <path d="M8 4.2v4.6m0 1.8v.8" style={{ stroke: 'var(--surface)' }} strokeWidth="1.9" />
     </>
   ),
   neutral: <circle cx="8" cy="8" r="3.5" fill="currentColor" />,
