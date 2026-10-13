@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { PLANNED } from './features/staff/planned'
 import StaffLayout from './features/staff/StaffLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -11,6 +12,7 @@ import HospitalFormPage from './pages/staff/HospitalFormPage'
 import HospitalsPage from './pages/staff/HospitalsPage'
 import OverviewPage from './pages/staff/OverviewPage'
 import PharmacyPage from './pages/staff/PharmacyPage'
+import PlannedPage from './pages/staff/PlannedPage'
 import UsersPage from './pages/staff/UsersPage'
 
 export function AppRoutes() {
@@ -29,6 +31,9 @@ export function AppRoutes() {
         <Route path="hospitals/:id" element={<HospitalDetailPage />} />
         <Route path="hospitals/:id/edit" element={<HospitalFormPage />} />
         <Route path="users" element={<UsersPage />} />
+        {PLANNED.map((p) => (
+          <Route key={p.path} path={p.path.replace('/staff/', '')} element={<PlannedPage />} />
+        ))}
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

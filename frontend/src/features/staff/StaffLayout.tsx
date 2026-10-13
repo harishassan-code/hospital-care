@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { hospital } from '../../config/hospital'
 import { currentShift, formatDuration } from '../../lib/time'
 import { AccessDenied } from './AccessDenied'
+import { PLANNED } from './planned'
 import { canSee, moduleForPath, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
 import styles from './StaffLayout.module.css'
@@ -29,7 +30,7 @@ function StaffShell() {
       </a>
       <Sidebar />
       <div className={styles.column}>
-        <TopBar title={module.label} />
+        <TopBar title={PLANNED.find((p) => p.path === pathname.replace(/\/$/, ''))?.label ?? module.label} />
         <main id="main" className={styles.main}>
           {canSee(role, module.id) ? <Outlet /> : <AccessDenied what={module.label} />}
         </main>
