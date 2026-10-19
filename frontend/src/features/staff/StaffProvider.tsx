@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getMe, logout, type User } from '../../api/auth'
 import { getBedBoard, postBedAction, type BedAction, type BedBoard } from '../../api/beds'
-import { getBloodUnits } from '../../api/blood'
+import { getBloodUnits, type BloodUnit } from '../../api/blood'
 import { ApiError } from '../../api/client'
 import { getMedicines } from '../../api/pharmacy'
 import { getPublicStatus } from '../../api/publicStatus'
@@ -120,14 +120,18 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     navigate('/login')
   }, [navigate])
 
+  const addUnit = useCallback((unit: BloodUnit) => {
+    setData((current) => current && { ...current, units: [...current.units, unit] })
+  }, [])
+
   const attention = useMemo(
     () => (data ? buildAttention(data, now).filter((item) => canSee(role, item.module)) : []),
     [data, now, role],
   )
 
   const value = useMemo<StaffState>(
-    () => ({ user, role, now, data, failed, attention, updateBed, signOut }),
-    [user, role, now, data, failed, attention, updateBed, signOut],
+    () => ({ user, role, now, data, failed, attention, updateBed, addUnit, signOut }),
+    [user, role, now, data, failed, attention, updateBed, addUnit, signOut],
   )
 
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>

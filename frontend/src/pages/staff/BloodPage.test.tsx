@@ -52,4 +52,39 @@ describe('BloodPage', () => {
     await userEvent.click(within(units).getByRole('button', { name: /^Platelets/ }))
     for (const row of bodyRows(table)) expect(row).toHaveTextContent('Platelets')
   })
+
+  it('lets blood-bank staff register a new unit, which then shows up in the unit list', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff('/staff/blood')
+    await userEvent.click(await screen.findByRole('button', { name: 'Register a unit' }))
+    const form = within(screen.getByRole('region', { name: 'Register a unit' }))
+    await userEvent.type(form.getByLabelText('Unit ID'), 'G7731 26 999999')
+    await userEvent.selectOptions(form.getByLabelText('Blood group'), 'AB−')
+    await userEvent.selectOptions(form.getByLabelText('Component'), 'Platelets')
+    await userEvent.click(form.getByRole('button', { name: 'Register unit' }))
+
+    const units = await screen.findByRole('region', { name: 'Units' })
+    await userEvent.click(within(units).getByRole('button', { name: 'Quarantined (testing)' }))
+    expect(within(units).getByText('G7731 26 999999')).toBeInTheDocument()
+    // The form collapses back to the toggle button after a successful save.
+    expect(screen.getByRole('button', { name: 'Register a unit' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Register a unit' })).not.toBeInTheDocument()
+  })
+
+  it('rejects a duplicate unit ID without leaving the form', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff('/staff/blood')
+    await userEvent.click(await screen.findByRole('button', { name: 'Register a unit' }))
+    const form = within(screen.getByRole('region', { name: 'Register a unit' }))
+    await userEvent.type(form.getByLabelText('Unit ID'), 'G7731 26 100000')
+    await userEvent.click(form.getByRole('button', { name: 'Register unit' }))
+    expect(await screen.findByText('A unit with this ID already exists.')).toBeInTheDocument()
+  })
+
+  it('hides the register form from roles that can only view the blood bank', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff('/staff/blood')
+    await screen.findByRole('region', { name: 'Units' })
+    expect(screen.queryByRole('button', { name: 'Register a unit' })).not.toBeInTheDocument()
+  })
 })

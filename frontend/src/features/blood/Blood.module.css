@@ -199,3 +199,48 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ── Register-unit form ────────────────────────────────── */
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 32rem;
+}
+
+.form select {
+  justify-self: start;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font-size: var(--text-base);
+}
+
+.pair {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 40rem) {
+  .pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.formActions > button {
+  width: auto;
+}
+
+.back {
+  font-weight: 700;
+}
