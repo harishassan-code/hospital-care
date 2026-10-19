@@ -23,6 +23,7 @@ needs one long meeting per week.
 |---|---|---|---|
 | Daily | **Stand-up** in `#daily-standup` (async, reply by 23:59). A short live voice check-in is optional | 2 min to write | Yesterday / Today / Blockers |
 | Mid-week (Tue/Wed) | **Backlog refinement**, async in `#backlog` plus 20 min voice if needed | 20 min | Next sprint's stories meet the Definition of Ready |
+| Friday, before 22:00 | **Weekly integration** (Scrum Master): every branch merged into `main` and tested, see `CONTRIBUTING.md` §5 | ~1–2 h | `main` and staging hold the sprint's increment |
 | **Friday 22:00 PKT** | **Sprint Review**: demo the increment from staging | 20 min | Review notes, PO feedback |
 | | **Retrospective**: what went well / what didn't / actions | 20 min | 1–3 action items, each with an owner |
 | | **Sprint Planning** for the sprint starting Saturday | 30 min | Sprint goal, committed items, points |
@@ -40,7 +41,7 @@ demo/notes in `#sprint-ceremonies` before 22:00.
 
 ## Definition of Done (before an item counts as done)
 
-- [ ] Implementation complete and merged to `main` through a reviewed PR
+- [ ] Implementation complete on the developer's branch, approved on their weekly PR, and merged to `main` at the weekly integration
 - [ ] All acceptance criteria pass
 - [ ] Unit/API tests written and CI green
 - [ ] Reviewed and approved by at least one other team member
@@ -65,9 +66,9 @@ and is re-estimated.
 
 - **Backlog:** not yet refined or not in this sprint.
 - **Ready:** in the current sprint and meets the DoR.
-- **In Progress:** has an assignee and a branch. Max 2 per person.
-- **In Review:** PR open and review requested.
-- **Done:** PR merged and the DoD is met.
+- **In Progress:** has an assignee and work is happening on their branch. Max 2 per person.
+- **In Review:** the work is pushed to your branch and a review is requested on your weekly PR.
+- **Done:** merged to `main` at the weekly integration and the DoD is met.
 
 ## Communication norms
 

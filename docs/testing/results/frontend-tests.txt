@@ -1,0 +1,203 @@
+
+ RUN  v5.0.3 ./frontend
+
+ ✓ src/features/landing/DoctorSchedule.test.tsx > tags doctors who are in now and shows their hours 171ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > sends signed-out visitors to the login page and remembers where they were going 54ms
+ ✓ src/features/landing/DoctorSchedule.test.tsx > filters by department 138ms
+ ✓ src/features/landing/DoctorSchedule.test.tsx > says so when nothing is published 3ms
+ ✓ src/pages/SignupPage.test.tsx > SignupPage > tells staff they do not sign up here 52ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > tells patients the workspace is for hospital staff 143ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > shows an admin every module, their name, and the current page 62ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > only shows and loads the modules a role may use 25ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > shows field errors and focuses the first invalid field 236ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > blocks a page the role cannot open 40ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > explains when the hospital system cannot be reached 9ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > signs out through the API and returns to the login page 109ms
+ ✓ src/features/staff/StaffLayout.test.tsx > StaffLayout > shows the current shift and how many items need attention 40ms
+ ✓ src/pages/LandingPage.test.tsx > shows the hospital, the sign and live emergency status 374ms
+ ✓ src/pages/LandingPage.test.tsx > says so when live status is unavailable 80ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N01 signed-out visitors are sent to sign-in and never see the workspace 272ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-01 the site opens on the public page, which links to sign-in 344ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-01 the login page loads with its heading and form 57ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N03 (ADAPTED) modules outside the role are hidden, never loaded, and blocked if opened directly 222ms
+ ✓ src/pages/staff/OverviewPage.test.tsx > OverviewPage > summarises every module in a linked tile 437ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-02 shows the hospital name, both fields, the Log in button and password help (ADAPTED: no "remember me") 39ms
+ ✓ src/pages/SignupPage.test.tsx > SignupPage > validates mismatched passwords and unchecked terms 723ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N03 opening a blocked module by its address shows "no access" 39ms
+ ✓ src/pages/staff/OverviewPage.test.tsx > OverviewPage > still works when the live ER status can’t be loaded 131ms
+ ✓ src/pages/staff/BloodPage.test.tsx > BloodPage > shows available stock for every component and group, flagging low groups 611ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > tells the user when the credentials are wrong 700ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N04 one failing source shows its own error while the rest keeps working 129ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N04 if the hospital system can’t be reached at all, the page says so plainly 27ms
+ ✓ src/pages/staff/OverviewPage.test.tsx > OverviewPage > lists what needs attention, critical first, with links 127ms
+ ✓ src/pages/staff/OverviewPage.test.tsx > OverviewPage > charts bed occupancy by ward and red-cell stock by group 94ms
+ ✓ src/pages/staff/OverviewPage.test.tsx > OverviewPage > only shows what the role may see 46ms
+ ✓ src/pages/staff/PharmacyPage.test.tsx > PharmacyPage > lists the formulary with high-alert and controlled-drug flags 822ms
+ ✓ src/pages/staff/BloodPage.test.tsx > BloodPage > finds compatible donor groups, reversing the rule for plasma 367ms
+ ✓ src/pages/staff/BedsPage.test.tsx > BedsPage > shows every ward with its beds 695ms
+ ✓ src/pages/staff/BloodPage.test.tsx > BloodPage > lists units soonest-expiry first and filters by component 297ms
+ ✓ src/pages/staff/PharmacyPage.test.tsx > PharmacyPage > narrows to medicines that need reordering 344ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-03 a successful staff sign-in opens the staff workspace 777ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-04 (ADAPTED) the button stays usable; an empty form explains what is missing and sends nothing 75ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-05 / LOGIN-N11 the password is masked by default 11ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > explains when the server is unreachable 576ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > reveals password help 74ms
+ ✓ src/pages/staff/PharmacyPage.test.tsx > PharmacyPage > searches by name 351ms
+ ✓ src/pages/staff/PharmacyPage.test.tsx > PharmacyPage > shows the batches behind a medicine 234ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-06 Show reveals the password and Hide masks it again 343ms
+ ✓ src/pages/SignupPage.test.tsx > SignupPage > reports an email that is already registered 1256ms
+ ✓ src/test/fixtures/fixtures.test.ts > sample blood units > is deterministic for a given clock and seed 7ms
+ ✓ src/test/fixtures/fixtures.test.ts > sample blood units > produces valid, uniquely numbered units 17ms
+ ✓ src/test/fixtures/fixtures.test.ts > sample blood units > marks units past their expiry as expired, and only those 3ms
+ ✓ src/test/fixtures/fixtures.test.ts > sample bed board > puts every bed in a known ward with a unique label 2ms
+ ✓ src/test/fixtures/fixtures.test.ts > sample bed board > gives occupied beds a patient and no one else 1ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N06 every navigation link goes to a real page 1047ms
+ ✓ src/components/form/PasswordField.test.tsx > toggles visibility and links the error to the input 242ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N07 HTML in data from the server is shown as text, never run 203ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > signs in staff 710ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N08 signing out ends the session on the server; coming back asks for sign-in again 155ms
+ ✓ src/qa/staff-workspace.qa.test.tsx > Staff workspace: negative cases (LAND-N) > LAND-N09 zero counts show as 0, never blank or NaN 101ms
+ ✓ src/pages/staff/BedsPage.test.tsx > BedsPage > discharges only after confirming, saves it, and shows the bed as the server saved it 1104ms
+ ✓ src/App.test.tsx > routes > shows a not-found page with a link home for unknown paths 210ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-07 / TC-15 (ADAPTED) the session is a server cookie: nothing is stored in the browser 698ms
+ ✓ src/api/auth.test.ts > login > posts credentials as JSON with cookies and the CSRF token, and returns the user 18ms
+ ✓ src/api/auth.test.ts > login > treats 400 as wrong credentials 2ms
+ ✓ src/api/auth.test.ts > login > treats 401 as wrong credentials 1ms
+ ✓ src/api/auth.test.ts > login > treats 429 as the account being locked after too many failed attempts 1ms
+ ✓ src/api/auth.test.ts > login > treats 403 as the server being unavailable 1ms
+ ✓ src/api/auth.test.ts > login > treats 404 as the server being unavailable 1ms
+ ✓ src/api/auth.test.ts > login > treats 500 as the server being unavailable 1ms
+ ✓ src/api/auth.test.ts > login > treats a network failure as the server being unavailable 1ms
+ ✓ src/api/auth.test.ts > signup > sends snake_case fields to the signup endpoint 1ms
+ ✓ src/api/auth.test.ts > signup > treats 409 as the email being taken 1ms
+ ✓ src/api/auth.test.ts > signup > treats a 400 with an email error as the email being taken 1ms
+ ✓ src/api/auth.test.ts > signup > treats other 400s as rejected details 1ms
+ ✓ src/api/auth.test.ts > signup > resolves when the account is created 1ms
+ ✓ src/api/auth.test.ts > getMe > returns the signed-in user 1ms
+ ✓ src/api/auth.test.ts > getMe > returns null when nobody is signed in (401) 1ms
+ ✓ src/api/auth.test.ts > getMe > returns null when nobody is signed in (403) 0ms
+ ✓ src/api/auth.test.ts > getMe > treats a network failure as the server being unavailable 1ms
+ ✓ src/api/auth.test.ts > logout > posts to the logout endpoint and accepts an empty 204 reply 1ms
+ ✓ src/api/auth.test.ts > authErrorMessage > has a plain message for every kind 0ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > signs in staff, back where they were going 707ms
+ ✓ src/pages/SignupPage.test.tsx > SignupPage > confirms success and points to log in 1160ms
+ ✓ src/lib/time.test.ts > clock maths > converts HH:MM to minutes since midnight 2ms
+ ✓ src/lib/time.test.ts > clock maths > formats a clock time as 24-hour HH:MM 0ms
+ ✓ src/lib/time.test.ts > clock maths > keeps a day range as one segment and splits overnight ranges at midnight 1ms
+ ✓ src/lib/time.test.ts > clock maths > knows whether now falls inside a range, including overnight 1ms
+ ✓ src/lib/time.test.ts > currentShift > finds the shift and the minutes left in it 0ms
+ ✓ src/lib/time.test.ts > currentShift > handles the overnight shift on both sides of midnight 0ms
+ ✓ src/lib/time.test.ts > formatDuration > uses minutes, hours or days as appropriate 0ms
+ ✓ src/lib/time.test.ts > hoursUntil > measures hours from now to a timestamp, negative when past 0ms
+ ✓ src/lib/time.test.ts > dateKey > gives the local calendar date as YYYY-MM-DD 0ms
+ ✓ src/lib/time.test.ts > fromDateKey / formatShortDate > reads a YYYY-MM-DD key as local midnight 0ms
+ ✓ src/lib/time.test.ts > fromDateKey / formatShortDate > formats short dates, optionally with the year 19ms
+ ✓ src/lib/useScrollToHash.test.tsx > scrolls to the element named by the URL hash once the page is ready 29ms
+ ✓ src/pages/staff/BedsPage.test.tsx > BedsPage > cancelling the confirmation leaves the patient in the bed 1284ms
+ ✓ src/features/auth/validation.test.ts > validateLogin > requires email and password 2ms
+ ✓ src/features/auth/validation.test.ts > validateLogin > rejects a malformed email 0ms
+ ✓ src/features/auth/validation.test.ts > validateLogin > refuses oversized input before anything is sent 0ms
+ ✓ src/features/auth/validation.test.ts > validateLogin > accepts valid input, ignoring surrounding spaces in the email 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > accepts a valid form 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > requires a name 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > requires a password 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > needs at least 8 characters 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > rejects passwords made only of digits 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > asks for the confirmation when it is left empty 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > checks the confirmation matches 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > treats phone as optional but checks its format when given 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > limits email and password length on sign-up too 0ms
+ ✓ src/features/auth/validation.test.ts > validateSignup > requires agreeing to the terms 0ms
+ ✓ src/features/auth/validation.test.ts > firstErrorKey > returns the first invalid field in form order 0ms
+ ✓ src/features/auth/validation.test.ts > firstErrorKey > returns undefined when there are no errors 0ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-08 a properly formatted email is accepted and sent 671ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > signs in patients, to the home page 698ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient O- 3ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient O+ 0ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient A- 0ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient A+ 0ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient B- 0ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient B+ 0ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient AB- 0ms
+ ✓ src/features/blood/blood.test.ts > red-cell compatibility > recipient AB+ 0ms
+ ✓ src/features/blood/blood.test.ts > plasma compatibility > recipient O (either Rh) 0ms
+ ✓ src/features/blood/blood.test.ts > plasma compatibility > recipient A (either Rh) 0ms
+ ✓ src/features/blood/blood.test.ts > plasma compatibility > recipient B (either Rh) 0ms
+ ✓ src/features/blood/blood.test.ts > plasma compatibility > recipient AB (either Rh) 0ms
+ ✓ src/features/blood/blood.test.ts > stock > rates stock against the minimum: low below it, critical below half 0ms
+ ✓ src/features/blood/blood.test.ts > stock > counts only available units, by component and group 1ms
+ ✓ src/features/blood/blood.test.ts > stock > orders units first-expiry-first-out 1ms
+ ✓ src/features/blood/blood.test.ts > stock > sorts by actual time, whatever the timestamp format the server sends 0ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-09 (ADAPTED) sign-in uses email only: a username without @ is refused before sending 479ms
+ ✓ src/features/staff/attention.test.ts > buildAttention > is empty when everything is fine 4ms
+ ✓ src/features/staff/attention.test.ts > buildAttention > flags red-cell groups below minimum, critical below half 2ms
+ ✓ src/features/staff/attention.test.ts > buildAttention > groups available units expiring within 24 hours by component 1ms
+ ✓ src/features/staff/attention.test.ts > buildAttention > flags beds cleaning past the target 1ms
+ ✓ src/features/staff/attention.test.ts > buildAttention > flags medicines that need reordering, critical under two days of supply 1ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-10 (ADAPTED) Tab moves through email, password, Show, password help, then Log in 242ms
+ ✓ src/test/random.test.ts > seededRandom > repeats the same sequence for the same seed 2ms
+ ✓ src/test/random.test.ts > seededRandom > draws integers within inclusive bounds and picks from lists 5ms
+ ✓ src/features/beds/beds.test.ts > bed transitions > offers only the valid next steps for each status 2ms
+ ✓ src/features/beds/beds.test.ts > bed transitions > discharging sends the bed for cleaning and clears the patient 0ms
+ ✓ src/features/beds/beds.test.ts > bed transitions > returning to service goes through cleaning first 0ms
+ ✓ src/features/beds/beds.test.ts > bed transitions > refuses an action that is not valid for the current status 1ms
+ ✓ src/features/beds/beds.test.ts > bed timing > measures minutes in the current status 0ms
+ ✓ src/features/beds/beds.test.ts > bed timing > flags cleaning that runs past the 45-minute target 0ms
+ ✓ src/features/beds/beds.test.ts > bed timing > counts the day of stay from admission, starting at day 1 0ms
+ ✓ src/features/beds/beds.test.ts > bed lists > counts beds by status 0ms
+ ✓ src/features/beds/beds.test.ts > bed lists > finds occupied beds expected to be discharged today 0ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > signs in staff, ignoring a link to another site 657ms
+ ✓ src/features/staff/roles.test.ts > roles > lists every role and module 2ms
+ ✓ src/features/staff/roles.test.ts > roles > matches the access table for admin 1ms
+ ✓ src/features/staff/roles.test.ts > roles > matches the access table for doctor 0ms
+ ✓ src/features/staff/roles.test.ts > roles > matches the access table for nurse 0ms
+ ✓ src/features/staff/roles.test.ts > roles > matches the access table for bloodBank 0ms
+ ✓ src/features/staff/roles.test.ts > roles > matches the access table for pharmacist 0ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > stock maths > adds up every batch 2ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > stock maths > works out days of supply from average daily use, to one decimal 0ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > stock maths > needs a reorder at or below the reorder level 0ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > stock maths > finds the batch that expires first, skipping empty batches 0ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > stock maths > counts whole days until a date 0ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > filterMedicines > filters by flag 1ms
+ ✓ src/features/pharmacy/pharmacy.test.ts > filterMedicines > searches name and category, ignoring case 0ms
+ ✓ src/pages/staff/BedsPage.test.tsx > BedsPage > explains a conflict and shows the latest state when someone else changed the bed first 1008ms
+ ✓ src/pages/staff/BedsPage.test.tsx > BedsPage > filters by status 269ms
+ ✓ src/pages/staff/BedsPage.test.tsx > BedsPage > is view-only for doctors 102ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-11 pressing Enter in the password field submits the form 643ms
+ ✓ src/features/landing/schedule.test.ts > doctor schedule > lists each department once, sorted 2ms
+ ✓ src/features/landing/schedule.test.ts > doctor schedule > puts doctors who are in first, then orders by start time 0ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > signs in staff, ignoring a full URL 708ms
+ ✓ src/pages/LoginPage.test.tsx > LoginPage > links new patients to sign up 11ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-12 / LOGIN-N12 the password is sent exactly as typed; the email is trimmed 738ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-13 (ADAPTED) "Forgot your password?" explains how to get it reset 36ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-14 / TC-21 (ADAPTED) admin signs in to the staff workspace 686ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-14 / TC-21 (ADAPTED) doctor signs in to the staff workspace 740ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-14 / TC-21 (ADAPTED) nurse signs in to the staff workspace 705ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-14 / TC-21 (ADAPTED) bloodBank signs in to the staff workspace 674ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-14 / TC-21 (ADAPTED) pharmacist signs in to the staff workspace 770ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-14 (ADAPTED) a patient signs in to the public home page 753ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-17 the fields carry autofill hints for password managers 4ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-18 the button shows progress and can’t be pressed twice while signing in 718ms
+ □ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-23 coordinator signs in to emergency request entry (emergency requests are planned for Sprint 5)
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-29 after sign-in, staff return to the page they asked for 688ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-29 the return page must be on this site (no redirect to another website) 708ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: positive cases (TC) > TC-30 (ADAPTED) the login API returns the user and role; the session itself is a cookie, not a token 2ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N01 an unknown email gets the same generic message 751ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N02 a wrong password gets the same generic message 628ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N03 after too many failed attempts the account is locked for 15 minutes 737ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N04 an SQL-injection string is refused as a malformed email before reaching the server 475ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N05 a script typed into the form is shown as plain text, never run 641ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N06 empty email, empty password, or both, are each blocked before sending 843ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N07 (ADAPTED) a deactivated account gets the generic message (the account isn’t confirmed to exist) 721ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N14 oversized input is refused before anything is sent 203ms
+ ✓ src/qa/login.qa.test.tsx > Sign-in: negative cases (LOGIN-N) > LOGIN-N15 only email and password are sent: no role or hospital chosen by the browser 707ms
+
+ Test Files  25 passed (25)
+      Tests  189 passed | 1 todo (190)
+   Start at  07:44:07
+   Duration  19.80s (tests 47%, environment 38%, setup 7%, transform 4%, import 4%)
+
+Environment  jsdom was created 25 times · 30.78s total, 38% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

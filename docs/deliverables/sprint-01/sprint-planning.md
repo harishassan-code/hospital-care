@@ -40,6 +40,24 @@ Owners are assigned by the Scrum Master on the board.
 
 **Total:** 27 pts
 
+## Added mid-sprint (6 Oct)
+
+Built ahead of the backend, using sample data, after the team widened the direction to a hospital template
+with staff and patient sides (still to be approved by the Product Owner). Labelled `added mid-sprint` on the board so the burndown shows the scope increase.
+These count as Done once they reach `main` at the Friday integration.
+
+| Issue | Title | Points | Owner |
+|---|---|---|---|
+| #72 | Public landing page with live ER status and today's doctors | 5 | Haris |
+| #73 | Log in and patient sign-up pages (UI) | 3 | Haris |
+| #74 | Staff workspace shell with preview roles | 3 | Haris |
+| #75 | Staff overview dashboard (UI) | 5 | Haris |
+| #76 | Bed board page (UI) | 5 | Haris |
+| #77 | Blood bank page (UI) | 5 | Haris |
+| #78 | Pharmacy stock page (UI) | 3 | Haris |
+
+**Added:** 29 pts · **Sprint 1 total now:** 58 pts (27 at planning + #69 staging, 2 pts, + 29 added)
+
 ## Risks and dependencies
 - **Docker on Windows:** some members may not be able to run Docker Desktop. Option B (venv + SQLite) in the README is the fallback.
 - **ERD blocks Sprint 2:** the shared Resource model and hospital models depend on it, so it must be reviewed by Thursday.

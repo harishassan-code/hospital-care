@@ -1,0 +1,201 @@
+.mono {
+  font-family: var(--font-mono);
+}
+
+.note {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.filters {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ── Stock grid ────────────────────────────────────────── */
+
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.grid th,
+.grid td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.grid thead th {
+  border-bottom: 2px solid var(--ink);
+}
+
+.grid tbody th {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.groupHead {
+  font-family: var(--font-mono);
+}
+
+.cell {
+  min-width: 5rem;
+}
+
+.cell[data-level='critical'],
+.cell[data-level='low'] {
+  background: color-mix(in srgb, var(--status-warning) 7%, var(--surface));
+}
+
+.count {
+  display: block;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.minimum {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+/* ── Storage guide ─────────────────────────────────────── */
+
+.guide {
+  display: grid;
+  margin: 0;
+}
+
+.guideRow {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.guideRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.guideRow dt {
+  font-weight: 700;
+}
+
+.guideRow dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.handling {
+  color: var(--ink-muted);
+}
+
+/* ── Compatibility finder ──────────────────────────────── */
+
+.finderControls {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.selectField {
+  display: grid;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.selectField select {
+  justify-self: start;
+  min-width: 10rem;
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+}
+
+.finderTotal {
+  font-size: var(--text-lg);
+}
+
+.donors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.donor {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+}
+
+.donor strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+}
+
+.donor[data-same='true'] {
+  border-color: var(--line-portal);
+}
+
+.preferred {
+  font-weight: 700;
+  color: var(--line-portal);
+}
+
+.disclaimer {
+  padding: var(--space-2) var(--space-3);
+  background: var(--wall);
+  border-left: var(--stripe) solid var(--sign);
+  font-size: var(--text-sm);
+}
+
+/* ── Unit list ─────────────────────────────────────────── */
+
+.units {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.units th {
+  text-align: left;
+  color: var(--ink-muted);
+  border-bottom: 2px solid var(--rule);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  white-space: nowrap;
+}
+
+.units td {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+.more {
+  justify-self: start;
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  font-weight: 700;
+  cursor: pointer;
+}

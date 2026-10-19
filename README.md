@@ -53,6 +53,8 @@ docker compose up --build
 - API: http://localhost:8000/api/health/
 - Django admin: http://localhost:8000/admin/ (create a user with
   `docker compose exec backend python manage.py createsuperuser`)
+- Demo data and a login per role: `docker compose exec backend python manage.py seed_demo`
+  (see the [API reference](docs/architecture/api.md))
 
 ### Option B: Without Docker
 
@@ -61,9 +63,10 @@ Backend (Python 3.13+). Without `DATABASE_URL` it falls back to SQLite, which is
 ```bash
 cd backend
 python -m venv .venv
-.venv/Scripts/activate          # Windows (Git Bash: source .venv/Scripts/activate) · macOS/Linux: source .venv/bin/activate
+.venv\Scripts\Activate.ps1      # Windows PowerShell (Git Bash: source .venv/Scripts/activate) · macOS/Linux: source .venv/bin/activate
 pip install -r requirements-dev.txt
 python manage.py migrate
+python manage.py seed_demo      # 3 demo hospitals with wards and beds, blood, medicines, doctors, one login per role
 python manage.py runserver
 ```
 
@@ -74,6 +77,24 @@ cd frontend
 npm install
 npm run dev
 ```
+
+### Signing in
+
+Open http://localhost:5173/login and use one of the demo accounts created by `seed_demo`. All are synthetic, with
+the password `CityCare-demo-1`. Staff work at CityCare General Hospital.
+
+| Role | Email |
+|---|---|
+| Admin (manages users, roles and every hospital) | `admin@demo.citycare.pk` |
+| Doctor | `doctor@demo.citycare.pk` |
+| Nurse | `nurse@demo.citycare.pk` |
+| Blood bank | `bloodbank@demo.citycare.pk` |
+| Pharmacist | `pharmacist@demo.citycare.pk` |
+| Patient | `patient@demo.citycare.pk` |
+
+Staff land in the staff workspace at `/staff` and see only the modules their role allows; patients land on the
+home page. Demo data only: never run `seed_demo` against a database with real patients. The frontend talks to the
+API at `VITE_API_URL` (default `http://localhost:8000/api`), so both servers must be running.
 
 ### Checks to run before pushing (CI runs the same ones)
 

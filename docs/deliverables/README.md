@@ -14,6 +14,7 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 | Working agreement, DoR, DoD | [scrum/working-agreement.md](../scrum/working-agreement.md) | ✅ Done |
 | Architecture & ERD | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
 | UI wireframes | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
+| Test report: Authentication & Role-Based Access module (class assignment) | [testing/authentication-test-report.md](../testing/authentication-test-report.md) | ✅ Done |
 | Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review | ⏳ Ongoing |
 | Final report & presentation | `final/` | ⏳ Sprint 9 |
 
@@ -35,7 +36,8 @@ Created during the Friday ceremonies:
 
 ## Friday checklist (Scrum Master)
 
-1. Before 22:00: screenshot the sprint board and the Insights burndown/burn-up chart for the sprint.
+1. Before 22:00: run the weekly integration (`CONTRIBUTING.md` §5), then screenshot the sprint board and the
+   Insights burndown/burn-up chart for the sprint.
 2. Review: fill in `sprint-NN/sprint-review.md` (demoed items, accepted/rejected, PO feedback, velocity).
 3. Retro: fill in `sprint-NN/retrospective.md` (went well / to improve / action items with owners).
 4. Planning: create `sprint-(NN+1)/sprint-planning.md` (goal, capacity, committed items, points).

@@ -1,0 +1,58 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.main {
+  padding-bottom: var(--space-8);
+}
+
+.container {
+  width: var(--page-width);
+  margin-inline: auto;
+}
+
+.heroHead {
+  padding: var(--space-8) 0 var(--space-6);
+}
+
+.title {
+  max-width: 14ch;
+  font-size: var(--text-display);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+}
+
+.note {
+  padding-block: var(--space-4);
+  color: var(--ink-muted);
+}
+
+.note a {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--line-emergency);
+}
+
+.updated {
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 59.99rem) {
+  /* The sign runs edge to edge on small screens. */
+  .container {
+    width: 100%;
+  }
+
+  .heroHead,
+  .note,
+  .container > section {
+    padding-inline: var(--space-4);
+  }
+
+  .heroHead {
+    padding-top: var(--space-7);
+  }
+}

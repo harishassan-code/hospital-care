@@ -1,0 +1,32 @@
+/* Page-level layout shared by staff pages. */
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.split {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-4);
+}
+
+.note {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 75rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  }
+}

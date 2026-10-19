@@ -1,0 +1,53 @@
+.destination {
+  scroll-margin-top: var(--space-4);
+}
+
+.approach {
+  height: var(--space-8);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 3.5rem;
+  font-size: var(--text-2xl);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The line's terminus: a square plate the floor line runs into. */
+.plate {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background: var(--c);
+  margin-left: -2px;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-6);
+  padding-top: var(--space-3);
+}
+
+.lede {
+  color: var(--ink-muted);
+  font-size: var(--text-lg);
+}
+
+@media (max-width: 59.99rem) {
+  .approach {
+    height: var(--space-7);
+  }
+
+  .destination > :not(:first-child) {
+    border-left: var(--stripe) solid var(--c);
+    padding-left: var(--space-4);
+  }
+
+  .plate {
+    display: none;
+  }
+}

@@ -1,0 +1,54 @@
+import { apiGet, apiPost } from './client'
+
+export type BedStatus = 'occupied' | 'reserved' | 'cleaning' | 'free' | 'outOfService'
+export type BedType = 'icu' | 'emergency' | 'general' | 'isolation' | 'nicu'
+export type Isolation = 'contact' | 'droplet' | 'airborne'
+/** A ward's code, e.g. 'icu'. Wards are added per hospital, so any string. */
+export type WardId = string
+
+export interface Ward {
+  id: WardId
+  name: string
+  /** What kind of care the ward gives, e.g. "Intensive care". */
+  kind: string
+}
+
+/** Only what a bed board needs: no names, so the board can be shown on a ward screen. */
+export interface Patient {
+  initials: string
+  age: number
+  sex: 'F' | 'M'
+}
+
+export interface Bed {
+  id: string
+  ward: WardId
+  label: string
+  /** What the bed is equipped for. */
+  type: BedType
+  status: BedStatus
+  /** ISO time the bed entered its current status. */
+  statusSince: string
+  patient?: Patient
+  admittedAt?: string
+  /** Local calendar date "YYYY-MM-DD". */
+  expectedDischarge?: string
+  isolation?: Isolation
+}
+
+export interface BedBoard {
+  wards: Ward[]
+  beds: Bed[]
+}
+
+export type BedAction = 'discharge' | 'markReady' | 'reserve' | 'cancelReservation' | 'outOfService' | 'returnToService'
+
+/** Every ward and bed. GET /api/beds/ (beds: view). */
+export function getBedBoard(): Promise<BedBoard> {
+  return apiGet<BedBoard>('/beds/')
+}
+
+/** Apply a lifecycle action; returns the bed as saved. 409 if the move isn't allowed any more. */
+export function postBedAction(bedId: string, action: BedAction): Promise<Bed> {
+  return apiPost<Bed>(`/beds/${encodeURIComponent(bedId)}/actions/`, { action })
+}

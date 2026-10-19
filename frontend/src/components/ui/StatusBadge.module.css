@@ -1,0 +1,29 @@
+/* Label text stays in ink; only the icon carries the status colour. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.icon {
+  flex: none;
+}
+
+.ok .icon {
+  color: var(--status-ok);
+}
+
+.warning .icon {
+  color: var(--status-warning);
+}
+
+.critical .icon {
+  color: var(--status-critical);
+}
+
+.neutral .icon {
+  color: var(--ink-muted);
+}
