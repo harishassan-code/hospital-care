@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type { User } from '../api/auth'
 import type { BedAction, BedBoard } from '../api/beds'
+import { COMPONENTS, type BloodUnitInput } from '../api/blood'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { PublicStatus } from '../api/publicStatus'
 import type { UserSummary } from '../api/users'
@@ -93,6 +94,7 @@ type StaffApiOptions = {
 export function mockStaffApi({ role, erDown = false, board: customBoard, publicStatus, networkDown = false }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
+  const units = sampleBloodUnits(now)
   const hospitals = sampleHospitals()
   const users = sampleUsers()
   const gate = (module: Module, reply: () => Reply): Route => () =>
@@ -115,7 +117,21 @@ export function mockStaffApi({ role, erDown = false, board: customBoard, publicS
     'POST /auth/logout/': { status: 204 },
     'GET /public/status/': erDown ? fail(503) : ok(publicStatus ?? samplePublicStatus(now)),
     'GET /beds/': gate('beds', () => ok(board)),
-    'GET /blood/units/': gate('blood', () => ok(sampleBloodUnits(now))),
+    'GET /blood/units/': gate('blood', () => ok(units)),
+    'POST /blood/units/': edit('blood', ({ body }) => {
+      const input = body as BloodUnitInput
+      if (units.some((u) => u.id === input.id)) {
+        return fail(400, { id: ['A unit with this ID already exists.'] })
+      }
+      const shelfLifeDays = COMPONENTS.find((c) => c.id === input.component)!.shelfLifeDays
+      const created = {
+        ...input,
+        status: 'quarantined' as const,
+        expiresAt: new Date(new Date(input.collectedAt).getTime() + shelfLifeDays * 86_400_000).toISOString(),
+      }
+      units.push(created)
+      return { status: 201, body: created }
+    }),
     'GET /pharmacy/stock/': gate('pharmacy', () => ok(sampleMedicines(now))),
     'POST /beds/:id/actions/': ({ params, body }) => {
       if (!role || role === 'patient' || !canEdit(role, 'beds')) return fail(403)

@@ -5,7 +5,7 @@ import styles from './Form.module.css'
 type TextFieldProps = FieldProps & {
   value: string
   onChange: (value: string) => void
-  type?: 'text' | 'email' | 'tel'
+  type?: 'text' | 'email' | 'tel' | 'date'
   autoComplete?: string
   inputMode?: 'decimal' | 'text'
 }

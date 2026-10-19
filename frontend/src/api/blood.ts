@@ -1,4 +1,4 @@
-import { apiGet } from './client'
+import { apiGet, apiPost } from './client'
 
 export type BloodGroup = 'O-' | 'O+' | 'A-' | 'A+' | 'B-' | 'B+' | 'AB-' | 'AB+'
 export type Component = 'redCells' | 'plasma' | 'platelets' | 'cryo'
@@ -42,4 +42,18 @@ export const MINIMUM_STOCK: Record<Component, Record<BloodGroup, number>> = {
 /** Every unit in the blood bank; past-expiry units come back as "expired". GET /api/blood/units/ (blood: view). */
 export function getBloodUnits(): Promise<BloodUnit[]> {
   return apiGet<BloodUnit[]>('/blood/units/')
+}
+
+export interface BloodUnitInput {
+  id: string
+  group: BloodGroup
+  component: Component
+  /** ISO timestamp. */
+  collectedAt: string
+  location: string
+}
+
+/** Registers a unit; the server defaults its expiry from the component's shelf life. POST /api/blood/units/ (blood: edit). */
+export function createBloodUnit(input: BloodUnitInput): Promise<BloodUnit> {
+  return apiPost<BloodUnit>('/blood/units/', input)
 }
