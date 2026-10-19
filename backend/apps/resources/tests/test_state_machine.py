@@ -40,6 +40,7 @@ UNIT_MOVES = [
     (U.QUARANTINED, "expire", U.EXPIRED),
     (U.AVAILABLE, "expire", U.EXPIRED),
     (U.RESERVED, "expire", U.EXPIRED),
+    (U.QUARANTINED, "discard", U.DISCARDED),  # Sprint 3, #18: a screening test failed
 ]
 
 
@@ -60,7 +61,7 @@ def test_every_status_action_pair_is_allowed_or_refused_exactly_as_listed(machin
 
 
 def test_terminal_blood_statuses_have_no_way_out():
-    for status in (U.ISSUED, U.EXPIRED):
+    for status in (U.ISSUED, U.EXPIRED, U.DISCARDED):
         for action in BLOOD_UNIT_LIFECYCLE.actions:
             with pytest.raises(TransitionNotAllowed):
                 BLOOD_UNIT_LIFECYCLE.next(status, action)

@@ -17,7 +17,16 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
-from apps.blood.models import BloodUnit, Component, UnitStatus
+from apps.blood.models import (
+    REQUIRED_TESTS,
+    AppointmentStatus,
+    BloodUnit,
+    Component,
+    DonationAppointment,
+    Donor,
+    TestResult,
+    UnitStatus,
+)
 from apps.emergencies.models import EmergencyStatus, ErStatus
 from apps.hospitals.models import (
     Bed,
@@ -502,7 +511,9 @@ class Command(BaseCommand):
         if reset:
             models = (
                 Bed,
+                DonationAppointment,
                 BloodUnit,
+                Donor,
                 Ward,
                 Department,
                 StorageLocation,
@@ -525,6 +536,9 @@ class Command(BaseCommand):
         if not BloodUnit.objects.exists():
             self.seed_blood(rand, now, main)
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
+        if not Donor.objects.exists():
+            # Own random stream, so adding donors doesn't change any of the data seeded before Sprint 3.
+            self.seed_donors(random.Random(seed * 1000), now, main)
         if not Medicine.objects.exists():
             self.seed_pharmacy(now)
         if not DoctorShift.objects.exists():
@@ -667,6 +681,69 @@ class Command(BaseCommand):
                 )
             )
         BloodUnit.objects.bulk_create(units)
+
+    def seed_donors(self, rand: random.Random, now, hospital: Hospital, count=60):
+        """Sprint 3: synthetic donors, units traced to them, screening results that match each unit's status,
+        a couple of deferred donors and a few upcoming appointments."""
+        first = ["Ahmed", "Sana", "Bilal", "Hira", "Usman", "Ayesha", "Fahad", "Mahnoor", "Zain", "Iqra"]
+        last = ["Khan", "Ahmed", "Siddiqui", "Raza", "Qureshi", "Malik", "Shaikh", "Hussain", "Ali", "Baig"]
+        donors = Donor.objects.bulk_create(
+            Donor(
+                code=f"DNR-{i:05d}",
+                hospital=hospital,
+                full_name=f"{rand.choice(first)} {rand.choice(last)} (demo)",
+                blood_group=weighted(rand, GROUP_SHARE),
+                phone=f"0300 {rand.randint(1_000_000, 9_999_999)}",
+            )
+            for i in range(1, count + 1)
+        )
+        Donor.objects.filter(code="DNR-00003").update(
+            deferral_reason="Low haemoglobin at screening",
+            deferred_until=timezone.localdate(now) + timedelta(days=30),
+        )
+        Donor.objects.filter(code="DNR-00007").update(
+            deferral_reason="Recent tattoo", deferred_until=timezone.localdate(now) + timedelta(days=120)
+        )
+        by_group = {}
+        for donor in donors:
+            by_group.setdefault(donor.blood_group, []).append(donor)
+
+        # Link about a third of the units, one donor per collection day and never twice within the interval.
+        last_given: dict[int, object] = {}
+        for unit in BloodUnit.objects.filter(hospital=hospital).order_by("collected_at"):
+            if rand.random() > 0.35 or unit.group not in by_group:
+                continue
+            donor = rand.choice(by_group[unit.group])
+            previous = last_given.get(donor.pk)
+            if previous is None or unit.collected_at - previous >= timedelta(days=60):
+                unit.donor = donor
+                unit.save(update_fields=["donor"])
+                last_given[donor.pk] = unit.collected_at
+
+        # Every unit that left quarantine passed all tests; quarantined ones are part-way through.
+        results = []
+        for unit in BloodUnit.objects.filter(hospital=hospital):
+            done = (
+                REQUIRED_TESTS
+                if unit.status != UnitStatus.QUARANTINED
+                else REQUIRED_TESTS[: rand.randint(0, 3)]
+            )
+            results += [TestResult(unit=unit, test=test, passed=True) for test in done]
+        TestResult.objects.bulk_create(results)
+
+        start = timezone.localtime(now).replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(
+            days=1
+        )
+        free = [d for d in donors if d.code not in ("DNR-00003", "DNR-00007") and d.pk not in last_given][:6]
+        DonationAppointment.objects.bulk_create(
+            DonationAppointment(
+                donor=d,
+                hospital=hospital,
+                starts_at=start + timedelta(minutes=30 * i),
+                status=AppointmentStatus.BOOKED,
+            )
+            for i, d in enumerate(free)
+        )
 
     def seed_pharmacy(self, now):
         today: date = timezone.localdate(now)

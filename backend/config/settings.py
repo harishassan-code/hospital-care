@@ -121,3 +121,9 @@ if not DEBUG:
     CSRF_COOKIE_SAMESITE = "None"
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Blood bank rules (Sprint 3). Each can be overridden with an environment variable.
+BLOOD_NEAR_EXPIRY_DAYS = int(os.environ.get("BLOOD_NEAR_EXPIRY_DAYS", "3"))  # story #19
+BLOOD_LOW_STOCK_UNITS = int(os.environ.get("BLOOD_LOW_STOCK_UNITS", "5"))  # per group and component
+BLOOD_MIN_DONATION_INTERVAL_DAYS = int(os.environ.get("BLOOD_MIN_DONATION_INTERVAL_DAYS", "56"))  # story #21
+BLOOD_APPOINTMENT_SLOT_MINUTES = int(os.environ.get("BLOOD_APPOINTMENT_SLOT_MINUTES", "30"))  # story #22
