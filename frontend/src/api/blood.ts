@@ -2,7 +2,8 @@ import { apiGet, apiPost } from './client'
 
 export type BloodGroup = 'O-' | 'O+' | 'A-' | 'A+' | 'B-' | 'B+' | 'AB-' | 'AB+'
 export type Component = 'redCells' | 'plasma' | 'platelets' | 'cryo'
-export type UnitStatus = 'quarantined' | 'available' | 'reserved' | 'issued' | 'expired'
+export type UnitStatus = 'quarantined' | 'available' | 'reserved' | 'issued' | 'expired' | 'discarded'
+export type ScreeningTest = 'hiv' | 'hbv' | 'hcv' | 'syphilis' | 'malaria'
 
 export interface BloodUnit {
   /** Donation identification number in ISBT 128 layout: facility, year, sequence. */
@@ -16,6 +17,15 @@ export interface BloodUnit {
 }
 
 export const BLOOD_GROUPS: readonly BloodGroup[] = ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
+
+/** Mandatory screening for every unit (story #18). Mirrors ScreeningTest in backend/apps/blood/models.py. */
+export const REQUIRED_TESTS: readonly { id: ScreeningTest; label: string }[] = [
+  { id: 'hiv', label: 'HIV' },
+  { id: 'hbv', label: 'Hepatitis B' },
+  { id: 'hcv', label: 'Hepatitis C' },
+  { id: 'syphilis', label: 'Syphilis' },
+  { id: 'malaria', label: 'Malaria' },
+]
 
 /** Shelf life and storage per component. Configurable per hospital; these are common defaults. */
 export const COMPONENTS: readonly {
@@ -56,4 +66,35 @@ export interface BloodUnitInput {
 /** Registers a unit; the server defaults its expiry from the component's shelf life. POST /api/blood/units/ (blood: edit). */
 export function createBloodUnit(input: BloodUnitInput): Promise<BloodUnit> {
   return apiPost<BloodUnit>('/blood/units/', input)
+}
+
+export interface TestResult {
+  test: ScreeningTest
+  passed: boolean
+  reason: string
+  recordedAt: string
+}
+
+export interface BloodUnitDetail extends BloodUnit {
+  donorId: string | null
+  tests: TestResult[]
+  /** Required tests not yet recorded as passed. Empty once the unit is released or discarded. */
+  missingTests: ScreeningTest[]
+}
+
+/** The unit with its screening results. GET /api/blood/units/<id>/ (blood: view). */
+export function getBloodUnit(id: string): Promise<BloodUnitDetail> {
+  return apiGet<BloodUnitDetail>(`/blood/units/${encodeURIComponent(id)}/`)
+}
+
+/**
+ * Records one screening result on a quarantined unit (story #18). A failed test discards the unit with
+ * `reason`; once every required test has passed the unit is released to available — both automatic.
+ * POST /api/blood/units/<id>/tests/ (blood: edit).
+ */
+export function recordTest(
+  id: string,
+  input: { test: ScreeningTest; passed: boolean; reason?: string },
+): Promise<BloodUnitDetail> {
+  return apiPost<BloodUnitDetail>(`/blood/units/${encodeURIComponent(id)}/tests/`, input)
 }

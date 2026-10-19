@@ -8,6 +8,7 @@ export const UNIT_STATUS_LABEL: Record<UnitStatus, string> = {
   reserved: 'Reserved',
   issued: 'Issued',
   expired: 'Expired',
+  discarded: 'Discarded',
 }
 
 export const COMPONENT_LABEL = Object.fromEntries(COMPONENTS.map((c) => [c.id, c.label])) as Record<Component, string>

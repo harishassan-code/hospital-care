@@ -244,3 +244,51 @@
 .back {
   font-weight: 700;
 }
+
+/* ── Screening panel ───────────────────────────────────── */
+
+.screening {
+  margin-top: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.testList {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.testRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.testActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.testActions > button {
+  width: auto;
+}
+
+.failReason {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.failReason > button {
+  width: auto;
+}

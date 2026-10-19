@@ -8,7 +8,7 @@ import { COMPONENT_LABEL, formatGroup, sortFefo, UNIT_STATUS_LABEL } from './blo
 import styles from './Blood.module.css'
 
 const PAGE = 25
-const STATUSES: UnitStatus[] = ['available', 'quarantined', 'reserved', 'issued', 'expired']
+const STATUSES: UnitStatus[] = ['available', 'quarantined', 'reserved', 'issued', 'expired', 'discarded']
 
 function Expiry({ iso, now }: { iso: string; now: Date }) {
   const hours = hoursUntil(iso, now)

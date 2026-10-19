@@ -30,8 +30,8 @@ export interface StaffState {
   attention: AttentionItem[]
   /** Saves a bed status change on the server, then shows the bed as saved. */
   updateBed: (bedId: string, action: BedAction) => Promise<BedActionResult>
-  /** Adds a newly registered unit to the loaded data, so the blood page shows it without a refetch. */
-  addUnit: (unit: BloodUnit) => void
+  /** Adds a newly registered unit, or updates an existing one by id (e.g. after a screening result), in the loaded data. */
+  upsertUnit: (unit: BloodUnit) => void
   signOut: () => Promise<void>
 }
 
