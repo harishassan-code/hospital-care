@@ -97,6 +97,24 @@
   text-decoration: none;
 }
 
+/* A button that looks like the outlined header link (Log out). Stays visible on small screens. */
+.navButton {
+  padding: 0 var(--space-4);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.navButton:hover {
+  background: var(--ink);
+  color: var(--surface);
+  text-decoration: none;
+}
+
 /* ── Footer ────────────────────────────────────────────── */
 
 .footer {

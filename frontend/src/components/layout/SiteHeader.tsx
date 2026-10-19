@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom'
-import { hospital } from '../../config/hospital'
-import styles from './Site.module.css'
+import { Link } from "react-router-dom";
+import { hospital } from "../../config/hospital";
+import { useCurrentUser } from "../../features/auth/useCurrentUser";
+import styles from "./Site.module.css";
 
 function PhoneIcon() {
   return (
@@ -10,10 +11,12 @@ function PhoneIcon() {
         fill="currentColor"
       />
     </svg>
-  )
+  );
 }
 
 export function SiteHeader() {
+  const { user, signOut } = useCurrentUser();
+
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
@@ -24,20 +27,49 @@ export function SiteHeader() {
           <span className={styles.brandName}>{hospital.name}</span>
         </Link>
         <nav className={styles.headerNav} aria-label="Main">
-          <a className={styles.emergency} href={`tel:${hospital.emergencyNumber}`}>
+          <a
+            className={styles.emergency}
+            href={`tel:${hospital.emergencyNumber}`}
+          >
             <PhoneIcon />
             <span>
-              Emergency: <span className={styles.number}>{hospital.emergencyNumber}</span>
+              Emergency:{" "}
+              <span className={styles.number}>{hospital.emergencyNumber}</span>
             </span>
           </a>
-          <Link className={styles.navLink} to="/login">
-            Log in
-          </Link>
-          <Link className={`${styles.navLink} ${styles.navCta}`} to="/signup">
-            Create account
-          </Link>
+          {user ? (
+            <>
+              <span className={styles.navLink} role="status">
+                Signed in as <strong>{user.fullName}</strong>
+              </span>
+              {user.isStaff && (
+                <Link className={styles.navLink} to="/staff">
+                  Staff workspace
+                </Link>
+              )}
+              <button
+                type="button"
+                className={`${styles.navLink} ${styles.navButton}`}
+                onClick={signOut}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link className={styles.navLink} to="/login">
+                Log in
+              </Link>
+              <Link
+                className={`${styles.navLink} ${styles.navCta}`}
+                to="/signup"
+              >
+                Create account
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </header>
-  )
+  );
 }

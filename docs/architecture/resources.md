@@ -50,7 +50,7 @@ stateDiagram-v2
 
 Discharging also clears the patient details. Same table as `TRANSITIONS` in `frontend/src/features/beds/beds.ts`.
 
-### Blood unit lifecycle (proposed; Sprint 3 wires it to the API)
+### Blood unit lifecycle (Sprint 3)
 
 ```mermaid
 stateDiagram-v2
@@ -68,9 +68,11 @@ stateDiagram-v2
     discarded --> [*]
 ```
 
-`discarded` comes from #18 ("A failed test moves the unit to 'discarded' with a reason"). Sprint 3 adds it to
-`UnitStatus` and to `BLOOD_UNIT_LIFECYCLE`; it isn't in the code yet. A unit past its
-expiry date already *reads* as expired (`BloodUnit.effective_status`) before anyone records the `expire` move.
+A unit stays `quarantined` until every required screening test (HIV, hepatitis B, hepatitis C, syphilis,
+malaria) is recorded as passed; the last pass releases it to `available`. A failed test discards it with the
+reason (#18). Units past their expiry date are moved to `expired` by `expire_blood_units` and before the stock
+view is built (#19); until then they already *read* as expired (`BloodUnit.effective_status`). See
+[api.md](api.md#blood-bank-sprint-3) for the endpoints.
 
 ### Planned lifecycles (proposed)
 
