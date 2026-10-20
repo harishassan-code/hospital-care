@@ -24,10 +24,24 @@ recreate it (or move to a paid plan) before the final demo. Put this in the Spri
 ### Frontend on Vercel
 1. Sign in to Vercel with GitHub → **Add New → Project** → import `hospital-care`.
 2. **Root Directory:** `frontend` (Vite is detected automatically).
-3. Environment variable: `VITE_API_URL = https://<service>.onrender.com/api`
+3. Environment variable: `VITE_API_URL = /api`
 4. Deploy. Every PR also gets a **preview URL**, which is useful for reviewing UI changes.
 
-### Login across domains
-The frontend and API are on different domains, so before login ships (Sprint 1), the auth story must
-set `SESSION_COOKIE_SAMESITE="None"`, `SESSION_COOKIE_SECURE=True`, and the same for the CSRF
-cookie in non-debug settings. The alternative is token auth. Decide this in the login story.
+### How the two connect (one domain for the browser)
+The browser only ever talks to the Vercel site. `frontend/vercel.json` forwards every `/api/...` request to
+the Render API, so the session and CSRF cookies belong to the Vercel domain. That matters: the frontend
+reads the `csrftoken` cookie to send it back, and a page can't read a cookie set by another domain, so
+calling `onrender.com` directly would let you log in but refuse every change after that with **403 CSRF**.
+It also means no third-party cookies, so login works in Safari and on iPhones too.
+
+If Render gives the API a different address than `https://hospital-care-api.onrender.com`, change the
+`destination` in `frontend/vercel.json` to match.
+
+On Render, set `CSRF_TRUSTED_ORIGINS` (and `CORS_ALLOWED_ORIGINS`) to the Vercel URL, e.g.
+`https://hospital-care.vercel.app`.
+
+### Demo data
+The Render build runs `seed_demo` (it only adds data to empty tables), so staging has the demo hospitals,
+beds, blood units and one login per role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`,
+`patient@demo.citycare.pk`, password `CityCare-demo-1`). These accounts are public test logins: never put
+real patient data on staging.
