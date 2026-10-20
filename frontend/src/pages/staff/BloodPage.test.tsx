@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { at } from '../../test/clock'
@@ -81,10 +81,67 @@ describe('BloodPage', () => {
     expect(await screen.findByText('A unit with this ID already exists.')).toBeInTheDocument()
   })
 
-  it('hides the register form from roles that can only view the blood bank', async () => {
+  it('hides the register form and screening panel from roles that can only view the blood bank', async () => {
     mockStaffApi({ role: 'doctor' })
     renderStaff('/staff/blood')
     await screen.findByRole('region', { name: 'Units' })
     expect(screen.queryByRole('button', { name: 'Register a unit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Screening' })).not.toBeInTheDocument()
+  })
+
+  async function registerUnit(id: string) {
+    await userEvent.click(await screen.findByRole('button', { name: 'Register a unit' }))
+    const form = within(screen.getByRole('region', { name: 'Register a unit' }))
+    await userEvent.type(form.getByLabelText('Unit ID'), id)
+    await userEvent.click(form.getByRole('button', { name: 'Register unit' }))
+    await screen.findByRole('button', { name: 'Register a unit' }) // form collapsed back
+  }
+
+  it('releases a unit to available once every screening test passes', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff('/staff/blood')
+    await registerUnit('G7731 26 888001')
+
+    const panel = within(await screen.findByRole('region', { name: 'Screening' }))
+    await userEvent.selectOptions(panel.getByLabelText('Unit to screen'), 'G7731 26 888001')
+
+    for (const label of ['HIV', 'Hepatitis B', 'Hepatitis C', 'Syphilis', 'Malaria']) {
+      const row = within(screen.getByText(label).closest('li')!)
+      await userEvent.click(row.getByRole('button', { name: 'Pass' }))
+      if (label !== 'Malaria') await row.findByText('Passed')
+    }
+
+    // A released unit leaves the screening queue — it's no longer offered in the picker.
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'G7731 26 888001' })).not.toBeInTheDocument())
+  })
+
+  it('discards a unit immediately when a screening test fails, with a reason', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff('/staff/blood')
+    await registerUnit('G7731 26 888002')
+
+    const panel = within(await screen.findByRole('region', { name: 'Screening' }))
+    await userEvent.selectOptions(panel.getByLabelText('Unit to screen'), 'G7731 26 888002')
+    const row = within(screen.getByText('HIV').closest('li')!)
+    await userEvent.click(row.getByRole('button', { name: 'Fail' }))
+    await userEvent.type(row.getByLabelText('Reason'), 'Reactive on initial screen')
+    await userEvent.click(row.getByRole('button', { name: 'Confirm fail' }))
+
+    const units = screen.getByRole('region', { name: 'Units' })
+    await userEvent.click(within(units).getByRole('button', { name: 'Discarded' }))
+    expect(within(units).getByText('G7731 26 888002')).toBeInTheDocument()
+  })
+
+  it('requires a reason before confirming a failed test', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff('/staff/blood')
+    await registerUnit('G7731 26 888003')
+
+    const panel = within(await screen.findByRole('region', { name: 'Screening' }))
+    await userEvent.selectOptions(panel.getByLabelText('Unit to screen'), 'G7731 26 888003')
+    const row = within(screen.getByText('HIV').closest('li')!)
+    await userEvent.click(row.getByRole('button', { name: 'Fail' }))
+    await userEvent.click(row.getByRole('button', { name: 'Confirm fail' }))
+    expect(await screen.findByText('Say why the test failed.')).toBeInTheDocument()
   })
 })

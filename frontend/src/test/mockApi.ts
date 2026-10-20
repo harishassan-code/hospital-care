@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 import type { User } from '../api/auth'
 import type { BedAction, BedBoard } from '../api/beds'
-import { COMPONENTS, type BloodUnitInput } from '../api/blood'
+import { COMPONENTS, REQUIRED_TESTS, type BloodUnit, type BloodUnitInput, type ScreeningTest, type TestResult } from '../api/blood'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { PublicStatus } from '../api/publicStatus'
 import type { UserSummary } from '../api/users'
@@ -110,6 +110,12 @@ export function mockStaffApi({ role, erDown = false, board: customBoard, publicS
   const view = allowed(canSee)
   const edit = allowed(canEdit)
   const findHospital = (id: string) => hospitals.find((h) => h.id === Number(id))
+  const unitTests = new Map<string, TestResult[]>()
+  const unitDetailBody = (unit: BloodUnit) => {
+    const tests = unitTests.get(unit.id) ?? []
+    const passed = new Set(tests.filter((t) => t.passed).map((t) => t.test))
+    return { ...unit, donorId: null, tests, missingTests: REQUIRED_TESTS.map((t) => t.id).filter((id) => !passed.has(id)) }
+  }
   let nextId = 100
 
   const fetchMock = mockApi({
@@ -132,6 +138,29 @@ export function mockStaffApi({ role, erDown = false, board: customBoard, publicS
       units.push(created)
       return { status: 201, body: created }
     }),
+    'GET /blood/units/:id/': ({ params }) => {
+      if (!role || role === 'patient' || !canSee(role, 'blood')) return fail(403)
+      const unit = units.find((u) => u.id === params.id)
+      return unit ? ok(unitDetailBody(unit)) : fail(404)
+    },
+    'POST /blood/units/:id/tests/': ({ params, body }) => {
+      if (!role || role === 'patient' || !canEdit(role, 'blood')) return fail(403)
+      const unit = units.find((u) => u.id === params.id)
+      if (!unit) return fail(404)
+      if (unit.status !== 'quarantined') {
+        return fail(409, { detail: `Tests can only be recorded on quarantined units; this one is ${unit.status}.` })
+      }
+      const { test, passed, reason } = body as { test: ScreeningTest; passed: boolean; reason?: string }
+      const existing = unitTests.get(unit.id) ?? []
+      if (existing.some((t) => t.test === test)) return fail(400, { test: ['This test is already recorded for this unit.'] })
+      if (!passed && !(reason ?? '').trim()) return fail(400, { reason: ['Say why the test failed.'] })
+      const updated = [...existing, { test, passed, reason: passed ? '' : (reason ?? ''), recordedAt: new Date().toISOString() }]
+      unitTests.set(unit.id, updated)
+      const passedTests = new Set(updated.filter((t) => t.passed).map((t) => t.test))
+      if (!passed) unit.status = 'discarded'
+      else if (REQUIRED_TESTS.every((t) => passedTests.has(t.id))) unit.status = 'available'
+      return { status: 201, body: unitDetailBody(unit) }
+    },
     'GET /pharmacy/stock/': gate('pharmacy', () => ok(sampleMedicines(now))),
     'POST /beds/:id/actions/': ({ params, body }) => {
       if (!role || role === 'patient' || !canEdit(role, 'beds')) return fail(403)

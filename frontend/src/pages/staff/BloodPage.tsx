@@ -1,5 +1,6 @@
 import { CompatibilityFinder } from '../../features/blood/CompatibilityFinder'
 import { RegisterUnitForm } from '../../features/blood/RegisterUnitForm'
+import { ScreeningPanel } from '../../features/blood/ScreeningPanel'
 import { StockGrid } from '../../features/blood/StockGrid'
 import { StorageGuide } from '../../features/blood/StorageGuide'
 import { UnitTable } from '../../features/blood/UnitTable'
@@ -9,7 +10,7 @@ import { StaffDataState } from './StaffDataState'
 import styles from './StaffPages.module.css'
 
 export default function BloodPage() {
-  const { data, now, role, addUnit } = useStaff()
+  const { data, now, role, upsertUnit } = useStaff()
   if (!data) return <StaffDataState />
 
   return (
@@ -20,7 +21,12 @@ export default function BloodPage() {
         <StorageGuide />
       </div>
       <UnitTable units={data.units} now={now} />
-      {canEdit(role, 'blood') && <RegisterUnitForm now={now} onRegistered={addUnit} />}
+      {canEdit(role, 'blood') && (
+        <>
+          <ScreeningPanel units={data.units} onUpdated={upsertUnit} />
+          <RegisterUnitForm now={now} onRegistered={upsertUnit} />
+        </>
+      )}
     </div>
   )
 }

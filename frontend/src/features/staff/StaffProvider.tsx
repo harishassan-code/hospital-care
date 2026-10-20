@@ -120,8 +120,16 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     navigate('/login')
   }, [navigate])
 
-  const addUnit = useCallback((unit: BloodUnit) => {
-    setData((current) => current && { ...current, units: [...current.units, unit] })
+  const upsertUnit = useCallback((unit: BloodUnit) => {
+    setData(
+      (current) =>
+        current && {
+          ...current,
+          units: current.units.some((u) => u.id === unit.id)
+            ? current.units.map((u) => (u.id === unit.id ? unit : u))
+            : [...current.units, unit],
+        },
+    )
   }, [])
 
   const attention = useMemo(
@@ -130,8 +138,8 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   )
 
   const value = useMemo<StaffState>(
-    () => ({ user, role, now, data, failed, attention, updateBed, addUnit, signOut }),
-    [user, role, now, data, failed, attention, updateBed, addUnit, signOut],
+    () => ({ user, role, now, data, failed, attention, updateBed, upsertUnit, signOut }),
+    [user, role, now, data, failed, attention, updateBed, upsertUnit, signOut],
   )
 
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>
