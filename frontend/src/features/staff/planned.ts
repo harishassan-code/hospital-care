@@ -4,7 +4,6 @@
  */
 export const PLANNED: readonly { path: string; label: string; sprint: number; issues: string }[] = [
   { path: '/staff/donors', label: 'Donors', sprint: 3, issues: '#20–#22' },
-  { path: '/staff/equipment', label: 'Equipment', sprint: 4, issues: '#26–#27' },
   { path: '/staff/operating-rooms', label: 'Operating rooms', sprint: 4, issues: '#28–#29' },
   { path: '/staff/emergencies', label: 'Emergency requests', sprint: 5, issues: '#30–#36' },
   { path: '/staff/matching', label: 'Matching', sprint: 6, issues: '#37–#42' },
