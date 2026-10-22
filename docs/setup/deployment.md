@@ -29,13 +29,14 @@ recreate it (or move to a paid plan) before the final demo. Put this in the Spri
 
 ### How the two connect (one domain for the browser)
 The browser only ever talks to the Vercel site. `frontend/vercel.json` forwards every `/api/...` request to
-the Render API, so the session and CSRF cookies belong to the Vercel domain. That matters: the frontend
+the Render API (with a `routes` rule, which Vercel checks before serving the app, so the app's catch-all
+never answers `/api` instead), so the session and CSRF cookies belong to the Vercel domain. That matters: the frontend
 reads the `csrftoken` cookie to send it back, and a page can't read a cookie set by another domain, so
 calling `onrender.com` directly would let you log in but refuse every change after that with **403 CSRF**.
 It also means no third-party cookies, so login works in Safari and on iPhones too.
 
 If Render gives the API a different address than `https://hospital-care-api.onrender.com`, change the
-`destination` in `frontend/vercel.json` to match.
+`dest` of the `/api` route in `frontend/vercel.json` to match.
 
 On Render, set `CSRF_TRUSTED_ORIGINS` (and `CORS_ALLOWED_ORIGINS`) to the Vercel URL, e.g.
 `https://hospital-care.vercel.app`.
