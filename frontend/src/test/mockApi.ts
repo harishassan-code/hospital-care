@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { User } from '../api/auth'
 import type { BedAction, BedBoard } from '../api/beds'
 import { COMPONENTS, REQUIRED_TESTS, type BloodUnit, type BloodUnitInput, type ScreeningTest, type TestResult } from '../api/blood'
+import type { Equipment, EquipmentInput } from '../api/equipment'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { PublicStatus } from '../api/publicStatus'
 import type { UserSummary } from '../api/users'
@@ -91,12 +92,27 @@ type StaffApiOptions = {
   networkDown?: boolean
 }
 
+/** A few pieces of equipment across types and statuses (story #26). */
+export function sampleEquipment(now: Date): Equipment[] {
+  const at = now.toISOString()
+  const item = (id: number, identifier: string, type: Equipment['type'], status: Equipment['status'], location: string) =>
+    ({ id, identifier, type, status, location, name: '', statusSince: at, hospital: 'CityCare General Hospital' }) satisfies Equipment
+  return [
+    item(1, 'VENT-001', 'ventilator', 'inUse', 'ICU bay 1'),
+    item(2, 'VENT-002', 'ventilator', 'available', 'ICU bay 2'),
+    item(3, 'VENT-003', 'ventilator', 'maintenance', 'HDU'),
+    item(4, 'DEFIB-001', 'defibrillator', 'available', 'Emergency department'),
+    item(5, 'DIAL-001', 'dialysis', 'outOfService', 'Dialysis unit'),
+  ]
+}
+
 export function mockStaffApi({ role, erDown = false, board: customBoard, publicStatus, networkDown = false }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
   const units = sampleBloodUnits(now)
   const hospitals = sampleHospitals()
   const users = sampleUsers()
+  const equipment = sampleEquipment(now)
   const gate = (module: Module, reply: () => Reply): Route => () =>
     role && role !== 'patient' && canSee(role, module) ? reply() : fail(403)
   /** Like gate, but the reply sees the request, and `networkDown` fails it. Reads need view, writes need edit. */
@@ -186,6 +202,17 @@ export function mockStaffApi({ role, erDown = false, board: customBoard, publicS
     // Before /hospitals/:id/, which would otherwise match it.
     'GET /hospitals/capabilities/': view('hospitals', () => ok(sampleCapabilities)),
     'GET /hospitals/': view('hospitals', () => ok(hospitals)),
+    'GET /equipment/': view('equipment', () => ok(equipment)),
+    'POST /equipment/': edit('equipment', ({ body }) => {
+      const input = body as EquipmentInput
+      const tag = input.identifier.toUpperCase()
+      if (equipment.some((e) => e.identifier === tag)) {
+        return fail(400, { identifier: ['This asset tag is already registered in your hospital.'] })
+      }
+      const created: Equipment = { ...input, identifier: tag, id: nextId++, statusSince: now.toISOString(), hospital: 'CityCare General Hospital' }
+      equipment.push(created)
+      return { status: 201, body: created }
+    }),
     'POST /hospitals/': edit('hospitals', ({ body }) => {
       const input = body as HospitalInput
       if (hospitals.some((h) => h.name.toLowerCase() === input.name.toLowerCase())) {
