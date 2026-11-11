@@ -13,6 +13,7 @@ Built for the **Agile Software Project Management** course using Scrum, with 1-w
 | **Sprints** | [Milestones](../../milestones) · [Timeline](docs/scrum/timeline.md) |
 | **How we work** | [Working agreement](docs/scrum/working-agreement.md) · [Contributing](CONTRIBUTING.md) |
 | **Course deliverables** | [docs/deliverables](docs/deliverables/README.md) |
+| **AIDLC process** | [docs/aidlc](docs/aidlc/README.md) |
 | **Backlog snapshot** | [docs/product/backlog.md](docs/product/backlog.md) |
 | **Architecture** | [docs/architecture](docs/architecture/README.md) |
 | **Team** | [docs/scrum/team.md](docs/scrum/team.md) |
