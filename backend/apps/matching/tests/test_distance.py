@@ -48,4 +48,5 @@ def test_hospital_distance_between_two_hospitals_at_the_same_coordinates_is_zero
 def test_hospital_distance_uses_each_hospitals_own_coordinates(make_hospital):
     karachi = make_hospital(name="Karachi General", latitude="24.8607", longitude="67.0011")
     lahore = make_hospital(name="Lahore General", latitude="31.5204", longitude="74.3587")
-    assert hospital_distance(karachi, lahore) == pytest.approx(haversine_km(24.8607, 67.0011, 31.5204, 74.3587))
+    expected = haversine_km(24.8607, 67.0011, 31.5204, 74.3587)
+    assert hospital_distance(karachi, lahore) == pytest.approx(expected)
