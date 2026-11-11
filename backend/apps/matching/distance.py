@@ -23,7 +23,9 @@ def haversine_km(
     return EARTH_RADIUS_KM * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def estimated_travel_minutes(distance_km: float, average_speed_kmh: float = DEFAULT_AVERAGE_SPEED_KMH) -> float:
+def estimated_travel_minutes(
+    distance_km: float, average_speed_kmh: float = DEFAULT_AVERAGE_SPEED_KMH
+) -> float:
     """Simulated travel time in minutes: distance over an assumed average city driving speed."""
     return (distance_km / average_speed_kmh) * 60
 
