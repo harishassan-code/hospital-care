@@ -25,6 +25,10 @@ def render_service_name() -> str | None:
 
 def vercel_api_destination() -> str | None:
     config = json.loads((ROOT / "frontend" / "vercel.json").read_text())
+    # `routes` (checked before the app's files, so /api always reaches Render) or the older `rewrites`.
+    for rule in config.get("routes", []):
+        if rule.get("src", "").startswith("/api"):
+            return rule.get("dest", "")
     for rule in config.get("rewrites", []):
         if rule.get("source", "").startswith("/api"):
             return rule.get("destination", "")
