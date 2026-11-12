@@ -106,6 +106,29 @@ Appointment = { id: number, donorId: string, donorName: string, startsAt: string
 
 All four `BLOOD_*` settings can be changed with environment variables of the same name.
 
+## Equipment (Sprint 4)
+
+Critical equipment that can be located and shared (#26). Access: admin and nurse **edit**, doctor **view**; other
+roles 403. Staff see only their own hospital's equipment; every registration is audit-logged.
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| GET | `/equipment/?type=&status=&q=` | – | `Equipment[]` (`q` searches asset tag, make/model and location) |
+| POST | `/equipment/` | `{identifier, type, name?, location, status?}` | 201 `Equipment` |
+
+```ts
+Equipment = {
+  id: number, identifier: string,   // asset tag, stored upper-case, unique within a hospital (400 otherwise)
+  type: 'ventilator' | 'monitor' | 'defibrillator' | 'dialysis',
+  name: string, location: string,
+  status: 'available' | 'inUse' | 'maintenance' | 'outOfService',  // defaults to available
+  statusSince: string, hospital: string | null
+}
+```
+
+Changing status after registration is #27 (Equipment operational status); the lifecycle is already defined in
+`apps/equipment/models.py`.
+
 ## Demo data
 
 ```bash

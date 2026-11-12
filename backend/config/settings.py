@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.matching",
     "apps.transfers",
     "apps.pharmacy",
+    "apps.equipment",
     "apps.notifications",
     "apps.audit",
 ]

@@ -28,6 +28,7 @@ from apps.blood.models import (
     UnitStatus,
 )
 from apps.emergencies.models import EmergencyStatus, ErStatus
+from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
     BedStatus,
@@ -510,6 +511,7 @@ class Command(BaseCommand):
         now = timezone.now()
         if reset:
             models = (
+                Equipment,
                 Bed,
                 DonationAppointment,
                 BloodUnit,
@@ -536,6 +538,8 @@ class Command(BaseCommand):
         if not BloodUnit.objects.exists():
             self.seed_blood(rand, now, main)
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
+        if not Equipment.objects.exists():
+            self.seed_equipment(main)
         if not Donor.objects.exists():
             # Own random stream, so adding donors doesn't change any of the data seeded before Sprint 3.
             self.seed_donors(random.Random(seed * 1000), now, main)
@@ -743,6 +747,31 @@ class Command(BaseCommand):
                 status=AppointmentStatus.BOOKED,
             )
             for i, d in enumerate(free)
+        )
+
+    def seed_equipment(self, hospital: Hospital):
+        """Sprint 4 (#26): a small, fixed set of critical equipment in the main hospital."""
+        T, St = EquipmentType, EquipmentStatus
+        items = [
+            ("VENT-001", T.VENTILATOR, "Dräger Evita V500", "ICU bay 1", St.IN_USE),
+            ("VENT-002", T.VENTILATOR, "Dräger Evita V500", "ICU bay 2", St.IN_USE),
+            ("VENT-003", T.VENTILATOR, "Hamilton C6", "ICU bay 3", St.AVAILABLE),
+            ("VENT-004", T.VENTILATOR, "Hamilton C6", "HDU", St.MAINTENANCE),
+            ("VENT-005", T.VENTILATOR, "Hamilton T1 (transport)", "Emergency department", St.AVAILABLE),
+            ("MON-001", T.MONITOR, "Philips IntelliVue MX450", "HDU bed 1", St.IN_USE),
+            ("MON-002", T.MONITOR, "Philips IntelliVue MX450", "HDU bed 2", St.AVAILABLE),
+            ("MON-003", T.MONITOR, "Mindray BeneVision N12", "Medical A", St.AVAILABLE),
+            ("MON-004", T.MONITOR, "Mindray BeneVision N12", "Surgical B", St.OUT_OF_SERVICE),
+            ("DEFIB-001", T.DEFIBRILLATOR, "Zoll R Series", "Emergency department crash cart", St.AVAILABLE),
+            ("DEFIB-002", T.DEFIBRILLATOR, "Philips HeartStart XL+", "ICU crash cart", St.AVAILABLE),
+            ("DEFIB-003", T.DEFIBRILLATOR, "Zoll AED Plus", "Main entrance", St.AVAILABLE),
+            ("DIAL-001", T.DIALYSIS, "Fresenius 5008S", "Dialysis unit", St.IN_USE),
+            ("DIAL-002", T.DIALYSIS, "Fresenius 5008S", "Dialysis unit", St.AVAILABLE),
+            ("DIAL-003", T.DIALYSIS, "Nipro Surdial X", "ICU", St.MAINTENANCE),
+        ]
+        Equipment.objects.bulk_create(
+            Equipment(hospital=hospital, identifier=i, equipment_type=t, name=n, location=loc, status=st)
+            for i, t, n, loc, st in items
         )
 
     def seed_pharmacy(self, now):
