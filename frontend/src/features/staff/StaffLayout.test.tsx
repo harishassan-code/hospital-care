@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -75,7 +75,8 @@ describe('StaffLayout', () => {
     renderAt('/staff')
     expect(await screen.findByText('overview content')).toBeInTheDocument()
     expect(navLinks()).toEqual(['Overview', 'Emergencies', 'Pharmacy', 'Hospitals'])
-    expect(requested(fetchMock)).toContain('/api/pharmacy/stock/')
+    // Module data loads after the layout appears, so wait for it rather than racing it.
+    await waitFor(() => expect(requested(fetchMock)).toContain('/api/pharmacy/stock/'))
     expect(requested(fetchMock)).not.toContain('/api/beds/')
     expect(requested(fetchMock)).not.toContain('/api/blood/units/')
   })

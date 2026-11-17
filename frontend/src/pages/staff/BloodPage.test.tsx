@@ -241,8 +241,10 @@ describe('BloodPage reserved for cases (story #46)', () => {
     renderStaff('/staff/blood')
 
     const region = within(await panel())
+    // Wait for the list first: allocating elsewhere before it loads would leave DN-0001 out of it.
+    const allocate = await region.findByRole('button', { name: 'Allocate O− red cells DN-0001' })
     await allocateReservation(1) // allocated elsewhere; this page still lists it
-    await userEvent.click(await region.findByRole('button', { name: 'Allocate O− red cells DN-0001' }))
+    await userEvent.click(allocate)
 
     expect(await region.findByRole('alert')).toHaveTextContent('This reservation is already allocated.')
     expect(region.getAllByRole('listitem')).toHaveLength(3)
