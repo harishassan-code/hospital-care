@@ -101,8 +101,11 @@ stateDiagram-v2
     cancelled --> [*]
 ```
 
-**Reservation** (#43, #45). Created inside `transaction.atomic()` with `select_for_update()`. Expires after a
-configurable hold time and releases the resource.
+**Reservation** (#43, #45). Held, released and expired are built in #43: a hold is made inside `transaction.atomic()` with
+`select_for_update()`, expires after `RESERVATION_HOLD_MINUTES` and releases its resource (`cancelReservation`). Allocation
+(`allocated`) comes with #45. Each resource's own lifecycle carries the hold: blood `available` → `reserved`, beds `free`
+→ `reserved`, equipment and operating rooms `available` → `reserved` (and `reserved` → `inUse`). The API is in
+[api.md](api.md#stock-holds-43).
 
 ```mermaid
 stateDiagram-v2
@@ -135,7 +138,8 @@ stateDiagram-v2
 ```
 
 **Ambulance trip** (#51): dispatched → en route → arrived → completed.
-**Equipment** (#27): available ↔ in use; available → maintenance → available; any → out of service.
+**Equipment** (#27): available ↔ in use; available → maintenance → available; any → out of service. A hold (#43) takes
+available equipment to reserved and back, or from reserved to in use.
 
 ## Own-hospital rule (story 1.2)
 

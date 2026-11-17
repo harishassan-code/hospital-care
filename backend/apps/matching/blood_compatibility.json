@@ -1,0 +1,47 @@
+{
+  "_source": "docs/domain/blood-compatibility.md (the 'System rule' lines). Lifeblood's ABO choices are the source; this file is the stricter subset the software applies.",
+  "_doc": "For each component and recipient group, the donor groups that may give to that recipient, best first. An entry is a donor group code, or {\"group\": ..., \"rhFlag\": true} for an RhD-positive platelet offered to an RhD-negative recipient: allowed, but flagged for a clinician to arrange anti-D cover. Loaded and validated by backend/apps/matching/compatibility.py. Change the rules here, then update the doc.",
+  "_order": "The identical group comes first. Red cells and platelets then rank the same ABO group with the recipient's RhD sign first, then the other compatible ABO groups (A, then B), then O, with O- last as the universal reserve. Plasma follows the doc's 1st to 4th choice columns, with the recipient's RhD sign first inside each ABO tier.",
+  "components": {
+    "redCells": {
+      "O-": ["O-"],
+      "O+": ["O+", "O-"],
+      "A-": ["A-", "O-"],
+      "A+": ["A+", "A-", "O+", "O-"],
+      "B-": ["B-", "O-"],
+      "B+": ["B+", "B-", "O+", "O-"],
+      "AB-": ["AB-", "A-", "B-", "O-"],
+      "AB+": ["AB+", "AB-", "A+", "A-", "B+", "B-", "O+", "O-"]
+    },
+    "plasma": {
+      "O-": ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],
+      "O+": ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"],
+      "A-": ["A-", "A+", "AB-", "AB+"],
+      "A+": ["A+", "A-", "AB+", "AB-"],
+      "B-": ["B-", "B+", "AB-", "AB+"],
+      "B+": ["B+", "B-", "AB+", "AB-"],
+      "AB-": ["AB-", "AB+"],
+      "AB+": ["AB+", "AB-"]
+    },
+    "platelets": {
+      "O-": ["O-", {"group": "O+", "rhFlag": true}, "A-", {"group": "A+", "rhFlag": true}, "B-", {"group": "B+", "rhFlag": true}],
+      "O+": ["O+", "O-", "A+", "A-", "B+", "B-"],
+      "A-": ["A-", {"group": "A+", "rhFlag": true}, "B-", {"group": "B+", "rhFlag": true}, "O-", {"group": "O+", "rhFlag": true}],
+      "A+": ["A+", "A-", "B+", "B-", "O+", "O-"],
+      "B-": ["B-", {"group": "B+", "rhFlag": true}, "A-", {"group": "A+", "rhFlag": true}, "O-", {"group": "O+", "rhFlag": true}],
+      "B+": ["B+", "B-", "A+", "A-", "O+", "O-"],
+      "AB-": ["AB-", {"group": "AB+", "rhFlag": true}, "A-", {"group": "A+", "rhFlag": true}, "B-", {"group": "B+", "rhFlag": true}, "O-", {"group": "O+", "rhFlag": true}],
+      "AB+": ["AB+", "AB-", "A+", "A-", "B+", "B-", "O+", "O-"]
+    },
+    "cryo": {
+      "O-": ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],
+      "O+": ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"],
+      "A-": ["A-", "A+", "AB-", "AB+"],
+      "A+": ["A+", "A-", "AB+", "AB-"],
+      "B-": ["B-", "B+", "AB-", "AB+"],
+      "B+": ["B+", "B-", "AB+", "AB-"],
+      "AB-": ["AB-", "AB+"],
+      "AB+": ["AB+", "AB-"]
+    }
+  }
+}

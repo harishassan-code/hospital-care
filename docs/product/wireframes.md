@@ -15,6 +15,7 @@ modules the signed-in role can open (`ACCESS` in [api-contracts.md](../architect
 | Public home | `/` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sign in / sign up | `/login`, `/signup` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Overview | `/staff` | ✓ | ✓ | ✓ | ✓ | ✓ | – |
+| Emergencies (#30, #32) | `/staff/emergencies` | edit | edit | edit | view | view | – |
 | Beds | `/staff/beds` | edit | view | edit | – | – | – |
 | Blood bank | `/staff/blood` | edit | view | – | edit | – | – |
 | Pharmacy | `/staff/pharmacy` | edit | view | view | – | edit | – |
@@ -22,7 +23,7 @@ modules the signed-in role can open (`ACCESS` in [api-contracts.md](../architect
 | Hospital detail | `/staff/hospitals/:id` | edit | view | view | view | view | – |
 | Register / edit hospital | `/staff/hospitals/new`, `/:id/edit` | ✓ | – | – | – | – | – |
 | Users and roles | `/staff/users` | ✓ | – | – | – | – | – |
-| Planned modules (placeholder) | `/staff/emergencies`, `/matching`, `/transfers`, … | ✓ | ✓ | ✓ | ✓ | ✓ | – |
+| Planned modules (placeholder) | `/staff/matching`, `/transfers`, … | ✓ | ✓ | ✓ | ✓ | ✓ | – |
 
 "–" means the link is hidden. Opening the path directly shows **"You don't have access to this page"** with a
 link to Overview, and the API answers 403. A patient opening any `/staff` path sees "This area is for hospital
@@ -117,7 +118,7 @@ Each ward header shows "⚠ At or above 90%" when its occupancy reaches `occupan
 
 ```
 ┌ NEW EMERGENCY REQUEST
-│ Severity*        (•) Critical  ( ) Urgent  ( ) Routine
+│ Severity*        (•) Critical  ( ) High  ( ) Moderate  ( ) Low
 │ Needed*          [Blood ▾]  Group* [O- ▾]  Component* [Red cells ▾]  Quantity* [4]
 │                  + Add another requirement (bed, equipment…)
 │ Patient ref      [__________] (optional, no names)

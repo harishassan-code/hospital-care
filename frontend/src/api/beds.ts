@@ -41,7 +41,7 @@ export interface BedBoard {
   beds: Bed[]
 }
 
-export type BedAction = 'discharge' | 'markReady' | 'reserve' | 'cancelReservation' | 'outOfService' | 'returnToService'
+export type BedAction = 'discharge' | 'markReady' | 'reserve' | 'admit' | 'cancelReservation' | 'outOfService' | 'returnToService'
 
 /** Every ward and bed. GET /api/beds/ (beds: view). */
 export function getBedBoard(): Promise<BedBoard> {

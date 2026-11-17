@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import module_permission
+from apps.accounts.permissions import module_permission, own_hospital
 from apps.resources.state_machine import TransitionNotAllowed
 
 from . import services
@@ -23,11 +23,6 @@ from .serializers import (
 )
 
 BloodAccess = module_permission("blood")
-
-
-def own_hospital(queryset, user):
-    """Users who work at a hospital see only its rows; admins without one see the whole network."""
-    return queryset.filter(hospital_id=user.hospital_id) if user.hospital_id else queryset
 
 
 def conflict(exc):

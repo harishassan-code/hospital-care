@@ -116,6 +116,19 @@ describe('QA · sign in', () => {
     expect(await screen.findByTestId('where')).toHaveTextContent('/staff/beds')
   })
 
+  it('doctor signs in straight to emergency case entry', async () => {
+    // There is no coordinator role yet (#9); doctors open emergency cases (#30).
+    mockStaffApi({ role: 'doctor' })
+    render(
+      <MemoryRouter initialEntries={['/login?next=%2Fstaff%2Femergencies']}>
+        <AppRoutes />
+      </MemoryRouter>,
+    )
+    await logIn('doctor@demo.test', 'valid-password-1')
+    await userEvent.click(await screen.findByRole('button', { name: 'New case' }))
+    expect(screen.getByRole('heading', { name: 'Step 1 of 3: Case' })).toHaveFocus()
+  })
+
   it('ignores external next= URLs', async () => {
     mockApi({ 'POST /auth/login/': ok(userFor('nurse')) })
     renderLogin('https://evil.example/phish')

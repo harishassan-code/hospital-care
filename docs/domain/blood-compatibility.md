@@ -71,6 +71,11 @@ plasma rule to cryo.
 
 ## Where the rules live
 
-- Frontend: `compatibleDonors()` in `frontend/src/features/blood/blood.ts` (red cells and plasma).
-- Backend: the matching engine (Sprint 6, issue #37) must load these as configurable rules, not hard-code a
-  second copy.
+- Backend rules: `backend/apps/matching/blood_compatibility.json`, the one configuration file for all four
+  components. It lists, for each recipient group, the donor groups in preference order. The engine in
+  `backend/apps/matching/compatibility.py` loads and validates it, and a Django system check fails `manage.py check`
+  when it is broken. The engine has no API endpoint yet (see
+  [the construction plan](../aidlc/construction/2026-11-17-blood-compatibility-matching.md)).
+- Frontend: `compatibleDonors()` in `frontend/src/features/blood/blood.ts` (red cells and plasma). A test in
+  `frontend/src/features/blood/blood.test.ts` reads the backend file and fails if the two disagree on either component.
+- To change a rule, change the JSON file and this document together.

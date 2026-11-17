@@ -142,6 +142,7 @@ BED_LIFECYCLE = StateMachine(
         (S.FREE, "reserve"): S.RESERVED,
         (S.FREE, "outOfService"): S.OUT_OF_SERVICE,
         (S.RESERVED, "cancelReservation"): S.FREE,
+        (S.RESERVED, "admit"): S.OCCUPIED,  # a reserved bed is admitted: an allocation (#45), or by hand
         (S.OUT_OF_SERVICE, "returnToService"): S.CLEANING,
     },
 )

@@ -28,6 +28,7 @@ BED_MOVES = [
     (B.FREE, "reserve", B.RESERVED),
     (B.FREE, "outOfService", B.OUT_OF_SERVICE),
     (B.RESERVED, "cancelReservation", B.FREE),
+    (B.RESERVED, "admit", B.OCCUPIED),
     (B.OUT_OF_SERVICE, "returnToService", B.CLEANING),
 ]
 

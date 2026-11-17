@@ -1,0 +1,528 @@
+/* Emergency cases (stories #30, #32). Follows the blood and hospital forms' conventions. */
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 40rem;
+}
+
+.form select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+/* ── Step indicator ─────────────────────────────────── */
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.steps li {
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step) '. ';
+}
+
+.steps li[aria-current='step'] {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.steps .done::after {
+  content: ' ✓';
+}
+
+.stepHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.stepHeading:focus {
+  outline: none;
+}
+
+.stepHeading:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ── Step 1: severity ───────────────────────────────── */
+
+.fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-weight: 700;
+}
+
+.severities {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.severity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: var(--space-3);
+  border: 2px solid var(--rule);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.severity[data-severity='critical'] {
+  border-left-color: var(--status-critical);
+}
+
+.severity[data-severity='high'] {
+  border-left-color: var(--status-warning);
+}
+
+.severity:has(input:checked) {
+  border-color: var(--ink);
+}
+
+.severity input {
+  margin-top: 0.3em;
+}
+
+.severity > span {
+  display: grid;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ── Step 2: needs ──────────────────────────────────── */
+
+.need {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.need legend {
+  padding: 0 var(--space-2);
+  font-weight: 700;
+}
+
+.needFields {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 40rem) {
+  .needFields {
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    align-items: start;
+  }
+}
+
+/* ── Step 3: review ─────────────────────────────────── */
+
+.review {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+
+.review dt {
+  font-weight: 700;
+}
+
+.review dd {
+  margin: 0;
+}
+
+.review ul {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.actions > button[type='submit'] {
+  width: auto;
+}
+
+.secondaryAction {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondaryAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.link {
+  justify-self: start;
+  min-height: var(--tap);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Case list ──────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.reference {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* A critical case is marked by its "Critical" label and by shape (a thick left edge), with a tint on top. */
+.critical > td {
+  background: color-mix(in srgb, var(--status-critical) 7%, var(--surface));
+}
+
+.critical > td:first-child {
+  box-shadow: inset var(--stripe) 0 0 var(--status-critical);
+}
+
+/* ── Case page (story #34) ──────────────────────────── */
+
+.back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 700;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+
+.facts dt {
+  font-weight: 700;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.needs {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+/* Each need's local availability (#33) sits on its own line under the need. */
+.needs .hint {
+  display: block;
+}
+
+.summary {
+  margin: var(--space-3) 0 0;
+  font-weight: 700;
+}
+
+/* Sources in the network (story #38): one block per short need, its hospitals as a plain list. */
+.sources {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.source {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sourceHeading {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.candidates {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.candidates .hint {
+  display: block;
+}
+
+/* The needs a hospital is missing, in the best destination list (story #42). */
+.missing {
+  margin: 0;
+}
+
+.candidate,
+.recommended {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--stripe) solid transparent;
+}
+
+/* The top source is marked by its "Recommended" badge and by shape (a thick edge and a tint), not by colour alone. */
+.recommended {
+  border-left-color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
+}
+
+.candidateTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.rank,
+.score {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.score {
+  margin-left: auto;
+}
+
+.badge {
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.why summary {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.factors {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.factorTotal {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+  font-weight: 700;
+}
+
+.points {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.marker {
+  font-weight: 700;
+}
+
+.moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* "Reserve N here" under a need (story #43): the quantity field and its button sit side by side on wide screens. */
+.reserve {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.timeline {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--rule);
+}
+
+/* The outcome of a closed case (story #35): the note as written, its line breaks kept, in larger bold text. */
+.outcome {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  white-space: pre-line;
+}
+
+.outcomeForm {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.entryNote {
+  margin: 0;
+}
+
+/* ── Emergencies page actions and the network feed (story #36) ───────── */
+
+.asides {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+.toggle legend {
+  margin-right: var(--space-2);
+  padding: 0;
+  font-weight: 700;
+}
+
+.toggle label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.toggle label:has(input:checked) {
+  border-color: var(--ink);
+  font-weight: 700;
+}
+
+.feed {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 2px solid var(--rule);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+}
+
+.entry[data-severity='critical'] {
+  border-left-color: var(--status-critical);
+}
+
+.entry[data-severity='high'] {
+  border-left-color: var(--status-warning);
+}
+
+.entryHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+}
+
+.entryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.needsLine {
+  margin: 0;
+}

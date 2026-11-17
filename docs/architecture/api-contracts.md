@@ -12,14 +12,18 @@ unknown id, **400** `{field: ["message"]}` for invalid input.
 `ACCESS` in `backend/apps/accounts/permissions.py` and `frontend/src/features/staff/roles.ts` must stay
 identical. Reads need *view*, writes need *edit*.
 
-| Role | overview | beds | blood | pharmacy | hospitals | users |
-|---|---|---|---|---|---|---|
-| admin | view | edit | edit | edit | edit | edit |
-| doctor | view | view | view | view | view | – |
-| nurse | view | edit | – | view | view | – |
-| bloodBank | view | – | edit | – | view | – |
-| pharmacist | view | – | – | edit | view | – |
-| patient | – | – | – | – | – | – |
+| Role | overview | emergencies | beds | blood | pharmacy | hospitals | users | equipment | operatingRooms | orBookings |
+|---|---|---|---|---|---|---|---|---|---|---|
+| admin | view | edit | edit | edit | edit | edit | edit | edit | edit | edit |
+| doctor | view | edit | view | view | view | view | – | view | view | edit |
+| nurse | view | edit | edit | – | view | view | – | edit | edit | edit |
+| bloodBank | view | view | – | edit | – | view | – | – | – | – |
+| pharmacist | view | view | – | – | edit | view | – | – | – | – |
+| patient | – | – | – | – | – | – | – | – | – | – |
+
+`emergencies` was added in Sprint 7 with #30 (see [api.md](api.md#emergency-cases-30-32)).
+
+`orBookings` (story #29) is the module for booking and cancelling operating room slots. It has no nav item of its own: the day schedule is part of operating rooms.
 
 **Own hospital only:** a user who isn't an admin may change a resource only if it belongs to their own
 hospital (`resource.hospital == user.hospital`); otherwise **403**. Admins manage the whole network.

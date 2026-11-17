@@ -1,5 +1,8 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { BloodGroup, BloodUnit } from '../../api/blood'
+import { BLOOD_GROUPS, type BloodGroup, type BloodUnit } from '../../api/blood'
 import { at, minutesFrom } from '../../test/clock'
 import { availableCounts, compatibleDonors, sortFefo, stockLevel } from './blood'
 
@@ -33,6 +36,23 @@ describe('plasma compatibility', () => {
     expect(compatibleDonors(`${abo}-` as BloodGroup, 'plasma')).toEqual(donors)
     expect(compatibleDonors(`${abo}+` as BloodGroup, 'plasma')).toEqual(donors)
   })
+})
+
+describe('backend rules file matches compatibleDonors', () => {
+  // The backend loads the same rules from backend/apps/matching/blood_compatibility.json. Red cells and plasma
+  // must agree with compatibleDonors() for every recipient, so the two copies can't drift apart silently.
+  type Entry = string | { group: string; rhFlag?: boolean }
+  // npm test runs from frontend/, so the path is relative to that directory.
+  const file = resolve(process.cwd(), '../backend/apps/matching/blood_compatibility.json')
+  const rules = JSON.parse(readFileSync(file, 'utf8')) as { components: Record<string, Record<string, Entry[]>> }
+  const groupOf = (entry: Entry) => (typeof entry === 'string' ? entry : entry.group)
+
+  for (const component of ['redCells', 'plasma'] as const) {
+    it.each(BLOOD_GROUPS)(`${component} donors for recipient %s`, (recipient) => {
+      const fromFile = rules.components[component][recipient].map(groupOf)
+      expect(new Set(fromFile)).toEqual(new Set(compatibleDonors(recipient, component)))
+    })
+  }
 })
 
 describe('stock', () => {

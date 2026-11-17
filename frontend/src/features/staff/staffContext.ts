@@ -32,6 +32,8 @@ export interface StaffState {
   updateBed: (bedId: string, action: BedAction) => Promise<BedActionResult>
   /** Adds a newly registered unit, or updates an existing one by id (e.g. after a screening result), in the loaded data. */
   upsertUnit: (unit: BloodUnit) => void
+  /** Reads the blood units again, so the stock figures show what changed on the server (e.g. after an allocation). */
+  refreshUnits: () => Promise<void>
   signOut: () => Promise<void>
 }
 

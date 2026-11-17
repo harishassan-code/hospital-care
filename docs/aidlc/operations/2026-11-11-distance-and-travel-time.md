@@ -28,8 +28,11 @@ was green on merge.
   built — that PR should go through its own AIDLC cycle, with its Inception spec referencing this
   utility as already available.
 - [#41 Ranked results with explanation](https://github.com/harishassan-code/hospital-care/issues/41)
-  and [#42 Multi-resource matching](https://github.com/harishassan-code/hospital-care/issues/42) are
-  the other consumers; no action needed on this unit until they're scheduled.
+  now shows the distance and estimated travel time of each source on the case page, with "distance unknown" when the
+  distance is not known (see [the construction plan](../construction/2026-11-17-ranked-results-with-explanation.md)).
+  This completes the display half of #39.
+- [#42 Multi-resource matching](https://github.com/harishassan-code/hospital-care/issues/42) is the remaining
+  consumer; no action needed on this unit until it's scheduled.
 
 This closes the Inception → Construction → Operations loop for #39, demonstrating the full AIDLC
 cycle end to end.

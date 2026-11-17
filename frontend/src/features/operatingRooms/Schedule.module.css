@@ -1,0 +1,36 @@
+/* The day schedule (story #29): one panel per room, one card per booked slot. */
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.booking {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.slot {
+  margin: 0;
+}
+
+.slot time {
+  margin-right: var(--space-2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.booking button {
+  justify-self: start;
+}

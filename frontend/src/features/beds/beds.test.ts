@@ -39,7 +39,7 @@ describe('bed transitions', () => {
     expect(offered('occupied')).toEqual(['discharge'])
     expect(offered('cleaning')).toEqual(['markReady'])
     expect(offered('free')).toEqual(['reserve', 'outOfService'])
-    expect(offered('reserved')).toEqual(['cancelReservation'])
+    expect(offered('reserved')).toEqual(['admit', 'cancelReservation'])
     expect(offered('outOfService')).toEqual(['returnToService'])
   })
 
@@ -52,6 +52,15 @@ describe('bed transitions', () => {
     expect(next.expectedDischarge).toBeUndefined()
     expect(next.isolation).toBeUndefined()
     expect(occupied.status).toBe('occupied')
+  })
+
+  it('admitting a reserved bed makes it occupied from now, with no patient recorded', () => {
+    const reserved = bed({ status: 'reserved' })
+    const next = applyAction(reserved, 'admit', now)
+    expect(next.status).toBe('occupied')
+    expect(next.admittedAt).toBe(now.toISOString())
+    expect(next.patient).toBeUndefined()
+    expect(() => applyAction(bed({ status: 'free' }), 'admit', now)).toThrow(/admit/)
   })
 
   it('returning to service goes through cleaning first', () => {

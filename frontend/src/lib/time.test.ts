@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   currentShift,
   dateKey,
+  formatAgo,
   formatClock,
   formatDuration,
   formatShortDate,
@@ -92,5 +93,22 @@ describe('fromDateKey / formatShortDate', () => {
   it('formats short dates, optionally with the year', () => {
     expect(formatShortDate(fromDateKey('2026-11-15'))).toBe('15 Nov')
     expect(formatShortDate(fromDateKey('2026-11-15'), { year: true })).toBe('15 Nov 2026')
+  })
+})
+
+describe('formatAgo', () => {
+  const now = new Date('2026-11-17T12:00:00Z')
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString()
+
+  it('says how long ago a time was, in the largest whole unit', () => {
+    expect(formatAgo(ago(12 * 60_000), now)).toBe('12 minutes ago')
+    expect(formatAgo(ago(60_000), now)).toBe('1 minute ago')
+    expect(formatAgo(ago(3 * 3_600_000 + 20 * 60_000), now)).toBe('3 hours ago')
+    expect(formatAgo(ago(26 * 3_600_000), now)).toBe('1 day ago')
+  })
+
+  it('says just now under a minute, and for a time ahead of now (clock skew)', () => {
+    expect(formatAgo(ago(30_000), now)).toBe('just now')
+    expect(formatAgo(new Date(now.getTime() + 5_000).toISOString(), now)).toBe('just now')
   })
 })

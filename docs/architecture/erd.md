@@ -190,7 +190,7 @@ erDiagram
         bigint id PK
         bigint hospital_id FK
         bigint created_by_id FK
-        string severity "critical|urgent|routine"
+        string severity "critical|high|moderate|low"
         string status "open|matching|partiallyFulfilled|fulfilled|escalated|closed|cancelled"
         string outcome_note "required to close"
         datetime escalate_after
@@ -207,9 +207,15 @@ erDiagram
     Reservation {
         bigint id PK
         bigint request_item_id FK
-        string resource "content type + id"
-        string status "held|allocated|released|expired"
-        datetime expires_at "configurable hold time"
+        bigint content_type_id FK "resource: content type + object id"
+        bigint object_id "the resource's id"
+        bigint hospital_id FK "the resource's hospital"
+        bigint reserved_by_id FK
+        string status "held|allocated|released|expired; one held or allocated per resource"
+        datetime created_at
+        datetime expires_at "RESERVATION_HOLD_MINUTES after created_at"
+        datetime ended_at
+        string end_reason
     }
     Allocation {
         bigint id PK
@@ -241,7 +247,7 @@ erDiagram
         bigint id PK
         string code UK
         string type
-        string status "available|inUse|maintenance|outOfService"
+        string status "available|reserved|inUse|maintenance|outOfService"
     }
     OperatingRoom {
         bigint id PK
@@ -273,7 +279,7 @@ Two differences from the proposal's entity list to settle in refinement:
 |---|---|---|---|
 | Donor, Donation, TestResult | blood | 3 | #17–#21 |
 | Equipment, OperatingRoom, RoomBooking (Equipment inherits Resource) | resources | 4 | #26–#29 |
-| EmergencyRequest, RequestItem | emergencies | 5 | #30–#36 |
-| Reservation, Allocation | matching | 6–7 | #38–#45 |
+| EmergencyRequest, RequestItem (built in Sprint 7 with #30/#32; no `escalate_after` or `outcome_note` until #35) | emergencies | 5 | #30–#36 |
+| Reservation (built in #43), Allocation | matching | 6–7 | #38–#45 |
 | TransferRequest, TransferItem, Ambulance, Trip | transfers | 7–8 | #47–#51 |
 | Notification | notifications | 8 | #52–#53 |

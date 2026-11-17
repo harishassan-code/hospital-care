@@ -35,7 +35,10 @@ const TRANSITIONS: Record<BedStatus, readonly Transition[]> = {
     { action: 'reserve', label: 'Reserve', next: 'reserved' },
     { action: 'outOfService', label: 'Take out of service', next: 'outOfService' },
   ],
-  reserved: [{ action: 'cancelReservation', label: 'Cancel reservation', next: 'free' }],
+  reserved: [
+    { action: 'admit', label: 'Admit', next: 'occupied' },
+    { action: 'cancelReservation', label: 'Cancel reservation', next: 'free' },
+  ],
   outOfService: [{ action: 'returnToService', label: 'Return to service', next: 'cleaning' }],
 }
 
@@ -45,7 +48,10 @@ export function actionsFor(status: BedStatus): readonly Transition[] {
   return TRANSITIONS[status]
 }
 
-/** The bed after `action`. Leaving "occupied" clears everything about the patient. */
+/**
+ * The bed after `action`. Leaving "occupied" clears everything about the patient. Admitting a reserved bed sets
+ * `admittedAt` to now and records no patient (story #46, mirrors apps/hospitals/services.py).
+ */
 export function applyAction(bed: Bed, action: BedAction, now: Date): Bed {
   const transition = TRANSITIONS[bed.status].find((t) => t.action === action)
   if (!transition) {
@@ -55,6 +61,7 @@ export function applyAction(bed: Bed, action: BedAction, now: Date): Bed {
   if (bed.status === 'occupied') {
     for (const key of PATIENT_FIELDS) delete next[key]
   }
+  if (action === 'admit') next.admittedAt = now.toISOString()
   return next
 }
 

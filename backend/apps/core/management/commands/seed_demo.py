@@ -10,7 +10,7 @@ Demo data only: never run against a database with real patients.
 """
 
 import random
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -28,6 +28,7 @@ from apps.blood.models import (
     UnitStatus,
 )
 from apps.emergencies.models import EmergencyStatus, ErStatus
+from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
     BedStatus,
@@ -39,6 +40,7 @@ from apps.hospitals.models import (
     StorageLocation,
     Ward,
 )
+from apps.operating_rooms.models import OperatingRoom, OrBooking, OrStatus
 from apps.pharmacy.models import Batch, Medicine
 
 DEMO_PASSWORD = "CityCare-demo-1"
@@ -492,6 +494,16 @@ FORMULARY = [
 
 LETTERS = "ABDFGHIKMNORSTUYZ"
 
+# Story #29: room, days from today, start, end, procedure, surgeon, patient initials (no full names).
+OR_BOOKINGS = [
+    ("Cardiac theatre", 0, time(9), time(13), "CABG", "Dr. Ayesha Khan", "M.H."),
+    ("OR 1", 0, time(8), time(10), "Appendicectomy", "Dr. Bilal Ahmed", "A.K."),
+    ("OR 1", 0, time(10), time(12, 30), "Cholecystectomy", "Dr. Bilal Ahmed", "S.R."),
+    ("Trauma theatre", 0, time(14), time(16), "Craniotomy", "Dr. Imran Qureshi", "F.Z."),
+    ("OR 1", 1, time(8, 30), time(10, 30), "Hernia repair", "Dr. Bilal Ahmed", "T.B."),
+    ("Cardiac theatre", 1, time(9), time(11), "Valve replacement", "Dr. Ayesha Khan", "N.Q."),
+]
+
 
 def weighted(rand: random.Random, shares: dict):
     return rand.choices(list(shares), weights=list(shares.values()))[0]
@@ -510,6 +522,9 @@ class Command(BaseCommand):
         now = timezone.now()
         if reset:
             models = (
+                Equipment,
+                OrBooking,  # before the rooms: a booking holds its room (PROTECT)
+                OperatingRoom,
                 Bed,
                 DonationAppointment,
                 BloodUnit,
@@ -536,6 +551,13 @@ class Command(BaseCommand):
         if not BloodUnit.objects.exists():
             self.seed_blood(rand, now, main)
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
+        if not Equipment.objects.exists():
+            self.seed_equipment(main)
+        for hospital in hospitals:
+            if not OperatingRoom.objects.filter(hospital=hospital).exists():
+                self.seed_operating_rooms(hospital)
+        for hospital in hospitals:
+            self.seed_or_bookings(hospital, now)
         if not Donor.objects.exists():
             # Own random stream, so adding donors doesn't change any of the data seeded before Sprint 3.
             self.seed_donors(random.Random(seed * 1000), now, main)
@@ -743,6 +765,64 @@ class Command(BaseCommand):
                 status=AppointmentStatus.BOOKED,
             )
             for i, d in enumerate(free)
+        )
+
+    def seed_equipment(self, hospital: Hospital):
+        """Sprint 4 (#26): a small, fixed set of critical equipment in the main hospital."""
+        T, St = EquipmentType, EquipmentStatus
+        items = [
+            ("VENT-001", T.VENTILATOR, "Dräger Evita V500", "ICU bay 1", St.IN_USE),
+            ("VENT-002", T.VENTILATOR, "Dräger Evita V500", "ICU bay 2", St.IN_USE),
+            ("VENT-003", T.VENTILATOR, "Hamilton C6", "ICU bay 3", St.AVAILABLE),
+            ("VENT-004", T.VENTILATOR, "Hamilton C6", "HDU", St.MAINTENANCE),
+            ("VENT-005", T.VENTILATOR, "Hamilton T1 (transport)", "Emergency department", St.AVAILABLE),
+            ("MON-001", T.MONITOR, "Philips IntelliVue MX450", "HDU bed 1", St.IN_USE),
+            ("MON-002", T.MONITOR, "Philips IntelliVue MX450", "HDU bed 2", St.AVAILABLE),
+            ("MON-003", T.MONITOR, "Mindray BeneVision N12", "Medical A", St.AVAILABLE),
+            ("MON-004", T.MONITOR, "Mindray BeneVision N12", "Surgical B", St.OUT_OF_SERVICE),
+            ("DEFIB-001", T.DEFIBRILLATOR, "Zoll R Series", "Emergency department crash cart", St.AVAILABLE),
+            ("DEFIB-002", T.DEFIBRILLATOR, "Philips HeartStart XL+", "ICU crash cart", St.AVAILABLE),
+            ("DEFIB-003", T.DEFIBRILLATOR, "Zoll AED Plus", "Main entrance", St.AVAILABLE),
+            ("DIAL-001", T.DIALYSIS, "Fresenius 5008S", "Dialysis unit", St.IN_USE),
+            ("DIAL-002", T.DIALYSIS, "Fresenius 5008S", "Dialysis unit", St.AVAILABLE),
+            ("DIAL-003", T.DIALYSIS, "Nipro Surdial X", "ICU", St.MAINTENANCE),
+        ]
+        Equipment.objects.bulk_create(
+            Equipment(hospital=hospital, identifier=i, equipment_type=t, name=n, location=loc, status=st)
+            for i, t, n, loc, st in items
+        )
+
+    def seed_operating_rooms(self, hospital: Hospital):
+        """Story #28: three rooms with different capabilities and statuses in each demo hospital."""
+        St = OrStatus
+        rooms = [
+            ("OR 1", ["general"], "Block B, floor 2", St.AVAILABLE),
+            ("Cardiac theatre", ["cardiac", "general"], "Block B, floor 3", St.IN_USE),
+            ("Trauma theatre", ["general", "neuro", "trauma"], "Emergency block, floor 1", St.CLEANING),
+        ]
+        OperatingRoom.objects.bulk_create(
+            OperatingRoom(hospital=hospital, name=n, capabilities=caps, location=loc, status=st)
+            for n, caps, loc, st in rooms
+        )
+
+    def seed_or_bookings(self, hospital: Hospital, now):
+        """Story #29: a few booked slots today and tomorrow in each demo hospital's rooms. Idempotent."""
+        if OrBooking.objects.filter(room__hospital=hospital).exists():
+            return
+        rooms = {room.name: room for room in OperatingRoom.objects.filter(hospital=hospital)}
+        booked_by = User.objects.get(username="nurse@demo.citycare.pk")
+        today = timezone.localdate(now)
+        OrBooking.objects.bulk_create(
+            OrBooking(
+                room=rooms[room],
+                booked_by=booked_by,
+                starts_at=timezone.make_aware(datetime.combine(today + timedelta(days=days), start)),
+                ends_at=timezone.make_aware(datetime.combine(today + timedelta(days=days), end)),
+                procedure=procedure,
+                surgeon=surgeon,
+                patient_initials=initials,
+            )
+            for room, days, start, end, procedure, surgeon, initials in OR_BOOKINGS
         )
 
     def seed_pharmacy(self, now):

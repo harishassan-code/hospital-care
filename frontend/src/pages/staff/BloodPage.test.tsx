@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { allocateReservation } from '../../api/emergencies'
 import { at } from '../../test/clock'
 import { mockStaffApi } from '../../test/mockApi'
 import { renderStaff } from '../../test/renderStaff'
@@ -143,5 +144,132 @@ describe('BloodPage', () => {
     await userEvent.click(row.getByRole('button', { name: 'Fail' }))
     await userEvent.click(row.getByRole('button', { name: 'Confirm fail' }))
     expect(await screen.findByText('Say why the test failed.')).toBeInTheDocument()
+  })
+})
+
+describe('BloodPage reserved for cases (story #46)', () => {
+  /** Three O− red cells held for EC-2026-0002, and a bed held for another case, which this page doesn't list. */
+  const held = {
+    stock: { 'EC-2026-0002': [3, 0], 'EC-2026-0001': [2] },
+    held: [
+      { reference: 'EC-2026-0002', itemId: 1, count: 3 },
+      { reference: 'EC-2026-0001', itemId: 1, count: 1 },
+    ],
+  }
+  const panel = async () => screen.findByRole('region', { name: 'Reserved for cases' })
+  const posts = (fetchMock: ReturnType<typeof mockStaffApi>['fetchMock']) =>
+    fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/allocate/') && init?.method === 'POST')
+  /** The stock grid's count of available O− red cells. */
+  const redCellsONegative = async () => {
+    const grid = await screen.findByRole('table', { name: /Available units by component and group/ })
+    const column = within(grid).getAllByRole('columnheader').findIndex((th) => th.textContent === 'O−')
+    return Number(within(within(grid).getByRole('row', { name: /^Red cells/ })).getAllByRole('cell')[column - 1]!.querySelector('span')!.textContent)
+  }
+
+  it('lists the holds by case and need: the case linked with its severity, what is still needed, and each unit', async () => {
+    mockStaffApi({ role: 'bloodBank', ...held })
+    renderStaff('/staff/blood')
+
+    const region = within(await panel())
+    const kase = within(await region.findByRole('region', { name: 'EC-2026-0002' }))
+    expect(kase.getByRole('link', { name: 'EC-2026-0002' })).toHaveAttribute('href', '/staff/emergencies/EC-2026-0002')
+    expect(kase.getByText('Critical')).toBeInTheDocument()
+    expect(kase.getByText('O− red cells')).toBeInTheDocument()
+    expect(kase.getByText('4 remaining')).toBeInTheDocument()
+    expect(kase.getAllByRole('listitem').map((li) => li.querySelector('strong')?.textContent)).toEqual([
+      'O− red cells DN-0001',
+      'O− red cells DN-0002',
+      'O− red cells DN-0003',
+    ])
+    expect(kase.getAllByText(/Holds until/)).toHaveLength(3)
+    expect(kase.getAllByText(/^\d\d:\d\d$/)).toHaveLength(3)
+    expect(kase.getByRole('button', { name: 'Allocate O− red cells DN-0002' })).toBeInTheDocument()
+    expect(kase.getByRole('button', { name: /^Allocate all 3/ })).toBeInTheDocument()
+    expect(region.queryByText(/Bed/)).toBeNull()
+  })
+
+  it('allocates one unit after a confirm: the list and the stock figures update', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { fetchMock } = mockStaffApi({ role: 'bloodBank', ...held })
+    renderStaff('/staff/blood')
+
+    const before = await redCellsONegative()
+    expect(before).toBeGreaterThan(0)
+    const region = within(await panel())
+    await userEvent.click(await region.findByRole('button', { name: 'Allocate O− red cells DN-0002' }))
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('O− red cells DN-0002'))
+    await waitFor(() => expect(region.queryByText('O− red cells DN-0002')).toBeNull())
+    expect(region.getByText('O− red cells DN-0001')).toBeInTheDocument()
+    expect(region.getByText('3 remaining')).toBeInTheDocument()
+    expect(region.getByRole('button', { name: /^Allocate all 2/ })).toBeInTheDocument()
+    await waitFor(async () => expect(await redCellsONegative()).toBe(before - 1))
+    const [call] = posts(fetchMock)
+    expect(String(call![0])).toContain('/reservations/2/allocate/')
+  })
+
+  it('allocates every unit held for a need at once, then shows the empty state', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { fetchMock } = mockStaffApi({ role: 'bloodBank', ...held })
+    renderStaff('/staff/blood')
+
+    await userEvent.click(await within(await panel()).findByRole('button', { name: /^Allocate all 3/ }))
+
+    expect(await within(await panel()).findByText('No units are reserved for cases right now.')).toBeInTheDocument()
+    const [call] = posts(fetchMock)
+    expect(String(call![0])).toContain('/reservations/allocate/')
+    expect(JSON.parse(String(call![1]!.body))).toEqual({ ids: [1, 2, 3] })
+  })
+
+  it('does nothing when the confirm is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const { fetchMock } = mockStaffApi({ role: 'bloodBank', ...held })
+    renderStaff('/staff/blood')
+
+    const region = within(await panel())
+    await userEvent.click(await region.findByRole('button', { name: 'Allocate O− red cells DN-0001' }))
+    await userEvent.click(region.getByRole('button', { name: /^Allocate all 3/ }))
+
+    expect(posts(fetchMock)).toHaveLength(0)
+    expect(region.getAllByRole('listitem')).toHaveLength(3)
+    expect(region.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows the server’s reason when an allocation is refused, and keeps the list', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockStaffApi({ role: 'bloodBank', ...held })
+    renderStaff('/staff/blood')
+
+    const region = within(await panel())
+    await allocateReservation(1) // allocated elsewhere; this page still lists it
+    await userEvent.click(await region.findByRole('button', { name: 'Allocate O− red cells DN-0001' }))
+
+    expect(await region.findByRole('alert')).toHaveTextContent('This reservation is already allocated.')
+    expect(region.getAllByRole('listitem')).toHaveLength(3)
+  })
+
+  it('says so when nothing is reserved', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff('/staff/blood')
+
+    expect(await within(await panel()).findByText('No units are reserved for cases right now.')).toBeInTheDocument()
+  })
+
+  it('shows the holds without allocate buttons to a role that can only view blood', async () => {
+    mockStaffApi({ role: 'doctor', ...held })
+    renderStaff('/staff/blood')
+
+    const region = within(await panel())
+    expect(await region.findByText('O− red cells DN-0001')).toBeInTheDocument()
+    expect(region.queryByRole('button')).toBeNull()
+  })
+
+  it('has no panel, and asks for nothing, for a role that can’t see blood', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'nurse' })
+    renderStaff('/staff/blood')
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(screen.queryByRole('region', { name: 'Reserved for cases' })).toBeNull()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/reservations/'))).toBe(false)
   })
 })

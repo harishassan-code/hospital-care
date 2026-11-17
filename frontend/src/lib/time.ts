@@ -72,3 +72,17 @@ export function formatShortDate(date: Date, { year = false } = {}): string {
 export function hoursUntil(iso: string, now: Date): number {
   return (new Date(iso).getTime() - now.getTime()) / 3_600_000
 }
+
+/** "12 minutes ago", "3 hours ago", "1 day ago", or "just now" under a minute (and for times ahead of `now`). */
+export function formatAgo(iso: string, now: Date): string {
+  const seconds = Math.max(0, (now.getTime() - new Date(iso).getTime()) / 1000)
+  const format = new Intl.RelativeTimeFormat('en', { numeric: 'always' })
+  for (const [unit, size] of [
+    ['day', 86_400],
+    ['hour', 3_600],
+    ['minute', 60],
+  ] as const) {
+    if (seconds >= size) return format.format(-Math.floor(seconds / size), unit)
+  }
+  return 'just now'
+}

@@ -1,6 +1,7 @@
 """Hospital network rules: bed lifecycle, hospital registration and structure, each audit-logged."""
 
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied
 
@@ -24,6 +25,8 @@ def apply_bed_action(label: str, action: str, *, actor) -> Bed:
         raise PermissionDenied("You can only change beds in your own hospital.")
     if bed.status == BedStatus.OCCUPIED:
         bed.clear_patient()  # discharge is the only way out of occupied; a refused move saves nothing
+    if action == "admit":
+        bed.admitted_at = timezone.now()  # no patient is recorded here; the bed is only marked occupied
     return change_status(bed, action, actor=actor)
 
 

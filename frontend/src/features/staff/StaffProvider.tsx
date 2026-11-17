@@ -132,14 +132,19 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     )
   }, [])
 
+  const refreshUnits = useCallback(async () => {
+    const units = await getBloodUnits().catch(() => null)
+    if (units) setData((current) => current && { ...current, units })
+  }, [])
+
   const attention = useMemo(
     () => (data ? buildAttention(data, now).filter((item) => canSee(role, item.module)) : []),
     [data, now, role],
   )
 
   const value = useMemo<StaffState>(
-    () => ({ user, role, now, data, failed, attention, updateBed, upsertUnit, signOut }),
-    [user, role, now, data, failed, attention, updateBed, upsertUnit, signOut],
+    () => ({ user, role, now, data, failed, attention, updateBed, upsertUnit, refreshUnits, signOut }),
+    [user, role, now, data, failed, attention, updateBed, upsertUnit, refreshUnits, signOut],
   )
 
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>
