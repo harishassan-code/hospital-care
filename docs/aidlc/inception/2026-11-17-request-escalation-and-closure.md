@@ -1,7 +1,7 @@
 # Inception Spec: Request escalation and closure
 
 **Date:** 2026-11-17
-**Author:** Claude, drafted for review
+**Author:** Krrishna
 **Related backlog item:** [#35 Request escalation and closure](https://github.com/harishassan-code/hospital-care/issues/35)
 (Epic E4, Sprint 5; builds on [#31 Severity and priority](2026-11-17-emergency-severity-and-priority.md),
 [#34 Emergency request status tracking](2026-11-17-emergency-status-tracking.md) and

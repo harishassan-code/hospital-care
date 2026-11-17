@@ -1,7 +1,7 @@
 # Inception Spec: Emergency blood request
 
 **Date:** 2026-11-17
-**Author:** Claude, drafted for review
+**Author:** Krrishna
 **Related backlog item:** [#36 Emergency blood request](https://github.com/harishassan-code/hospital-care/issues/36)
 (Epic E4, Sprint 5; builds on [#30 Create emergency case](2026-11-17-create-emergency-case.md),
 [#31 Severity and priority](2026-11-17-emergency-severity-and-priority.md) and
