@@ -225,6 +225,12 @@ def book_appointment(donor: Donor, starts_at: datetime, *, actor) -> DonationApp
     hospital = getattr(actor, "hospital", None) or donor.hospital
     if donor.appointments.filter(status=AppointmentStatus.BOOKED, starts_at__gte=timezone.now()).exists():
         raise ValidationError({"donorId": ["This donor already has an upcoming appointment."]})
+    # The unique constraint is the race-safe guard on Postgres, but SQLite (the no-Docker test fallback)
+    # ignores nulls_distinct=False, so check up front too: one booking per slot, admins (no hospital) too.
+    if DonationAppointment.objects.filter(
+        hospital=hospital, starts_at=starts_at, status=AppointmentStatus.BOOKED
+    ).exists():
+        raise ValidationError({"startsAt": ["That slot is already booked."]})
     try:
         with transaction.atomic():
             appointment = DonationAppointment.objects.create(
