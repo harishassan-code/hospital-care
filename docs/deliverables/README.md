@@ -16,6 +16,7 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 | UI wireframes | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
 | Test report: Authentication & Role-Based Access module (class assignment) | [testing/authentication-test-report.md](../testing/authentication-test-report.md) | ✅ Done |
 | AIDLC process (Inception/Construction/Operations + templates) | [aidlc/](../aidlc/README.md) | ✅ Done |
+| AIDLC bolt board (remaining work, Sprints 7–9) | [aidlc/bolts/](../aidlc/bolts/README.md) | ⏳ Ongoing |
 | Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review | ⏳ Ongoing |
 | Final report & presentation | `final/` | ⏳ Sprint 9 |
 

@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 scripts/check_deploy_config.py
+      - run: python3 scripts/aidlc_board.py --check
 
   backend:
     runs-on: ubuntu-latest

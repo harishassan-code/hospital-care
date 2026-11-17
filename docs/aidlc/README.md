@@ -53,6 +53,50 @@ record the outcome using the [template](templates/operations-notes-template.md) 
 Follow-ups and issues observed here feed directly into the next Inception spec, and are also visible
 in the sprint review/retrospective docs under [docs/deliverables](../deliverables/README.md).
 
+## 4. Bolts
+
+The remaining backlog is split into **bolts**: the AIDLC unit of delivery. A bolt is one short, time-boxed cycle
+(1–3 days) through Inception → Construction → Operations, owned by one person working with an AI assistant. It
+covers one backlog story (sometimes two or three small, related ones) and is sized to finish inside a sprint.
+
+| Scrum | AIDLC |
+|---|---|
+| Epic (E6 Transfers & Logistics) | Intent: the outcome the epic is after |
+| Story / issue (#47) | Unit of work, described in the issue's acceptance criteria |
+| Sprint (1 week) | Contains several bolts; each bolt finishes inside it |
+| Task on the board | **Bolt** (`docs/aidlc/bolts/B01-transfer-request.md`): the issue(s), the existing code to build on, scope, open questions, exit checklist |
+
+**The board:** [bolts/README.md](bolts/README.md), generated from each bolt's front matter by
+`scripts/aidlc_board.py`. CI runs `python3 scripts/aidlc_board.py --check`, so the board always matches the files.
+
+**Taking a bolt (team members):**
+
+1. Pick a 🟢 Ready bolt on the [board](bolts/README.md) (all its dependencies are Done). Agree on it at planning or
+   in `#daily-standup`.
+2. In the bolt file set `owner:` to your GitHub handle and `status: In Progress`, run
+   `python3 scripts/aidlc_board.py`, and assign yourself the linked issue(s). Max 2 in progress per person.
+3. Run the three phases above. With Claude Code: `/bolt-start B01`, then `/aidlc-construction B01`, then
+   `/aidlc-operations B01` (see [CLAUDE.md](../../CLAUDE.md)). With another assistant, give it
+   [AGENTS.md](../../AGENTS.md) and the bolt file.
+4. The Scrum Master (or PO) signs the Inception spec's Approval line before any code is written.
+5. When it's merged and checked on staging: tick the bolt's exit checklist, set `status: Done`, regenerate the
+   board, close the issue(s). Move any bolt it unblocked from Backlog to Ready.
+
+**Writing a new bolt:** copy [templates/bolt-template.md](templates/bolt-template.md) to
+`bolts/BNN-<slug>.md` with the next free number, fill it in (especially **Build on**), and regenerate the board.
+
+## 5. The AI assistant environment
+
+The repository carries everything an assistant needs to follow this process:
+
+| File | Purpose |
+|---|---|
+| [AGENTS.md](../../AGENTS.md) | The rules for any AI assistant: the AIDLC gates, codebase conventions, the checks to run |
+| [CLAUDE.md](../../CLAUDE.md) | Loads AGENTS.md into Claude Code and lists the slash commands |
+| [.claude/commands/](../../.claude/commands/) | `/bolt-start`, `/aidlc-construction`, `/aidlc-operations`, `/bolt-board` |
+| [templates/](templates/) | Inception spec, construction plan, operations notes, bolt |
+| [scripts/aidlc_board.py](../../scripts/aidlc_board.py) | Builds and checks the bolt board |
+
 ## Why this on top of Scrum
 
 Scrum answers *what we build this sprint and in what order*. AIDLC answers *how a single piece of
