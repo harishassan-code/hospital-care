@@ -1,7 +1,7 @@
 # Inception Spec: Local availability check
 
 **Date:** 2026-11-17
-**Author:** Claude, drafted for review
+**Author:** Krrishna
 **Related backlog item:** #33 Local availability check (Epic E4, Sprint 5; builds on
 [#30 Create emergency case](2026-11-17-create-emergency-case.md) and
 [#34 Emergency request status tracking](2026-11-17-emergency-status-tracking.md))

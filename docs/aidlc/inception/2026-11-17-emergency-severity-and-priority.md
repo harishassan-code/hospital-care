@@ -1,7 +1,7 @@
 # Inception Spec: Emergency severity and priority
 
 **Date:** 2026-11-17
-**Author:** Claude, drafted for review
+**Author:** Krrishna
 **Related backlog item:** [#31 Emergency severity and priority](https://github.com/harishassan-code/hospital-care/issues/31)
 (Epic E4, Sprint 5, 3 pts, priority high; builds on [#30 Create emergency case](2026-11-17-create-emergency-case.md))
 
