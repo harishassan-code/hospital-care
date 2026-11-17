@@ -3,8 +3,8 @@
  * Each gets its real page, nav entry and access rule in the sprint shown; remove it from here then.
  */
 export const PLANNED: readonly { path: string; label: string; sprint: number; issues: string }[] = [
-  { path: '/staff/donors', label: 'Donors', sprint: 3, issues: '#20–#22' },
-  { path: '/staff/matching', label: 'Matching', sprint: 6, issues: '#37–#42' },
+  // The donor API shipped in Sprint 3 (#20–#22); its page is bolt B11 (docs/aidlc/bolts/).
+  { path: '/staff/donors', label: 'Donors', sprint: 8, issues: '#20–#22' },
   { path: '/staff/transfers', label: 'Transfers', sprint: 7, issues: '#47–#49' },
   { path: '/staff/ambulances', label: 'Ambulances', sprint: 8, issues: '#50–#51' },
   { path: '/staff/alerts', label: 'Alerts', sprint: 8, issues: '#52–#53' },

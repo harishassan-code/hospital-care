@@ -119,7 +119,9 @@ describe('StaffLayout', () => {
   it('shows the hospital the signed-in user works at', async () => {
     mockStaffApi({ role: 'nurse' })
     renderAt('/staff')
-    expect(await screen.findByText('CityCare General Hospital')).toBeInTheDocument()
+    // Wait for the workspace: the loading screen shows the installation's (same) name before it.
+    await screen.findByRole('navigation', { name: 'Staff' })
+    expect(screen.getByText('CityCare General Hospital')).toBeInTheDocument()
   })
 
   it('explains when the hospital system cannot be reached', async () => {
