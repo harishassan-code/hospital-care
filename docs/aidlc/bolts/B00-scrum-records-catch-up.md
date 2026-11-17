@@ -24,8 +24,8 @@ From [#2](https://github.com/harishassan-code/hospital-care/issues/2) and the [F
       write what actually happened, including what slipped.
 - [ ] Sprint 1 review and retrospective filled in (both are still ⏳ in the index)
 - [ ] Velocity table in [docs/scrum/timeline.md](../../scrum/timeline.md#velocity-check) filled in for sprints 1–7
-- [ ] Delivered issues closed after a check against their acceptance criteria: #26–#46 shipped in
-      #100 (equipment, operating rooms, emergencies, matching, reservations, allocation) but are still open
+- [x] Delivered issues closed after a check against their acceptance criteria: #26, #30, #32 and #37–#46
+      shipped in #100 and were closed on 17 Nov with a comment linking the evidence
 - [ ] [docs/deliverables/README.md](../../deliverables/README.md) index updated (sprint rows, Architecture/Wireframes status)
 
 ## Build on
