@@ -126,6 +126,51 @@ There's no new endpoint. `POST /beds/<id>/actions/` now runs through the shared 
 (`apps/resources`). It records who, when, from, to and why in `StatusChange`, writes the audit entry
 `bed.status_changed`, and answers 403 for a bed in another hospital (non-admins).
 
+## Specialists (#61, #62)
+
+Module `specialists` (B16). Every staff role reads the whole network, so a coordinator can find a specialist at another
+hospital. Admins write for any hospital, a nurse writes for her own hospital only, and doctors, blood bank and pharmacy
+staff only read. Patients get 403. The rules are in `apps/specialists/services.py`.
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| GET | `/specialists/?hospital=&specialty=&availableNow=true` | – | 200 `SpecialistSummary[]` |
+| POST | `/specialists/` | `SpecialistInput` | 201 `SpecialistDetail` |
+| GET | `/specialists/<id>/` | – | 200 `SpecialistDetail` |
+| PATCH | `/specialists/<id>/` | `{name?, specialty?, isActive?}` | 200 `SpecialistDetail` |
+| POST | `/specialists/<id>/on-call/` | `{startsAt, endsAt}` | 201 `OnCallWindow` |
+| DELETE | `/specialists/<id>/on-call/<window id>/` | – | 204 |
+
+```ts
+SpecialistInput = { name: string, specialty: string, hospitalId: number }  // all required
+SpecialistSummary = { id: number, name: string, specialty: string, isActive: boolean,
+  hospital: { id: number, name: string }, onCallNow: boolean, onCallUntil: string | null }
+SpecialistDetail = SpecialistSummary & { onCall: OnCallWindow[] }           // windows not yet ended, by start
+OnCallWindow = { id: number, startsAt: string, endsAt: string }             // ISO with offset: "2030-01-15T20:00:00+05:00"
+```
+
+- **Filters.** `hospital` (an id), `specialty` (free text, matched case-insensitively) and `availableNow=true` combine.
+  `availableNow` uses the server's clock. Rows come by hospital name, then specialty, then name. A non-numeric `hospital`
+  or a non-boolean `availableNow` is 400.
+- **Available now.** A specialist is on call when they are active and one window has `startsAt <= now < endsAt`: start
+  inclusive, end exclusive. `onCallUntil` is the end of that window, and `null` when the specialist isn't on call. That
+  includes a deactivated specialist who is inside a window.
+- **Windows.** Times are stored in UTC and shown in Asia/Karachi. An overnight window is one entry (Monday 20:00 to Tuesday
+  08:00). Two windows of one specialist may not overlap, but one that starts as another ends is fine. A window must end after
+  it starts and must not have ended when it is added. Removing a window that has started is **409** `{detail}`: it stays as
+  history. A window that belongs to another specialist is 404.
+- **Profiles.** Never deleted. `isActive: false` keeps the profile, marked, and takes it off call at once. `hospitalId` is
+  set on create and can't change. A name is unique per hospital, in any case.
+- **Refusals.** Every refusal names its field: `{"endsAt": [...]}` (not after the start, or already ended),
+  `{"startsAt": ["Overlaps an on-call window from 16 Jan 08:00 to 16 Jan 20:00."]}`, `{"name": [...]}` (taken at the hospital),
+  `{"hospitalId": [...]}` (unknown or deactivated hospital). A role that may not edit, or a non-admin writing for another
+  hospital, gets **403** `{detail}`. An unknown specialist is 404.
+- **Public page.** `/public/status/` is unchanged. It never lists staff specialists.
+- **Audit:** `specialist.created` (after: name, specialty, hospital), `specialist.updated` (only the fields that changed,
+  before and after), `on_call.created` (after: startsAt, endsAt) and `on_call.deleted` (before: startsAt, endsAt). The
+  target of an `on_call` entry is the window.
+- **Admin:** read-only, the same as transfers, so every change goes through the app and is audit-logged.
+
 ## Audit (story 8.1)
 
 There's no endpoint in Sprint 2. Entries are append-only (the model refuses update and delete), so the API can
