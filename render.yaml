@@ -37,6 +37,10 @@ services:
       # Django admin (/admin/) is not routed on staging (B13, F6). Set to "true" to route it, and back to "false" after.
       - key: DJANGO_ADMIN_ENABLED
         value: "false"
+      # Render's proxy is the one hop in front of the app. Sign-in and sign-up limits count per client address,
+      # read from X-Forwarded-For through that many proxies (B13, F4). Confirm on staging before relying on it.
+      - key: DJANGO_TRUSTED_PROXY_COUNT
+        value: "1"
       # Set both to the Vercel frontend URL once it exists (e.g. https://hospital-care.vercel.app).
       # The browser only talks to Vercel, which forwards /api/* here (frontend/vercel.json), so this
       # is what lets the CSRF check accept requests from the staging site.
