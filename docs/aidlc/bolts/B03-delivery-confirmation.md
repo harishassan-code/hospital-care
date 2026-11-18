@@ -7,7 +7,7 @@ priority: high
 sprint: 7
 depends_on: B02
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B03 · Delivery confirmation
@@ -41,8 +41,8 @@ request updates.
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-delivery-confirmation.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-delivery-confirmation.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [ ] Inception spec [`2026-11-18-delivery-confirmation.md`](../inception/2026-11-18-delivery-confirmation.md) approved (written; Approval line still says pending)
+- [x] Construction plan [`2026-11-18-delivery-confirmation.md`](../construction/2026-11-18-delivery-confirmation.md) written
+- [x] Code, tests and docs merged in #102; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-delivery-confirmation.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed

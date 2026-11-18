@@ -7,7 +7,7 @@ priority: high
 sprint: 8
 depends_on: B01
 owner: unassigned
-status: Backlog
+status: Ready
 ---
 
 # B08 · Hospital dashboard: requests, transfers and live refresh
