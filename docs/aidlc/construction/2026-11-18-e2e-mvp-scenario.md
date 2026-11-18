@@ -34,7 +34,7 @@ Checked by running `migrate` and `seed_demo` on a fresh scratch SQLite database,
   `902011`), as the spec says. Both expire on the same instant, so expiry does not separate them.
 - **The default blood strategy is `earliestExpiry`** (`apps/matching/scoring.py`: expiry 0.5, compatibility 0.2,
   distance 0.2, stock 0.1). Seaview and Northside tie on expiry, compatibility and stock, so distance decides the order.
-  Seaview is nearer, so it ranks first. The scenario run in unit 3 confirms the order on the page.
+  Seaview is nearer, so it ranks first. The scenario confirms the order on the page (S4).
 - **Two actions use the browser's confirm dialog:** "Confirm receipt" (S9) and the allocate button on a hold (S10).
   Approve, dispatch and in transit do not ask. The spec names only S9's dialog, so S10 accepts one too.
 - **Reservations have no Django admin page.** `apps/matching/admin.py` registers only `Allocation`. S12 reads the
@@ -49,7 +49,7 @@ Checked by running `migrate` and `seed_demo` on a fresh scratch SQLite database,
 | Unit | Description | Files touched | Tests |
 |---|---|---|---|
 | 0 | Construction plan, and the approved inception spec (it was untracked on this branch) | `docs/aidlc/construction/2026-11-18-e2e-mvp-scenario.md`, `docs/aidlc/inception/2026-11-18-e2e-mvp-scenario.md` | Board and deploy-config checks |
-| 1 | `seed_demo`: CityCare's usable O− red cells set to exactly one, after the random draws. Surplus usable units become `issued`. With none usable, the newest unexpired reserved or issued unit becomes available. Runs only on a fresh stock, like the rest of the blood seed | `backend/apps/core/management/commands/seed_demo.py`, `backend/apps/core/tests/test_seed_demo.py` | pytest: exactly one usable O− red cell at CityCare; reset repeats the same units and statuses; with the change switched off, every other unit's status is the same (only O− red cells differ); the 352-unit count is unchanged |
+| 1 | `seed_demo`: CityCare's usable O− red cells set to exactly one, after the random draws. Surplus usable units become `issued`. With none usable, the unexpired reserved or issued unit that expires last becomes available. Runs only on a fresh stock, like the rest of the blood seed | `backend/apps/core/management/commands/seed_demo.py`, `backend/apps/core/tests/test_seed_demo.py` | pytest: exactly one usable O− red cell at CityCare; reset repeats the same units and statuses; with the change switched off, every other unit's status is the same (only O− red cells differ); the 352-unit count is unchanged |
 | 2 | Playwright project in `e2e/`: `package.json` with `@playwright/test` pinned exactly and a lockfile, `playwright.config.ts` (base URL from `E2E_BASE_URL`, one worker, Chromium only, list and HTML reporters, trace and screenshot on failure, no retries), `tsconfig.json` with a `typecheck` script, the six seeded accounts, and a `signIn` helper. `.gitignore` gets `e2e/playwright-report/` and `e2e/test-results/` | `e2e/package.json`, `e2e/package-lock.json`, `e2e/playwright.config.ts`, `e2e/tsconfig.json`, `e2e/tests/support/accounts.ts`, `e2e/tests/support/signIn.ts`, `.gitignore` | `npm ci`, `npm run typecheck`, `npx playwright test --list` |
 | 3 | The scenario: steps S1 to S12, each titled with its §23 number, each asserting its spec row, with a precondition check at S4 | `e2e/tests/mvp-scenario.spec.ts` | The scenario itself, 3 consecutive local passes, each on a new database |
 | 4 | Stable hooks in the frontend, only where a step cannot be found by role, label or the existing section id | None expected. If needed: the page, plus a Vitest test | `npm test`, `npm run build` |
@@ -85,8 +85,26 @@ unit 3 for the job to have something to run. Unit 6 documents what units 3 and 5
 - **The admin's Django page is opened on `E2E_ADMIN_URL`** (default `http://localhost:8000/admin/`). The spec names no
   variable for it. It mirrors `E2E_BASE_URL`, and nothing else reads it.
 - **`--noreload` is not used on `runserver`.** The spec's command is kept as written.
-- **`workflow_dispatch` is added to the workflow's top-level `on:`.** The spec asks for manual runs. The job's own `if:`
-  holds the rest of the triggers, so the other jobs keep running on every push.
+- **`workflow_dispatch` is added to the workflow's top-level `on:`, so a manual run runs every job.** The spec asks for
+  manual runs and keeps the existing triggers. The other jobs have no `if:`, so they run on a manual run too. That is a
+  full check of the branch, and it is the cost of putting the trigger on the workflow.
+- **Playwright is pinned at 1.64.1, not the newest 1.65.1.** 1.65.1 was published five days before this bolt. 1.64.1 is
+  the newest release at least two weeks old. TypeScript and `@types/node` match the versions the frontend locks.
+- **No frontend change (unit 4 is empty).** Every step found its element by role, label or the page's section id.
+- **The local runs use SQLite; CI uses PostgreSQL 17.** Unit 5's job has not run on PostgreSQL. See Verification.
+
+## Verification
+
+- **Backend** (after unit 1): `ruff check .`, `ruff format --check .` and `makemigrations --check --dry-run` pass.
+  `pytest -q`: 1251 passed, 5 skipped. The baseline was 1246 passed, 5 skipped, and the five new seed tests account for
+  the difference.
+- **Scenario** (after unit 3, the final spec): three consecutive passes, each on a freshly seeded SQLite database, took
+  5.7 s, 6.0 s and 6.5 s. A negative check with four usable O− units (the seed change undone) failed at S4 with the
+  precondition message: "Precondition: CityCare has 1 or 2 usable O− red cells (seed_demo sets exactly 1)".
+- **Repo**: `check_deploy_config.py` and `aidlc_board.py --check` pass after each commit.
+- **Not verified here:** the `e2e` job on GitHub, and the scenario on PostgreSQL 17. The sandbox refused to run a
+  downloaded PostgreSQL binary, so the database is SQLite. The bolt's "three consecutive CI runs" criterion needs a push
+  and a human to check the runs.
 
 ## Review
 

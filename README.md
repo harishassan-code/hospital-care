@@ -103,3 +103,18 @@ API at `VITE_API_URL` (default `http://localhost:8000/api`), so both servers mus
 cd backend && ruff check . && ruff format --check . && pytest
 cd frontend && npm run lint && npm test && npm run build
 ```
+
+### End-to-end scenario (MVP acceptance test)
+
+The proposal's §23 scenario runs as one browser test: request, match, reserve, transfer, receipt, history. CI runs it on
+pull requests and on pushes to `main`. To run it on your machine, start the API on a fresh database and the built
+frontend on port 5173, then run the test from `e2e/`:
+
+```bash
+cd backend && python manage.py migrate && python manage.py seed_demo && python manage.py runserver localhost:8000
+cd frontend && npm ci && npm run build && npm run preview -- --host localhost --port 5173 --strictPort
+cd e2e && npm ci && npx playwright install chromium && npm test
+```
+
+The scenario uses up its stock, so delete `backend/db.sqlite3` (or use a new `DATABASE_URL`) before each run. The
+steps, and what each one proves, are in [docs/testing/mvp-scenario.md](docs/testing/mvp-scenario.md).
