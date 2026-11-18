@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.pharmacy",
     "apps.equipment",
     "apps.operating_rooms",
+    "apps.specialists",
     "apps.notifications",
     "apps.audit",
 ]
