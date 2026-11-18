@@ -31,6 +31,7 @@ export const MODULES: readonly { id: Module; label: string; path: string }[] = [
   { id: 'equipment', label: 'Equipment', path: '/staff/equipment' },
   { id: 'operatingRooms', label: 'Operating rooms', path: '/staff/operating-rooms' },
   { id: 'hospitals', label: 'Hospitals', path: '/staff/hospitals' },
+  { id: 'specialists', label: 'Specialists', path: '/staff/specialists' },
   { id: 'users', label: 'Users and roles', path: '/staff/users' },
 ]
 

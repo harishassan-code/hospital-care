@@ -13,7 +13,7 @@ const TABLE: Record<Role, Record<Module, 'v' | 'e' | '-'>> = {
 describe('roles', () => {
   it('lists every role and module', () => {
     expect(ROLES.map((r) => r.id)).toEqual(Object.keys(TABLE))
-    expect(MODULES.map((m) => m.id)).toEqual(['overview', 'emergencies', 'transfers', 'beds', 'blood', 'pharmacy', 'equipment', 'operatingRooms', 'hospitals', 'users'])
+    expect(MODULES.map((m) => m.id)).toEqual(['overview', 'emergencies', 'transfers', 'beds', 'blood', 'pharmacy', 'equipment', 'operatingRooms', 'hospitals', 'specialists', 'users'])
   })
 
   it.each([
@@ -27,6 +27,9 @@ describe('roles', () => {
     ['/staff/users', 'users'],
     ['/staff/equipment', 'equipment'],
     ['/staff/operating-rooms', 'operatingRooms'],
+    ['/staff/specialists', 'specialists'],
+    ['/staff/specialists/3', 'specialists'],
+    ['/staff/specialists/3/edit', 'specialists'],
     ['/staff/hospitalsx', 'overview'],
   ])('maps %s to the %s module', (path, module) => {
     expect(moduleForPath(path).id).toBe(module)
