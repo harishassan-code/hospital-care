@@ -7,6 +7,7 @@ import { BloodRequestForm } from '../../features/emergencies/BloodRequestForm'
 import { CaseStatusLabel } from '../../features/emergencies/CaseStatusLabel'
 import { describeNeed, SEVERITY_TONE } from '../../features/emergencies/emergencies'
 import styles from '../../features/emergencies/Emergencies.module.css'
+import { IncomingPatients, OutgoingPatients } from '../../features/emergencies/IncomingPatients'
 import { NewCaseForm } from '../../features/emergencies/NewCaseForm'
 import { canEdit } from '../../features/staff/roles'
 import { useStaff } from '../../features/staff/staffContext'
@@ -113,6 +114,8 @@ export default function EmergenciesPage() {
           </div>
         )}
       </Panel>
+      {editable && <IncomingPatients />}
+      <OutgoingPatients />
     </div>
   )
 }
