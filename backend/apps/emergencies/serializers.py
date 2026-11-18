@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from apps.blood.models import BloodGroup, Component
 from apps.equipment.models import EquipmentType
-from apps.hospitals.models import BedType
+from apps.hospitals.models import BedType, Hospital
 from apps.matching.allocations import may_allocate
 from apps.matching.models import ACTIVE, Allocation, Reservation, ReservationStatus
 from apps.matching.multi import HospitalMatch
@@ -15,13 +15,18 @@ from apps.operating_rooms.models import OrCapability
 from .availability import local_availability
 from .labels import hospital_match_data, need_label
 from .models import (
+    PATIENT_TRANSFER_LIFECYCLE,
     REQUEST_LIFECYCLE,
     EmergencyRequest,
+    PatientTransfer,
+    PatientTransferStatus,
     RequestItem,
     RequestStatusChange,
     ResourceType,
     Severity,
 )
+from .patient_transfers import actions_for as patient_actions_for
+from .patient_transfers import transfer_flag
 
 MAX_ITEMS = 10
 MAX_QUANTITY = {
@@ -334,7 +339,7 @@ class CaseDetailSerializer(CaseSerializer):
     what its hospital has for each need (story #33): `localAvailable` and `shortfall` per item, and the
     case's `shortfallTotal`. Only the detail computes availability, so the list stays cheap. Also the holds
     on the case's stock (story #43): `reserved` per item (held, not yet allocated) and `reservations`, the
-    held and allocated ones."""
+    held and allocated ones. `transferFlag` and `patientTransfers` are the case's patient transfers (B17)."""
 
     history = StatusChangeSerializer(many=True, read_only=True)
     actions = serializers.SerializerMethodField()
@@ -361,6 +366,7 @@ class CaseDetailSerializer(CaseSerializer):
             for need, row in zip(data["items"], rows, strict=True)
         ]
         data["shortfallTotal"] = sum(row.shortfall for row in rows)
+        data["transferFlag"] = transfer_flag(case, rows)
         holds = (
             Reservation.objects.filter(request_item__request=case, status__in=ACTIVE)
             .select_related("hospital", "reserved_by", "request_item")
@@ -373,6 +379,18 @@ class CaseDetailSerializer(CaseSerializer):
 
         transfers = Transfer.objects.filter(request_item__request=case).with_details()
         data["transfers"] = TransferSerializer(transfers, many=True, context=self.context).data
+        # The case is loaded with its needs, so each transfer points at it: one query for the transfers, none
+        # for their needs.
+        patient_transfers = list(
+            PatientTransfer.objects.filter(request=case).select_related(
+                "from_hospital", "to_hospital", "requested_by", "arrived_by"
+            )
+        )
+        for transfer in patient_transfers:
+            transfer.request = case
+        data["patientTransfers"] = PatientTransferSerializer(
+            patient_transfers, many=True, context=self.context
+        ).data
         allocations = (
             Allocation.objects.filter(request=case)
             .select_related("hospital", "allocated_by", "request_item")
@@ -388,6 +406,68 @@ class CaseDetailSerializer(CaseSerializer):
         """The note of the latest close (story #35), or None. Reads the prefetched history: no extra query."""
         closes = [change for change in case.history.all() if change.action == "close"]
         return closes[-1].note if closes else None
+
+
+class PatientTransferSerializer(serializers.Serializer):
+    """One patient transfer (B17, stories #63 to #65): a case's move to another hospital, and its history.
+    Shape of `PatientTransfer` in frontend/src/api/emergencies.ts. Use
+    `PatientTransfer.objects.with_details()`, and `self.context["user"]` decides `actions`. It never carries
+    the patient reference, stock or holds."""
+
+    def to_representation(self, transfer: PatientTransfer):
+        case = transfer.request
+        user = self.context.get("user")
+        requested_by = transfer.requested_by
+        arrived_by = transfer.arrived_by
+        return {
+            "id": transfer.pk,
+            "reference": case.reference,
+            "severity": case.severity,
+            "status": transfer.status,
+            "from": {"id": transfer.from_hospital_id, "name": transfer.from_hospital.name},
+            "to": {"id": transfer.to_hospital_id, "name": transfer.to_hospital.name},
+            "needs": [need_label(item) for item in case.items.all()],
+            "match": transfer.match,
+            "requestedBy": requested_by.get_full_name() or requested_by.email,
+            "requestedAt": serializers.DateTimeField().to_representation(transfer.requested_at),
+            "arrivedBy": None if arrived_by is None else arrived_by.get_full_name() or arrived_by.email,
+            "arrivedAt": None
+            if transfer.arrived_at is None
+            else serializers.DateTimeField().to_representation(transfer.arrived_at),
+            "note": transfer.note,
+            "reason": transfer.reason,
+            "actions": patient_actions_for(user, transfer) if user is not None else [],
+        }
+
+
+class PatientTransferInputSerializer(serializers.Serializer):
+    """POST /api/emergencies/<reference>/patient-transfer/: the destination hospital, and an optional note."""
+
+    destinationId = serializers.IntegerField()
+    note = serializers.CharField(max_length=MAX_NOTE, required=False, allow_blank=True, default="")
+
+    def validate_destinationId(self, value):
+        """An existing hospital. The validated value is the hospital itself; the service checks it is
+        active."""
+        hospital = Hospital.objects.filter(pk=value).first()
+        if hospital is None:
+            raise serializers.ValidationError("No hospital with that id.")
+        return hospital
+
+
+class PatientTransferActionSerializer(serializers.Serializer):
+    """POST /api/patient-transfers/<id>/actions/: arrival, or a cancel with its reason (required for a
+    cancel)."""
+
+    action = serializers.ChoiceField(choices=PATIENT_TRANSFER_LIFECYCLE.actions)
+    reason = serializers.CharField(max_length=MAX_NOTE, required=False, allow_blank=True, default="")
+
+
+class PatientTransferQuerySerializer(serializers.Serializer):
+    """GET /api/patient-transfers/?direction=&status=: both filters are optional."""
+
+    direction = serializers.ChoiceField(choices=["incoming", "outgoing"], required=False)
+    status = serializers.ChoiceField(choices=PatientTransferStatus.choices, required=False)
 
 
 def score_data(score) -> dict:
