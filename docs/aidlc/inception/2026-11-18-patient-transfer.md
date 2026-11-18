@@ -29,30 +29,30 @@ Refined from the bolt's three checkboxes. Each keeps the bolt's wording at its h
 
 **Need check (#63): flag raised when local availability check fails for critical requirements**
 
-- [ ] The case detail carries `transferFlag`: true when the case is `critical` and at least one need is short after local availability (holds count as local, #33 and #43). It is computed on read and never stored, like the shortfall.
-- [ ] The case page shows a "Transfer may be needed" notice naming the short needs. The notice goes when local stock covers them.
-- [ ] Cases of other severities don't raise the flag (see open question 2).
+- [x] The case detail carries `transferFlag`: true when the case is `critical` and at least one need is short after local availability (holds count as local, #33 and #43). It is computed on read and never stored, like the shortfall.
+- [x] The case page shows a "Transfer may be needed" notice naming the short needs. The notice goes when local stock covers them.
+- [x] Cases of other severities don't raise the flag (see open question 2).
 
 **Destination (#64): uses multi-resource matching to recommend a destination**
 
-- [ ] The destination list is `match_hospitals` (#42). The rank-1 hospital that has everything is marked Recommended. When no hospital has everything, the best partial one is still listed, with what it is missing.
-- [ ] With one short need the #42 panel isn't shown (it appears from two short needs), so the recommendation is the per-need rank 1, as today.
-- [ ] Staff at the case's hospital (edit on emergencies) can request a transfer to a hospital from that list, with an optional note. The request is refused (400, nothing saved) when the case has no hospital, nothing is short, the case can't take stock (the #43 statuses), the destination is the case's own or inactive, or the destination isn't in the list. A second open request for the same case is 409.
-- [ ] The request stores a snapshot of the destination's match at that moment: covered needs, missing needs, distance and travel time. It reserves nothing at the destination.
+- [x] The destination list is `match_hospitals` (#42). The rank-1 hospital that has everything is marked Recommended. When no hospital has everything, the best partial one is still listed, with what it is missing.
+- [x] With one short need the #42 panel isn't shown (it appears from two short needs), so the recommendation is the per-need rank 1, as today.
+- [x] Staff at the case's hospital (edit on emergencies) can request a transfer to a hospital from that list, with an optional note. The request is refused (400, nothing saved) when the case has no hospital, nothing is short, the case can't take stock (the #43 statuses), the destination is the case's own or inactive, or the destination isn't in the list. A second open request for the same case is 409.
+- [x] The request stores a snapshot of the destination's match at that moment: covered needs, missing needs, distance and travel time. It reserves nothing at the destination.
 
 **Arrival (#65): arrival confirmation updates case ownership**
 
-- [ ] Confirming arrival sets `EmergencyRequest.hospital` to the destination in one transaction, and marks the transfer arrived with who and when.
-- [ ] Only staff at the destination with edit on emergencies, or an admin, can confirm. The sending hospital gets 403. A hospital in neither role gets 404.
-- [ ] Arrival releases the case's unallocated holds at the sending hospital, so the units go back on its shelf. Allocated ones stay. The case's requested (unanswered) stock transfers are cancelled. Approved, dispatched or in-transit ones refuse arrival with 409, naming them.
-- [ ] A transfer that is no longer requested (already arrived or cancelled) can't be confirmed: 409, nothing changes.
-- [ ] After arrival the case is in the destination's list and gone from the sending hospital's. Its timeline shows "Arrived at X from Y". The sending hospital still sees the transfer in its outgoing list.
-- [ ] Before arrival the destination sees the incoming patient on its Emergencies page: reference, severity, need labels, sending hospital and request time. It does not see the case detail, its stock, its holds or the patient reference.
+- [x] Confirming arrival sets `EmergencyRequest.hospital` to the destination in one transaction, and marks the transfer arrived with who and when.
+- [x] Only staff at the destination with edit on emergencies, or an admin, can confirm. The sending hospital gets 403. A hospital in neither role gets 404.
+- [x] Arrival releases the case's unallocated holds at the sending hospital, so the units go back on its shelf. Allocated ones stay. The case's requested (unanswered) stock transfers are cancelled. Approved, dispatched or in-transit ones refuse arrival with 409, naming them.
+- [x] A transfer that is no longer requested (already arrived or cancelled) can't be confirmed: 409, nothing changes.
+- [x] After arrival the case is in the destination's list and gone from the sending hospital's. Its timeline shows "Arrived at X from Y". The sending hospital still sees the transfer in its outgoing list.
+- [x] Before arrival the destination sees the incoming patient on its Emergencies page: reference, severity, need labels, sending hospital and request time. It does not see the case detail, its stock, its holds or the patient reference.
 
 **Cancel, close and audit**
 
-- [ ] The sending hospital can cancel a requested transfer, with a reason. Closing or cancelling the case cancels its requested transfer in the same transaction.
-- [ ] Every change writes an audit record: `patienttransfer.requested`, `patienttransfer.arrived`, `patienttransfer.cancelled`, `emergencyrequest.hospital_changed`.
+- [x] The sending hospital can cancel a requested transfer, with a reason. Closing or cancelling the case cancels its requested transfer in the same transaction.
+- [x] Every change writes an audit record: `patienttransfer.requested`, `patienttransfer.arrived`, `patienttransfer.cancelled`, `emergencyrequest.hospital_changed`.
 
 ## Design
 
