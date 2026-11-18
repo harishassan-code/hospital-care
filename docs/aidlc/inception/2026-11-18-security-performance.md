@@ -32,28 +32,28 @@ The bolt's two criteria are kept and refined below.
 
 ### Deployment checks (bolt: `check --deploy` clean on staging)
 
-- [ ] With `DJANGO_DEBUG=false` and a random `DJANGO_SECRET_KEY` of 50 characters or more, `python manage.py check --deploy --fail-level WARNING` prints no issues and exits 0. Today it prints W004 and W008.
-- [ ] With `DJANGO_DEBUG=false` and no `DJANGO_SECRET_KEY`, the server refuses to start, and the error names the variable. Today it starts with the key from the code.
-- [ ] HSTS and the SSL redirect are on only when DEBUG is off. The HSTS length comes from `DJANGO_HSTS_SECONDS`. Local development and the test suite (DEBUG on by default) behave as before.
-- [ ] `/api/health/` is exempt from the SSL redirect, so Render's health check still passes.
-- [ ] CI runs the same `check --deploy` command with a dummy key, so a regression fails the build.
+- [x] With `DJANGO_DEBUG=false` and a random `DJANGO_SECRET_KEY` of 50 characters or more, `python manage.py check --deploy --fail-level WARNING` prints no issues and exits 0. Today it prints W004 and W008.
+- [x] With `DJANGO_DEBUG=false` and no `DJANGO_SECRET_KEY`, the server refuses to start, and the error names the variable. Today it starts with the key from the code.
+- [x] HSTS and the SSL redirect are on only when DEBUG is off. The HSTS length comes from `DJANGO_HSTS_SECONDS`. Local development and the test suite (DEBUG on by default) behave as before.
+- [x] `/api/health/` is exempt from the SSL redirect, so Render's health check still passes.
+- [x] CI runs the same `check --deploy` command with a dummy key, so a regression fails the build.
 - [ ] On staging, `check --deploy` shows no issues. The output is recorded in the operations notes.
 
 ### Permission review (bolt: permission review notes)
 
 - [ ] Every view in `apps/*/views.py` and every URL module appears in the review table in the Design section, with its guard and hospital scope. Each finding is fixed in this bolt or linked to a follow-up issue.
-- [ ] A donor registered at another hospital is refused for an appointment (F1) and for a blood unit link (F2), with a 404 and a test for each. Admins, who see the whole network, can still do both.
-- [ ] Views that look up a record before the service check return 404 for another hospital's record, not 403 (F3). Each affected view has a test.
-- [ ] A test walks every `/api/` URL pattern and fails if a view declares no permission class, or is `AllowAny` but not on the allowlist: the auth csrf, login, logout and signup endpoints, the public status endpoint and health (F10).
-- [ ] The role table (`ACCESS` in `apps/accounts/permissions.py` and `frontend/src/features/staff/roles.ts`) does not change in this bolt unless the Product Owner approves a change.
+- [x] A donor registered at another hospital is refused for an appointment (F1) and for a blood unit link (F2), with a 404 and a test for each. Admins, who see the whole network, can still do both.
+- [x] Views that look up a record before the service check return 404 for another hospital's record, not 403 (F3). Each affected view has a test.
+- [x] A test walks every `/api/` URL pattern and fails if a view declares no permission class, or is `AllowAny` but not on the allowlist: the auth csrf, login, logout and signup endpoints, the public status endpoint and health (F10).
+- [x] The role table (`ACCESS` in `apps/accounts/permissions.py` and `frontend/src/features/staff/roles.ts`) does not change in this bolt unless the Product Owner approves a change.
 
 ### Search performance (bolt: search p95 recorded)
 
-- [ ] `seed_demo --hospitals N` seeds N hospitals, where N is 3 or more. With no flag, the data and output are unchanged, and the existing tests pass without edits.
+- [x] `seed_demo --hospitals N` seeds N hospitals, where N is 3 or more. With no flag, the data and output are unchanged, and the existing tests pass without edits.
 - [ ] `scripts/load_test_search.py` times `GET /api/emergencies/<reference>/candidates/` over HTTP, on Postgres, against a seeded network of 50 hospitals (proposed, Q3), after a warm-up. It reports p50, p95, p99, max and the error count, at concurrency 1 and 5 (proposed).
 - [ ] The p95 is recorded in `docs/testing/search-load-test.md` with the dataset's row counts, the commit, the database version and the exact command. The final report (B15) links to it.
-- [ ] A test shows the candidate query count does not grow with the number of hospitals: the same `QUERY_BUDGET` holds at 10 hospitals as at 3.
-- [ ] `apps/matching/tests/test_candidates_performance.py` passes unchanged.
+- [x] A test shows the candidate query count does not grow with the number of hospitals: the same `QUERY_BUDGET` holds at 10 hospitals as at 3.
+- [x] `apps/matching/tests/test_candidates_performance.py` passes unchanged.
 
 ## Design
 
