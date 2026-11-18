@@ -30,6 +30,10 @@ services:
         value: "false"
       - key: DJANGO_ALLOWED_HOSTS
         value: .onrender.com
+      # HTTPS only: with DEBUG off the app redirects to HTTPS (health check excepted) and sends HSTS (B13).
+      # How long browsers remember HSTS, in seconds. Raise it to 31536000 after a week of HTTPS-only staging.
+      - key: DJANGO_HSTS_SECONDS
+        value: "3600"
       # Set both to the Vercel frontend URL once it exists (e.g. https://hospital-care.vercel.app).
       # The browser only talks to Vercel, which forwards /api/* here (frontend/vercel.json), so this
       # is what lets the CSRF check accept requests from the staging site.

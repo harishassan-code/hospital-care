@@ -74,6 +74,28 @@ The free Render plan has no scheduled jobs, so the API releases expired holds it
 candidates or a reservation endpoint. A scheduler can run the same release with
 `python manage.py release_expired_reservations`, which prints how many holds it released.
 
+### HTTPS and deploy checks (B13)
+With `DJANGO_DEBUG=false` (staging), the app:
+
+- **refuses to start without `DJANGO_SECRET_KEY`**. Render generates the key (`generateValue` in `render.yaml`).
+  Set a long random value (50 characters or more) by hand if you run the app anywhere else.
+- **redirects plain HTTP to HTTPS** and sends `Strict-Transport-Security`. `/api/health/` is exempt, so Render's health
+  check still passes. `DJANGO_HSTS_SECONDS` sets the HSTS length (default `3600`). Raise it to `31536000` after a week of
+  HTTPS-only staging, since browsers cache it. Preload is off.
+- sends the same HSTS header from the Vercel domain (`frontend/vercel.json`, `max-age=3600; includeSubDomains`). Change
+  both when you change the length.
+
+Check the settings with the same command CI runs (a dummy key, so nothing secret is needed):
+
+```bash
+cd backend
+DJANGO_DEBUG=false DJANGO_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(50))") \
+  python manage.py check --deploy --fail-level WARNING
+```
+
+It should print `System check identified no issues`. CI runs the same command on every push, and
+`apps/core/tests/test_deploy_settings.py` checks the settings too.
+
 ### Demo data
 The Render build runs `seed_demo` (it only adds data to empty tables), so staging has the demo hospitals,
 beds, blood units and one login per role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`,

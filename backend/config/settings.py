@@ -27,8 +27,13 @@ def positive_int_env(name, default):
     return value
 
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
+# The development key is only for DEBUG. With DEBUG off the key must come from the environment (Render
+# generates it), so a host that forgets it refuses to start, not sign sessions with a key from the code (F8).
+DEV_SECRET_KEY = "dev-only-insecure-key-change-me"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or (DEV_SECRET_KEY if DEBUG else "")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 INSTALLED_APPS = [
@@ -138,6 +143,16 @@ if not DEBUG:
     CSRF_COOKIE_SAMESITE = "None"
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # HTTPS only (B13). Render's health check reaches the app over plain HTTP, so that one path is exempt.
+    SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
+    # How long browsers keep to HTTPS for this host: 3600 for the first deploy, then 31536000 (one year) once
+    # staging has been HTTPS-only for a week, because browsers cache it. Preload stays off (B13 non-goal).
+    SECURE_HSTS_SECONDS = positive_int_env("DJANGO_HSTS_SECONDS", 3600)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # deploy check W005; this host's own subdomains only
+    # W021 asks for the HSTS preload token, a commitment to the browser preload list. That is out of scope for
+    # B13, so the header leaves the token out and the check is silenced on purpose.
+    SILENCED_SYSTEM_CHECKS = ["security.W021"]
 
 # Blood bank rules (Sprint 3). Each can be overridden with an environment variable.
 BLOOD_NEAR_EXPIRY_DAYS = int(os.environ.get("BLOOD_NEAR_EXPIRY_DAYS", "3"))  # story #19
