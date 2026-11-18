@@ -35,6 +35,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or (DEV_SECRET_KEY if DEBUG els
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+# The Django admin at /admin/ (B13, F6). On under DEBUG; off otherwise unless DJANGO_ADMIN_ENABLED=true.
+ADMIN_ENABLED = os.environ.get("DJANGO_ADMIN_ENABLED", "true" if DEBUG else "false").lower() == "true"
 
 INSTALLED_APPS = [
     "django.contrib.admin",

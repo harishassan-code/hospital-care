@@ -84,6 +84,9 @@ With `DJANGO_DEBUG=false` (staging), the app:
   HTTPS-only staging, since browsers cache it. Preload is off.
 - sends the same HSTS header from the Vercel domain (`frontend/vercel.json`, `max-age=3600; includeSubDomains`). Change
   both when you change the length.
+- does **not** route the Django admin at `/admin/` (it answers 404). The demo `admin@` login is a superuser, and its
+  password is public in this document, so the admin is left off on staging. Set `DJANGO_ADMIN_ENABLED=true` on Render
+  to route it, and back to `false` afterwards. Under `DJANGO_DEBUG=true` (local development) it is on.
 
 Check the settings with the same command CI runs (a dummy key, so nothing secret is needed):
 
