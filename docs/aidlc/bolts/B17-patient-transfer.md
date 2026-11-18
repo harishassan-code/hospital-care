@@ -7,7 +7,7 @@ priority: low
 sprint: stretch
 depends_on: B01
 owner: unassigned
-status: Backlog
+status: Ready
 ---
 
 # B17 · Patient transfer: need check, destination and arrival

@@ -7,7 +7,7 @@ priority: highest
 sprint: 9
 depends_on: B03
 owner: unassigned
-status: Backlog
+status: Ready
 ---
 
 # B12 · End-to-end MVP scenario test
