@@ -19,6 +19,7 @@ import {
   type CaseReservation,
   type EmergencyCaseDetail,
   type HospitalMatch,
+  type PatientTransfer,
   type Score,
   type StatusChange,
   type UnmetNeed,
@@ -32,6 +33,7 @@ import {
   ACTION_LABEL,
   describeMove,
   describeNeed,
+  describePatientTransfer,
   SEVERITY_TONE,
   shortfallSummary,
   STATUS_LABEL,
@@ -178,7 +180,7 @@ function CaseView({ reference }: { reference: string }) {
       )}
 
       {canEdit(role, 'emergencies') && <CaseMoves kase={kase} onMoved={(updated) => setData(() => updated)} />}
-      <Timeline entries={timelineOf(kase.history, kase.allocations)} />
+      <Timeline entries={timelineOf(kase.history, kase.allocations, kase.patientTransfers)} />
     </div>
   )
 }
@@ -735,7 +737,8 @@ function moveFailure(error: unknown): string {
 }
 
 /**
- * Every status move and every allocation (story #45), oldest first. An entry with no actor was made by the system.
+ * Every status move, every allocation (story #45) and every patient transfer step (B17), oldest first. An entry with no
+ * actor was made by the system.
  */
 function Timeline({ entries }: { entries: TimelineEntry[] }) {
   return (
@@ -744,16 +747,44 @@ function Timeline({ entries }: { entries: TimelineEntry[] }) {
         <p>No history yet.</p>
       ) : (
         <ol className={styles.timeline}>
-          {entries.map((entry) =>
-            entry.kind === 'move' ? (
-              <MoveEntry key={`move-${entry.at}-${entry.change.action}`} change={entry.change} />
-            ) : (
-              <AllocationEntry key={`allocation-${entry.allocation.id}`} allocation={entry.allocation} />
-            ),
-          )}
+          {entries.map((entry) => {
+            if (entry.kind === 'move') return <MoveEntry key={`move-${entry.at}-${entry.change.action}`} change={entry.change} />
+            if (entry.kind === 'allocation') {
+              return <AllocationEntry key={`allocation-${entry.allocation.id}`} allocation={entry.allocation} />
+            }
+            return (
+              <TransferEntry
+                key={`transfer-${entry.transfer.id}-${entry.step}`}
+                transfer={entry.transfer}
+                step={entry.step}
+                at={entry.at}
+              />
+            )
+          })}
         </ol>
       )}
     </Panel>
+  )
+}
+
+/** A patient transfer step (B17): the request (with its note, and its cancellation if there was one), or the arrival. */
+function TransferEntry({ transfer, step, at }: { transfer: PatientTransfer; step: 'requested' | 'arrived'; at: string }) {
+  const when = new Date(at)
+  const who = step === 'arrived' ? transfer.arrivedBy : transfer.requestedBy
+  return (
+    <li>
+      <strong>{describePatientTransfer(transfer, step)}</strong>
+      <span className={styles.hint}>
+        <time dateTime={at}>
+          {formatShortDate(when)}, {formatClock(when)}
+        </time>
+        {who ? ` · ${who}` : ''}
+      </span>
+      {step === 'requested' && transfer.note && <p className={styles.entryNote}>{transfer.note}</p>}
+      {step === 'requested' && transfer.status === 'cancelled' && (
+        <p className={styles.entryNote}>Cancelled: {transfer.reason}</p>
+      )}
+    </li>
   )
 }
 
