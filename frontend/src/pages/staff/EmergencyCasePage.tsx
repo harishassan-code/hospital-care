@@ -29,11 +29,14 @@ import { TextField } from '../../components/form/TextField'
 import { Panel } from '../../components/ui/Panel'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { CaseStatusLabel } from '../../features/emergencies/CaseStatusLabel'
+import { PatientTransferPanel, TransferPatientAction } from '../../features/emergencies/PatientTransferPanel'
 import {
   ACTION_LABEL,
+  canMovePatient,
   describeMove,
   describeNeed,
   describePatientTransfer,
+  openTransferOf,
   SEVERITY_TONE,
   shortfallSummary,
   STATUS_LABEL,
@@ -67,6 +70,7 @@ function CaseView({ reference }: { reference: string }) {
   const { result, setData } = useLoad(load)
   const [notice, setNotice] = useState('')
   const [transferNotice, setTransferNotice] = useState('')
+  const [patientNotice, setPatientNotice] = useState('')
   /** Read the case again, so its figures, holds and transfers are the server's. */
   const reread = () => void getCase(reference).then((fresh) => setData(() => fresh))
   /** After a hold is made or released, the case is read again. */
@@ -77,6 +81,11 @@ function CaseView({ reference }: { reference: string }) {
   /** After a transfer is asked for, the case is read again, so its transfers and remaining counts are the server's. */
   const transferred = (message: string) => {
     setTransferNotice(message)
+    reread()
+  }
+  /** After a patient transfer is asked for or cancelled, the case is read again, so its transfer is the server's. */
+  const movedPatient = (message: string) => {
+    setPatientNotice(message)
     reread()
   }
 
@@ -95,6 +104,10 @@ function CaseView({ reference }: { reference: string }) {
   const kase = result.data
   const opened = new Date(kase.createdAt)
   const severity = SEVERITIES.find((s) => s.id === kase.severity)?.label
+  const openTransfer = openTransferOf(kase)
+  /** Whether "Transfer patient" is offered: the server allows it, and the user may edit emergencies. */
+  const canMove = canEdit(role, 'emergencies') && canMovePatient(kase)
+  const shortNeeds = kase.items.filter((need) => need.shortfall > 0)
 
   return (
     <div className={pageStyles.stack}>
@@ -150,6 +163,15 @@ function CaseView({ reference }: { reference: string }) {
         </dl>
       </Panel>
 
+      {kase.transferFlag && (
+        <Panel title="Transfer may be needed" id="transfer-may-be-needed">
+          <p role="status">
+            Short here: {shortNeeds.map((need) => `${describeNeed(need)} (${need.shortfall} short)`).join(', ')}. Pick a
+            hospital below that has them to transfer the patient, or keep the case here.
+          </p>
+        </Panel>
+      )}
+
       {(kase.reservations.length > 0 || canEdit(role, 'emergencies')) && (
         <Reservations
           reference={kase.id}
@@ -166,9 +188,15 @@ function CaseView({ reference }: { reference: string }) {
           needs={kase.items}
           transfers={kase.transfers}
           canRequest={canEdit(role, 'emergencies')}
+          canMove={canMove}
           notice={transferNotice}
           onRequested={transferred}
+          onPatientMoved={movedPatient}
         />
+      )}
+
+      {(openTransfer !== undefined || patientNotice !== '') && (
+        <PatientTransferPanel transfer={openTransfer} notice={patientNotice} onChanged={movedPatient} />
       )}
 
       {kase.transfers.length > 0 && <CaseTransfers transfers={kase.transfers} />}
@@ -201,8 +229,10 @@ function Sources({
   needs,
   transfers,
   canRequest,
+  canMove,
   notice,
   onRequested,
+  onPatientMoved,
 }: {
   reference: string
   /** The case's needs, to find each short need's type and what it still lacks. */
@@ -210,8 +240,12 @@ function Sources({
   transfers: Transfer[]
   /** Whether the user may request a transfer (edit on Emergencies). */
   canRequest: boolean
+  /** Whether "Transfer patient" is offered on the hospitals below (B17). */
+  canMove: boolean
   notice: string
   onRequested: (message: string) => void
+  /** Called with the notice once a patient transfer is asked for. */
+  onPatientMoved: (message: string) => void
 }) {
   const load = useCallback(() => getCandidates(reference), [reference])
   const { result } = useLoad(load)
@@ -224,15 +258,25 @@ function Sources({
       )}
       {result.state === 'ready' && (
         <div className={styles.sources}>
-          {result.data.items.length >= 2 && <BestDestination hospitals={result.data.hospitals} />}
+          {result.data.items.length >= 2 && (
+            <BestDestination
+              reference={reference}
+              hospitals={result.data.hospitals}
+              canMove={canMove}
+              onPatientMoved={onPatientMoved}
+            />
+          )}
           {result.data.items.map((item) => (
             <SourceItem
               key={item.itemId}
               item={item}
+              reference={reference}
               need={needs.find((n) => n.itemId === item.itemId)}
               transfers={transfers}
               canRequest={canRequest}
+              canMove={canMove}
               onRequested={onRequested}
+              onPatientMoved={onPatientMoved}
             />
           ))}
         </div>
@@ -245,7 +289,17 @@ function Sources({
  * The hospitals judged across every short need at once (story #42), in the server's order. Shown only with two or more
  * short needs: with one, the list for that need below already answers the question.
  */
-function BestDestination({ hospitals }: { hospitals: HospitalMatch[] }) {
+function BestDestination({
+  reference,
+  hospitals,
+  canMove,
+  onPatientMoved,
+}: {
+  reference: string
+  hospitals: HospitalMatch[]
+  canMove: boolean
+  onPatientMoved: (message: string) => void
+}) {
   const anyComplete = hospitals.some((hospital) => hospital.complete)
   return (
     <section className={styles.source} aria-labelledby="best-destination">
@@ -258,7 +312,13 @@ function BestDestination({ hospitals }: { hospitals: HospitalMatch[] }) {
       {hospitals.length > 0 && (
         <ul className={styles.candidates}>
           {hospitals.map((hospital) => (
-            <DestinationRow key={hospital.hospital.id} hospital={hospital} />
+            <DestinationRow
+              key={hospital.hospital.id}
+              hospital={hospital}
+              reference={reference}
+              canMove={canMove}
+              onPatientMoved={onPatientMoved}
+            />
           ))}
         </ul>
       )}
@@ -268,9 +328,19 @@ function BestDestination({ hospitals }: { hospitals: HospitalMatch[] }) {
 
 /**
  * One hospital across the short needs: whether it has everything, how many it covers, its score and distance, and
- * what it is missing. The badges are words, not colour alone.
+ * what it is missing. The badges are words, not colour alone. The recommended one can take the patient (B17).
  */
-function DestinationRow({ hospital }: { hospital: HospitalMatch }) {
+function DestinationRow({
+  hospital,
+  reference,
+  canMove,
+  onPatientMoved,
+}: {
+  hospital: HospitalMatch
+  reference: string
+  canMove: boolean
+  onPatientMoved: (message: string) => void
+}) {
   return (
     <li className={hospital.recommended ? styles.recommended : styles.candidate}>
       <div className={styles.candidateTop}>
@@ -285,6 +355,9 @@ function DestinationRow({ hospital }: { hospital: HospitalMatch }) {
         <span>{distanceText(hospital)}</span>
       </div>
       {hospital.unmet.length > 0 && <p className={styles.missing}>Missing: {hospital.unmet.map(missingText).join(', ')}</p>}
+      {hospital.recommended && canMove && (
+        <TransferPatientAction reference={reference} hospital={hospital.hospital} onRequested={onPatientMoved} />
+      )}
     </li>
   )
 }
@@ -301,16 +374,22 @@ function missingText(need: UnmetNeed): string {
  */
 function SourceItem({
   item,
+  reference,
   need,
   transfers,
   canRequest,
+  canMove,
   onRequested,
+  onPatientMoved,
 }: {
   item: CandidateItem
+  reference: string
   need: AvailableNeed | undefined
   transfers: Transfer[]
   canRequest: boolean
+  canMove: boolean
   onRequested: (message: string) => void
+  onPatientMoved: (message: string) => void
 }) {
   const askable = need && transferTypeOf(need) ? askableFor(need, transfers) : 0
   const canAsk = canRequest && askable > 0
@@ -330,6 +409,11 @@ function SourceItem({
                 key={candidate.hospital.id}
                 candidate={candidate}
                 strategyLabel={item.strategy.label}
+                patientMove={
+                  canMove ? (
+                    <TransferPatientAction reference={reference} hospital={candidate.hospital} onRequested={onPatientMoved} />
+                  ) : undefined
+                }
                 request={
                   canAsk && candidate.available > 0 ? (
                     <RequestTransferForm
@@ -352,7 +436,18 @@ function SourceItem({
 }
 
 /** One hospital in a short need's list: its rank, score, stock, distance, and why it scored as it did. */
-function SourceRow({ candidate, strategyLabel, request }: { candidate: Candidate; strategyLabel: string; request?: ReactNode }) {
+function SourceRow({
+  candidate,
+  strategyLabel,
+  request,
+  patientMove,
+}: {
+  candidate: Candidate
+  strategyLabel: string
+  request?: ReactNode
+  /** "Transfer patient" to this hospital (B17), when the server allows it. */
+  patientMove?: ReactNode
+}) {
   return (
     <li className={candidate.recommended ? styles.recommended : styles.candidate}>
       <div className={styles.candidateTop}>
@@ -373,6 +468,7 @@ function SourceRow({ candidate, strategyLabel, request }: { candidate: Candidate
       )}
       <ScoreBreakdown score={candidate.score} strategyLabel={strategyLabel} />
       {request}
+      {patientMove}
     </li>
   )
 }
