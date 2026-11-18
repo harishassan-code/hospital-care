@@ -46,18 +46,18 @@ The bolt's two criteria, kept and made testable:
 - [ ] **The scenario runs in CI.** A job `e2e` in `.github/workflows/ci.yml` starts PostgreSQL 17, runs `migrate` and
       `seed_demo`, starts `runserver` and `vite preview`, and runs the Playwright scenario. Any failing step fails the job.
       On failure the job uploads the Playwright report and traces.
-- [ ] **The scenario covers every MVP acceptance criterion in the proposal (§23).** The eleven numbered criteria in
+- [x] **The scenario covers every MVP acceptance criterion in the proposal (§23).** The eleven numbered criteria in
       `docs/product/source/CityCare_Project_Proposal.docx`, section 23, each map to a step of the scenario (see the mapping
       table). Three are partial, with the reason stated there. None is left out. Each step title starts with its §23 number.
 
 Added so the two criteria can be checked:
 
-- [ ] The scenario lives in its own Playwright project in `e2e/`. `frontend/package.json` does not change.
-- [ ] Every number the scenario checks is read from the app during the run. The scenario asserts its seed preconditions
+- [x] The scenario lives in its own Playwright project in `e2e/`. `frontend/package.json` does not change.
+- [x] Every number the scenario checks is read from the app during the run. The scenario asserts its seed preconditions
       (Design, Preconditions) and fails with a message that names the precondition. It never skips.
-- [ ] The scenario uses only the browser and the seeded logins from README "Signing in". It adds no test-only endpoints.
+- [x] The scenario uses only the browser and the seeded logins from README "Signing in". It adds no test-only endpoints.
 - [ ] The scenario is green on three consecutive CI runs of the same commit before the bolt is set to Done.
-- [ ] No real patient data, names or secrets are added. The demo password is the one already published in the README.
+- [x] No real patient data, names or secrets are added. The demo password is the one already published in the README.
 
 ## Non-goals
 
