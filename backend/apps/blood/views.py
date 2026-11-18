@@ -51,7 +51,7 @@ class BloodUnitListView(APIView):
         return Response(BloodUnitSerializer(units, many=True, context={"now": now}).data)
 
     def post(self, request):
-        serializer = BloodUnitCreateSerializer(data=request.data)
+        serializer = BloodUnitCreateSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         unit = services.register_unit(serializer, request.user)
         return Response(
@@ -195,7 +195,7 @@ class AppointmentListView(APIView):
         return Response(AppointmentSerializer(appointments, many=True).data)
 
     def post(self, request):
-        serializer = AppointmentSerializer(data=request.data)
+        serializer = AppointmentSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         appointment = services.book_appointment(data["donor"], data["starts_at"], actor=request.user)
