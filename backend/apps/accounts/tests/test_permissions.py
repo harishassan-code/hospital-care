@@ -82,7 +82,10 @@ class TestOwnHospitalOnly:
         nurse = client_as(Role.NURSE, hospital=here)
         assert self.act(nurse, "H-01").status_code == 200
         response = self.act(nurse, "T-01")
-        assert response.status_code == 403
+        # B13, F3: another hospital's bed is a 404, the same reply as a label that doesn't exist.
+        unknown = self.act(nurse, "NO-SUCH-BED")
+        assert response.status_code == 404
+        assert (response.status_code, response.json()) == (unknown.status_code, unknown.json())
         assert Bed.objects.get(label="T-01").status == BedStatus.FREE
 
     def test_admin_changes_beds_anywhere(self, client_as, beds):

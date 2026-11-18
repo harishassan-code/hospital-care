@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import module_permission
+from apps.accounts.permissions import changeable_by, module_permission
 from apps.resources.state_machine import TransitionNotAllowed
 
 from .models import Bed, Capability, Department, Hospital, StorageLocation, Ward
@@ -49,7 +49,9 @@ class BedActionView(APIView):
     def post(self, request, label):
         serializer = BedActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        if not Bed.objects.filter(label=label).exists():
+        if (
+            not changeable_by(Bed.objects.all(), request.user).filter(label=label).exists()
+        ):  # F3: 404 elsewhere
             return Response({"detail": "No bed with that id."}, status=status.HTTP_404_NOT_FOUND)
         try:
             bed = apply_bed_action(label, serializer.validated_data["action"], actor=request.user)

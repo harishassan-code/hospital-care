@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import module_permission, own_hospital
+from apps.accounts.permissions import changeable_by, module_permission, own_hospital
 from apps.resources.state_machine import TransitionNotAllowed
 
 from . import services
@@ -84,7 +84,7 @@ class BloodUnitTestView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, unit_id):
-        get_object_or_404(BloodUnit, donation_number=unit_id)
+        get_object_or_404(changeable_by(BloodUnit.objects.all(), request.user), donation_number=unit_id)
         serializer = RecordTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -101,7 +101,7 @@ class BloodUnitActionView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, unit_id):
-        get_object_or_404(BloodUnit, donation_number=unit_id)
+        get_object_or_404(changeable_by(BloodUnit.objects.all(), request.user), donation_number=unit_id)
         serializer = UnitActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -172,7 +172,7 @@ class DonorScreeningView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, donor_id):
-        donor = get_object_or_404(Donor, code=donor_id)
+        donor = get_object_or_404(changeable_by(Donor.objects.all(), request.user), code=donor_id)
         serializer = ScreeningSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -208,7 +208,9 @@ class AppointmentCancelView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, appointment_id):
-        appointment = get_object_or_404(DonationAppointment, pk=appointment_id)
+        appointment = get_object_or_404(
+            changeable_by(DonationAppointment.objects.all(), request.user), pk=appointment_id
+        )
         try:
             appointment = services.cancel_appointment(appointment, actor=request.user)
         except TransitionNotAllowed as exc:
