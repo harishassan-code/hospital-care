@@ -19,6 +19,7 @@ import OperatingRoomSchedulePage from './pages/staff/OperatingRoomSchedulePage'
 import OperatingRoomsPage from './pages/staff/OperatingRoomsPage'
 import PharmacyPage from './pages/staff/PharmacyPage'
 import PlannedPage from './pages/staff/PlannedPage'
+import TransfersPage from './pages/staff/TransfersPage'
 import UsersPage from './pages/staff/UsersPage'
 
 export function AppRoutes() {
@@ -32,6 +33,7 @@ export function AppRoutes() {
         <Route path="emergencies" element={<EmergenciesPage />} />
         <Route path="emergencies/feed" element={<EmergencyFeedPage />} />
         <Route path="emergencies/:reference" element={<EmergencyCasePage />} />
+        <Route path="transfers" element={<TransfersPage />} />
         <Route path="beds" element={<BedsPage />} />
         <Route path="blood" element={<BloodPage />} />
         <Route path="pharmacy" element={<PharmacyPage />} />

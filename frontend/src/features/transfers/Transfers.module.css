@@ -1,0 +1,214 @@
+/* Transfers between hospitals (stories #47 to #49): the direction tabs, the status filter, one card per transfer, and
+   the transfers listed on a case. Buttons and facts follow the emergency pages' conventions. */
+
+/* ── Direction tabs: links, so the active one is the page's own address (aria-current) ───────── */
+
+.tabList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.tab:hover {
+  border-color: var(--ink-muted);
+}
+
+.tab[aria-current='page'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+}
+
+/* ── Status filter ─────────────────────────────────────────────────────────────────────────── */
+
+.filter {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.filter label {
+  font-weight: 700;
+}
+
+.select {
+  min-height: var(--tap);
+  min-width: 12rem;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────────────────────── */
+
+.cards {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.cardTitle:focus {
+  outline: none;
+}
+
+.cardTitle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+
+.facts dt {
+  font-weight: 700;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.units {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.link {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.button {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.reason {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ── History (oldest first, as the server keeps it) ────────────────────────────────────────── */
+
+.history summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.timeline {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--rule);
+}
+
+.entryNote {
+  margin: 0;
+}
+
+/* ── A case's transfers (the case page's Transfers panel) ──────────────────────────────────── */
+
+.caseTransfers {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.caseTransfer {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.caseTransferTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.caseTransferTop strong {
+  margin-right: auto;
+}

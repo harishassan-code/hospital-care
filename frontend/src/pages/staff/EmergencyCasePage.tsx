@@ -1,6 +1,7 @@
-import { useCallback, useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import type { Transfer } from '../../api/transfers'
 import {
   allocateReservation,
   getCandidates,
@@ -39,6 +40,9 @@ import {
   type TimelineEntry,
 } from '../../features/emergencies/emergencies'
 import styles from '../../features/emergencies/Emergencies.module.css'
+import { CaseTransfers } from '../../features/transfers/CaseTransfers'
+import { RequestTransferForm } from '../../features/transfers/RequestTransferForm'
+import { askableFor, transferTypeOf } from '../../features/transfers/transfers'
 import { canEdit } from '../../features/staff/roles'
 import { useStaff } from '../../features/staff/staffContext'
 import { formatClock, formatShortDate } from '../../lib/time'
@@ -60,10 +64,18 @@ function CaseView({ reference }: { reference: string }) {
   const load = useCallback(() => getCase(reference), [reference])
   const { result, setData } = useLoad(load)
   const [notice, setNotice] = useState('')
-  /** After a hold is made or released, the case is read again so its figures and holds are the server's. */
+  const [transferNotice, setTransferNotice] = useState('')
+  /** Read the case again, so its figures, holds and transfers are the server's. */
+  const reread = () => void getCase(reference).then((fresh) => setData(() => fresh))
+  /** After a hold is made or released, the case is read again. */
   const refreshCase = (message: string) => {
     setNotice(message)
-    void getCase(reference).then((fresh) => setData(() => fresh))
+    reread()
+  }
+  /** After a transfer is asked for, the case is read again, so its transfers and remaining counts are the server's. */
+  const transferred = (message: string) => {
+    setTransferNotice(message)
+    reread()
   }
 
   if (result.state === 'failed' && result.status === 404) {
@@ -146,7 +158,18 @@ function CaseView({ reference }: { reference: string }) {
         />
       )}
 
-      {kase.shortfallTotal > 0 && <Sources reference={kase.id} />}
+      {kase.shortfallTotal > 0 && (
+        <Sources
+          reference={kase.id}
+          needs={kase.items}
+          transfers={kase.transfers}
+          canRequest={canEdit(role, 'emergencies')}
+          notice={transferNotice}
+          onRequested={transferred}
+        />
+      )}
+
+      {kase.transfers.length > 0 && <CaseTransfers transfers={kase.transfers} />}
 
       {kase.outcome !== null && (
         <Panel title="Outcome" id="outcome">
@@ -171,11 +194,28 @@ function distanceText(place: { distanceKm: number | null; travelMinutes: number 
  * server ranks them and this shows that order as it comes. Asked for only when the case has a shortfall, so a case
  * covered locally makes no extra request.
  */
-function Sources({ reference }: { reference: string }) {
+function Sources({
+  reference,
+  needs,
+  transfers,
+  canRequest,
+  notice,
+  onRequested,
+}: {
+  reference: string
+  /** The case's needs, to find each short need's type and what it still lacks. */
+  needs: AvailableNeed[]
+  transfers: Transfer[]
+  /** Whether the user may request a transfer (edit on Emergencies). */
+  canRequest: boolean
+  notice: string
+  onRequested: (message: string) => void
+}) {
   const load = useCallback(() => getCandidates(reference), [reference])
   const { result } = useLoad(load)
   return (
     <Panel title="Sources in the network" id="sources">
+      {notice && <p role="status">{notice}</p>}
       {result.state === 'loading' && <p role="status">Looking for hospitals…</p>}
       {result.state === 'failed' && (
         <p role="status">The network didn’t answer, so the sources aren’t shown. Reload the page to try again.</p>
@@ -184,7 +224,14 @@ function Sources({ reference }: { reference: string }) {
         <div className={styles.sources}>
           {result.data.items.length >= 2 && <BestDestination hospitals={result.data.hospitals} />}
           {result.data.items.map((item) => (
-            <SourceItem key={item.itemId} item={item} />
+            <SourceItem
+              key={item.itemId}
+              item={item}
+              need={needs.find((n) => n.itemId === item.itemId)}
+              transfers={transfers}
+              canRequest={canRequest}
+              onRequested={onRequested}
+            />
           ))}
         </div>
       )}
@@ -246,8 +293,25 @@ function missingText(need: UnmetNeed): string {
   return `${need.missing} × ${withMinus(need.need)}${partial}`
 }
 
-/** One short need and the hospitals that have it, best first, or the empty state when none do. */
-function SourceItem({ item }: { item: CandidateItem }) {
+/**
+ * One short need and the hospitals that have it, best first, or the empty state when none do. Blood and equipment can be
+ * asked for from another hospital (story #47); beds and operating rooms can't, so their rows have no request form.
+ */
+function SourceItem({
+  item,
+  need,
+  transfers,
+  canRequest,
+  onRequested,
+}: {
+  item: CandidateItem
+  need: AvailableNeed | undefined
+  transfers: Transfer[]
+  canRequest: boolean
+  onRequested: (message: string) => void
+}) {
+  const askable = need && transferTypeOf(need) ? askableFor(need, transfers) : 0
+  const canAsk = canRequest && askable > 0
   return (
     <section className={styles.source}>
       <h3 className={styles.sourceHeading}>
@@ -260,7 +324,23 @@ function SourceItem({ item }: { item: CandidateItem }) {
           <p className={styles.hint}>Ordered by {item.strategy.label.toLowerCase()}</p>
           <ul className={styles.candidates}>
             {item.candidates.map((candidate) => (
-              <SourceRow key={candidate.hospital.id} candidate={candidate} strategyLabel={item.strategy.label} />
+              <SourceRow
+                key={candidate.hospital.id}
+                candidate={candidate}
+                strategyLabel={item.strategy.label}
+                request={
+                  canAsk && candidate.available > 0 ? (
+                    <RequestTransferForm
+                      key={`${askable}-${candidate.hospital.id}`}
+                      itemId={item.itemId}
+                      candidate={candidate}
+                      shortfall={item.shortfall}
+                      askable={askable}
+                      onRequested={onRequested}
+                    />
+                  ) : undefined
+                }
+              />
             ))}
           </ul>
         </>
@@ -270,7 +350,7 @@ function SourceItem({ item }: { item: CandidateItem }) {
 }
 
 /** One hospital in a short need's list: its rank, score, stock, distance, and why it scored as it did. */
-function SourceRow({ candidate, strategyLabel }: { candidate: Candidate; strategyLabel: string }) {
+function SourceRow({ candidate, strategyLabel, request }: { candidate: Candidate; strategyLabel: string; request?: ReactNode }) {
   return (
     <li className={candidate.recommended ? styles.recommended : styles.candidate}>
       <div className={styles.candidateTop}>
@@ -290,6 +370,7 @@ function SourceRow({ candidate, strategyLabel }: { candidate: Candidate; strateg
         </span>
       )}
       <ScoreBreakdown score={candidate.score} strategyLabel={strategyLabel} />
+      {request}
     </li>
   )
 }
@@ -439,16 +520,10 @@ function Reservations({
                 <span className={styles.badge}>{hold.status === 'held' ? 'Held' : 'Allocated'}</span>
               </div>
               <div>
-                {hold.status === 'held' ? (
-                  <span>
-                    Holds until <time dateTime={hold.expiresAt}>{formatClock(new Date(hold.expiresAt))}</time>
-                  </span>
-                ) : (
-                  <span>Confirmed for this case</span>
-                )}{' '}
+                <HoldTiming hold={hold} />{' '}
                 · <span>{hold.hospital.name}</span> · <span>reserved by {hold.reservedBy}</span>
               </div>
-              {((canRelease && hold.status === 'held') || hold.canAllocate) && (
+              {!hold.transfer && ((canRelease && hold.status === 'held') || hold.canAllocate) && (
                 <div className={styles.moves}>
                   {hold.canAllocate && (
                     <button
@@ -481,6 +556,20 @@ function Reservations({
         </ul>
       )}
     </Panel>
+  )
+}
+
+/**
+ * When a hold lasts. A transfer's holds are pinned to it (story #47): they don't expire, so they say which transfer holds
+ * them instead. An ordinary hold lasts until it expires; an allocated one is confirmed for the case.
+ */
+function HoldTiming({ hold }: { hold: CaseReservation }) {
+  if (hold.status !== 'held') return <span>Confirmed for this case</span>
+  if (hold.transfer) return <span>In transfer #{hold.transfer.id}</span>
+  return (
+    <span>
+      Holds until <time dateTime={hold.expiresAt}>{formatClock(new Date(hold.expiresAt))}</time>
+    </span>
   )
 }
 

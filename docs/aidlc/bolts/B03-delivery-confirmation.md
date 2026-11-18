@@ -6,8 +6,8 @@ points: 3
 priority: high
 sprint: 7
 depends_on: B02
-owner: unassigned
-status: Backlog
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B03 · Delivery confirmation

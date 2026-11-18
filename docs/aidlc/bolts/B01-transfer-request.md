@@ -6,8 +6,8 @@ points: 5
 priority: highest
 sprint: 7
 depends_on: -
-owner: unassigned
-status: Ready
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B01 · Inter-hospital transfer request

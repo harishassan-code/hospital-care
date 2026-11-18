@@ -619,6 +619,94 @@ Allocation = {id, itemId, resource, hospital: {id, name}, allocatedBy, at, note}
 - **Audit:** `allocation.created`, plus `<model>.status_changed` for the resource move.
 - Expired holds are released before each of these endpoints answers, as for reservations.
 
+## Transfers (#47, #48, #49)
+
+Module `transfers`: admin, doctor, nurse and blood bank can use it; pharmacist and patient get 403. A transfer asks another
+hospital for stock of one need of a case: blood or equipment only (beds and operating rooms are patient transfer,
+#63 to #65). Shapes are in `frontend/src/api/transfers.ts`.
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| GET | `/transfers/?direction=incoming\|outgoing&status=` | – | 200 `Transfer[]`, newest first |
+| POST | `/transfers/` | `{itemId, supplierId, quantity, note?}` | 201 `Transfer` |
+| GET | `/transfers/<id>/` | – | 200 `Transfer` |
+| POST | `/transfers/<id>/actions/` | `{action, reason?, note?}` | 200 `Transfer`, after the move |
+
+```ts
+Transfer = {
+  id: number,
+  case: { reference: string, severity: string },
+  itemId: number,
+  resourceType: 'blood' | 'equipment',
+  need: string,                          // "A+ red cells", "Ventilator"
+  supplier: { id: number, name: string },
+  receiver: { id: number, name: string },  // the case's hospital
+  quantity: number,
+  approved: number,                      // holds made for it so far: "2 of 4 approved"
+  resources: string[],                   // one per hold: "A+ red cells DN-0042"
+  status: 'requested' | 'approved' | 'dispatched' | 'inTransit' | 'delivered' | 'rejected' | 'cancelled',
+  reason: string,                        // why it was rejected or cancelled
+  requestedBy: string,
+  createdAt: string,
+  history: { fromStatus, toStatus, action, note, actor: string | null, at: string }[],  // oldest first
+  actions: ('approve' | 'reject' | 'dispatch' | 'startTransit' | 'deliver' | 'cancel')[]  // what this user may do now
+}
+```
+
+- **Direction.** `incoming` is where your hospital is the supplier, `outgoing` where it is the receiver. Without it you get
+  both. Admins see the whole network; a user with no hospital sees nothing. Bad `direction` or `status` is 400.
+- **Asking (#47).** The case must be visible to you (its need is 404 otherwise), and you must edit emergencies at the
+  case's hospital (admins: any). Otherwise 403. Refused with 400 and nothing saved:
+  - `{"supplierId": [...]}` when the supplier is the case's own hospital, or not an active hospital.
+  - `{"itemId": [...]}` for a bed or an operating room.
+  - `{"quantity": ["Only 2 more can be asked for this need."]}` when the quantity is more than the need has left: its
+    quantity, less its fulfilled units, its holds and the requests still waiting for an answer.
+  - `{"detail": "Can't ask for stock for a case that is closed."}` for a fulfilled, closed or cancelled case.
+  A new transfer is `requested`. Nothing is reserved yet.
+- **Moves (#47, #48).** The lifecycle is the table in the [tracking spec](../aidlc/inception/2026-11-18-transfer-tracking.md):
+
+  | From | Action | To | Who |
+  |---|---|---|---|
+  | requested | approve | approved | supplier |
+  | requested | reject (reason required) | rejected | supplier |
+  | requested | cancel | cancelled | requester |
+  | approved | dispatch | dispatched | supplier |
+  | approved | cancel | cancelled | requester |
+  | dispatched | startTransit | inTransit | supplier |
+  | dispatched | deliver | delivered | receiver |
+  | dispatched | cancel | cancelled | requester |
+  | inTransit | deliver | delivered | receiver |
+  | inTransit | cancel | cancelled | requester |
+
+  "Supplier" is edit on the resource's module (`blood` or `equipment`) at the supplying hospital. "Requester" for cancel is
+  edit on `emergencies` at the receiving hospital. "Receiver" for deliver is edit on the module at the receiving hospital.
+  Admins can make any move. `actions` lists exactly the moves the table allows from the current status and the user may make.
+- **Approval** holds the units at the supplier through `reserve`, in one transaction. If fewer are free, what is free is
+  held (partial approval). If none is free, or the case can no longer take stock, it is **409** and the transfer stays
+  `requested`.
+- **Refusals:** a move the lifecycle doesn't allow, or a receipt that a unit or the case refuses, is **409**
+  `{"detail": "Can't deliver a transfer that is approved."}`; nothing changes. A move the user may not make is **403**
+  `{"detail"}`. A transfer that involves neither of the user's hospitals is **404**. `reject` without a reason is
+  **400** `{"reason": ["Say why the request is rejected."]}`. `cancel` takes an optional `reason`; the other moves take `note`.
+  Every move can carry a `note`, which goes in the history.
+- **Holds are pinned (#47).** The holds of a live transfer (approved, dispatched or in transit) are never swept by expiry.
+  The case page can't release them (409 `{"detail": "This hold is part of transfer #7; cancel the transfer instead."}`) or
+  allocate them (409, "receive the transfer instead"), and `canAllocate` is false. Each case reservation gains
+  `transfer: {id, status} | null`, the live transfer it belongs to. Cancelling releases them, and each unit goes back on
+  the supplier's shelf, even after dispatch.
+- **Receipt (#49).** `deliver` (from dispatched or in transit) runs in one transaction. For each held unit: its hospital
+  becomes the receiver, its storage place is cleared and its location says "Received from <supplier>" (cut to the field's
+  length). Then `allocate` issues it (blood) or puts it in use (equipment), writes the allocation (its hospital stays the
+  supplier), and the case is recomputed. Last, the transfer is `delivered`. Any refusal, such as a unit that expired on the
+  way or a case that closed meanwhile, undoes every unit: nothing moves, nothing is allocated and the transfer stays where
+  it was.
+- **Audit:** `transfer.requested`, `transfer.approved`, `transfer.rejected`, `transfer.cancelled`, `transfer.dispatched`,
+  `transfer.inTransit` and `transfer.delivered`, each with the status before and after. Per unit on receipt,
+  `<model>.transferred` (`bloodunit` or `equipment`) with the hospital before and after, then `allocation.created`.
+- **Case detail** gains `transfers`: the case's transfers, newest first, in the same shape, with the moves this user may make.
+  Each reservation gains `transfer`, as above.
+- **Admin:** read-only. Transfers are asked, answered and received in the app, so every move is checked and recorded.
+
 ## Demo data
 
 ```bash

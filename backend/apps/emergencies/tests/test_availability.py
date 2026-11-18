@@ -318,9 +318,10 @@ def test_the_detail_query_count_is_bounded_and_does_not_grow_with_the_needs(
     url = reverse("emergency-case", args=["EC-2026-0002"])
     # The overdue check (one query, story #35), the expiry check for holds (one query, story #43), the case,
     # its needs, its history, the needs again with their holds for availability (one query, story #43), the
-    # holds on the case (one query), the allocations on the case (one query, story #45), and one query per
-    # resource type (blood, beds, equipment, operating rooms), whatever the needs.
-    with django_assert_max_num_queries(12):
+    # holds on the case (one query), the allocations on the case (one query, story #45), the transfers on the
+    # case (one query, story #47), and one query per resource type (blood, beds, equipment, operating rooms),
+    # whatever the needs.
+    with django_assert_max_num_queries(13):
         big = count_queries(doctor, url)
 
     assert big == small

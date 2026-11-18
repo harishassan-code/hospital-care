@@ -3,6 +3,7 @@ import type { BloodGroup, Component } from './blood'
 import { apiGet, apiPost } from './client'
 import type { EquipmentType } from './equipment'
 import type { OrCapability } from './operatingRooms'
+import type { Transfer } from './transfers'
 
 /** Most severe first. Lists come from the server in this order: severity, then the oldest case first (story #31). */
 export type Severity = 'critical' | 'high' | 'moderate' | 'low'
@@ -204,6 +205,11 @@ export interface CaseReservation {
   reservedBy: string
   /** True when the signed-in user may allocate this hold now: it is held, and the user's role and hospital allow it. */
   canAllocate: boolean
+  /**
+   * The transfer that holds this stock (story #47), or null. A transfer's holds are pinned: they don't expire, and only
+   * the transfer can release or allocate them, so the case page shows neither button for them.
+   */
+  transfer: { id: number; status: string } | null
 }
 
 /**
@@ -254,6 +260,8 @@ export interface EmergencyCaseDetail extends EmergencyCase {
   reservations: CaseReservation[]
   /** The resources handed over to the case, oldest first (story #45). */
   allocations: CaseAllocation[]
+  /** The transfers asked for this case, newest first (stories #47 to #49). */
+  transfers: Transfer[]
 }
 
 export const SEVERITIES: readonly { id: Severity; label: string; hint: string }[] = [

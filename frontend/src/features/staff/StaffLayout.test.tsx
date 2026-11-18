@@ -65,7 +65,18 @@ describe('StaffLayout', () => {
     mockStaffApi({ role: 'admin' })
     renderAt('/staff/beds')
     expect(await screen.findByText('beds content')).toBeInTheDocument()
-    expect(navLinks()).toEqual(['Overview', 'Emergencies', 'Beds', 'Blood bank', 'Pharmacy', 'Equipment', 'Operating rooms', 'Hospitals', 'Users and roles'])
+    expect(navLinks()).toEqual([
+      'Overview',
+      'Emergencies',
+      'Transfers',
+      'Beds',
+      'Blood bank',
+      'Pharmacy',
+      'Equipment',
+      'Operating rooms',
+      'Hospitals',
+      'Users and roles',
+    ])
     expect(screen.getByRole('link', { name: 'Beds' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Sadia Admin')).toBeInTheDocument()
   })

@@ -28,7 +28,17 @@ from apps.matching.tests.reservation_support import (
 
 pytestmark = pytest.mark.django_db
 
-HOLD_KEYS = {"id", "itemId", "resource", "hospital", "status", "expiresAt", "reservedBy", "canAllocate"}
+HOLD_KEYS = {
+    "id",
+    "itemId",
+    "resource",
+    "hospital",
+    "status",
+    "expiresAt",
+    "reservedBy",
+    "canAllocate",
+    "transfer",  # story #47: the live transfer the hold is pinned to, or null
+}
 
 
 @pytest.fixture

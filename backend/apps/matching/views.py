@@ -51,7 +51,9 @@ class HeldReservationListView(APIView):
         holds = (
             own_hospital(held, request.user)
             .select_related("request_item__request", "reserved_by")
-            .prefetch_related("resource")
+            .prefetch_related(
+                "resource", "transfers"
+            )  # transfers: a hold in a live transfer can't be allocated
             .annotate(priority=severity_rank("request_item__request__severity"))
             .order_by("priority", "request_item__request__created_at", "expires_at", "id")
         )

@@ -15,4 +15,5 @@ urlpatterns = [
     path("api/reservations/", include("apps.matching.urls")),
     path("api/equipment/", include("apps.equipment.urls")),
     path("api/operating-rooms/", include("apps.operating_rooms.urls")),
+    path("api/transfers/", include("apps.transfers.urls")),
 ]

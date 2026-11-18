@@ -67,6 +67,15 @@ def active_holds(item: RequestItem) -> int:
     return item.reservations.filter(status=ReservationStatus.HELD).count()
 
 
+def live_transfer(hold: Reservation):
+    """The transfer this hold belongs to while it is live (approved, dispatched or in transit), or None.
+    Such a hold is pinned: only the transfer releases or allocates it (story #47). Reads the prefetched
+    transfers when the caller prefetched them."""
+    from apps.transfers.models import LIVE  # transfers builds on matching, so import late
+
+    return next((transfer for transfer in hold.transfers.all() if transfer.status in LIVE), None)
+
+
 def _free_resources(item: RequestItem, hospital, limit: int) -> list:
     """Up to `limit` resources the registry allows for the need, at this hospital, locked, skipping any
     another transaction holds. A resource with an active hold is never picked, even if its status still
@@ -169,9 +178,10 @@ def _end(hold: Reservation, *, status: str, actor, reason: str, now) -> Reservat
 
 
 @transaction.atomic
-def release(reservation: Reservation, *, actor, reason: str) -> Reservation:
-    """Release a held reservation: its resource goes back to available or free. Raises ReservationNotHeld, and
-    changes nothing, when the hold is already allocated, released or expired. Locks the case, then the
+def release(reservation: Reservation, *, actor, reason: str, transfer_ok: bool = False) -> Reservation:
+    """Release a held reservation: its resource goes back to available or free. Raises ReservationNotHeld,
+    and changes nothing, when the hold is already allocated, released or expired, or when it belongs to a
+    live transfer (unless `transfer_ok`, which only the transfer's cancel passes). Locks the case, then the
     hold."""
     case_id = RequestItem.objects.values_list("request_id", flat=True).get(pk=reservation.request_item_id)
     EmergencyRequest.objects.select_for_update().get(pk=case_id)
@@ -180,22 +190,29 @@ def release(reservation: Reservation, *, actor, reason: str) -> Reservation:
         raise ReservationNotHeld(
             f"This reservation is {hold.get_status_display().lower()}, so it can't be released."
         )
+    if not transfer_ok and (transfer := live_transfer(hold)):
+        raise ReservationNotHeld(
+            f"This hold is part of transfer #{transfer.pk}; cancel the transfer instead."
+        )
     return _end(hold, status=ReservationStatus.RELEASED, actor=actor, reason=reason, now=timezone.now())
 
 
 def release_expired(now=None) -> int:
     """Release every held reservation whose hold has run out, and return how many. Runs as the system (no
     actor). Each hold is locked with skip_locked and checked again under the lock, so two runs, or a run
-    and a release, never end the same hold twice. Idempotent: an expired hold is no longer held.
+    and a release, never end the same hold twice. Idempotent: an expired hold is no longer held. Holds that
+    belong to a live transfer are pinned and never swept (story #47).
 
     ponytail: a request-time sweep (the case list, case and candidates GETs and the reservation endpoints
     call it). Ceiling: read traffic or hold volume grows; then run `release_expired_reservations` on a
     scheduler and drop the calls from the views."""
+    from apps.transfers.models import LIVE  # transfers builds on matching, so import late
+
     now = now or timezone.now()
     due = list(
-        Reservation.objects.filter(status=ReservationStatus.HELD, expires_at__lte=now).values_list(
-            "pk", flat=True
-        )
+        Reservation.objects.filter(status=ReservationStatus.HELD, expires_at__lte=now)
+        .exclude(transfers__status__in=LIVE)
+        .values_list("pk", flat=True)
     )
     released = 0
     for pk in due:
@@ -203,6 +220,7 @@ def release_expired(now=None) -> int:
             hold = (
                 Reservation.objects.select_for_update(skip_locked=True)
                 .filter(pk=pk, status=ReservationStatus.HELD, expires_at__lte=now)
+                .exclude(transfers__status__in=LIVE)
                 .first()
             )
             if hold is None:

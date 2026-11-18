@@ -553,6 +553,9 @@ class Command(BaseCommand):
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
         if not Equipment.objects.exists():
             self.seed_equipment(main)
+        for index, partner in enumerate(hospitals[1:], start=1):
+            if not BloodUnit.objects.filter(hospital=partner).exists():
+                self.seed_partner_stock(partner, index, now)
         for hospital in hospitals:
             if not OperatingRoom.objects.filter(hospital=hospital).exists():
                 self.seed_operating_rooms(hospital)
@@ -790,6 +793,42 @@ class Command(BaseCommand):
         Equipment.objects.bulk_create(
             Equipment(hospital=hospital, identifier=i, equipment_type=t, name=n, location=loc, status=st)
             for i, t, n, loc, st in items
+        )
+
+    def seed_partner_stock(self, hospital: Hospital, index: int, now):
+        """Sprint 7 (#47): a little stock at the other hospitals, so a short case at CityCare General has
+        somewhere to ask for a transfer. Two red-cell units of every group and two pieces of equipment, all
+        available. `index` keeps donation numbers and identifiers apart from the main hospital's."""
+        fridge = StorageLocation.objects.get(hospital=hospital, name="Blood fridge")
+        groups = [group for group in GROUP_SHARE for _ in range(2)]
+        BloodUnit.objects.bulk_create(
+            BloodUnit(
+                hospital=hospital,
+                storage_location=fridge,
+                donation_number=f"G7731 26 {900_000 + index * 1000 + i:06d}",
+                group=group,
+                component=Component.RED_CELLS,
+                collected_at=now - timedelta(days=5),
+                expires_at=now + timedelta(days=37),
+                status=UnitStatus.AVAILABLE,
+                location=fridge.name,
+            )
+            for i, group in enumerate(groups)
+        )
+        T = EquipmentType
+        Equipment.objects.bulk_create(
+            Equipment(
+                hospital=hospital,
+                identifier=identifier,
+                equipment_type=kind,
+                name=name,
+                location="Main store",
+                status=EquipmentStatus.AVAILABLE,
+            )
+            for identifier, kind, name in [
+                (f"VENT-{index}01", T.VENTILATOR, "Hamilton C6"),
+                (f"MON-{index}01", T.MONITOR, "Mindray BeneVision N12"),
+            ]
         )
 
     def seed_operating_rooms(self, hospital: Hospital):

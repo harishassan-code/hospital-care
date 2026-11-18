@@ -1,10 +1,11 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fail, mockApi, mockStaffApi, userFor } from '../../test/mockApi'
 import { renderStaff } from '../../test/renderStaff'
-import { sampleCases, sampleNewNeedsCase, sampleThreeNeedSources } from '../../test/fixtures/emergencies'
-import { allocateReservation, type StatusChange } from '../../api/emergencies'
+import { sampleCandidates, sampleCases, sampleNewNeedsCase, sampleThreeNeedSources } from '../../test/fixtures/emergencies'
+import { sampleTransfers } from '../../test/fixtures/transfers'
+import { allocateReservation, type CandidateItem, type StatusChange } from '../../api/emergencies'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -578,5 +579,144 @@ describe('EmergencyCasePage allocation (stories #45, #46)', () => {
 
     expect(await within(panel).findByRole('alert')).toHaveTextContent('This reservation is already allocated.')
     expect(within(await details()).getByText('0 of 4 allocated · 4 remaining')).toBeInTheDocument()
+  })
+})
+
+describe('EmergencyCasePage: asking another hospital for stock (story #47)', () => {
+  const sources = async () => screen.findByRole('region', { name: 'Sources in the network' })
+  const riversideForm = async () => within(await sources()).findByRole('form', { name: 'Request transfer from Riverside Medical Centre' })
+  const transferPosts = (fetchMock: ReturnType<typeof mockStaffApi>['fetchMock']) =>
+    fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith('/transfers/') && init?.method === 'POST')
+
+  it('asks a hospital for the smaller of the shortfall and what it has, then shows the transfer on the case', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'doctor' })
+    renderStaff(CASE)
+
+    const form = await riversideForm()
+    expect(within(form).getByLabelText('Quantity')).toHaveValue(3)
+    await userEvent.click(within(form).getByRole('button', { name: 'Request 3 from Riverside Medical Centre' }))
+
+    expect(await within(await sources()).findByText('Transfer #1 requested: 3 from Riverside Medical Centre.')).toBeInTheDocument()
+    expect(JSON.parse(String(transferPosts(fetchMock)[0]![1]!.body))).toEqual({ itemId: 1, supplierId: 2, quantity: 3 })
+    const panel = await screen.findByRole('region', { name: 'Transfers' })
+    expect(within(panel).getByText('Requested')).toBeInTheDocument()
+    expect(within(panel).getByText('0 of 3 approved')).toBeInTheDocument()
+    expect(within(panel).getByText('From Riverside Medical Centre')).toBeInTheDocument()
+    // The case is read again, and only one more can be asked for: the three requested are no longer free to ask for.
+    await waitFor(() =>
+      expect(within(screen.getByRole('form', { name: 'Request transfer from Riverside Medical Centre' })).getByLabelText('Quantity')).toHaveValue(1),
+    )
+  })
+
+  it('will not ask for more than the need can still take, and says so without asking the server', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'doctor' })
+    renderStaff(CASE)
+
+    const form = await riversideForm()
+    await userEvent.clear(within(form).getByLabelText('Quantity'))
+    await userEvent.type(within(form).getByLabelText('Quantity'), '5')
+    await userEvent.click(within(form).getByRole('button', { name: 'Request from Riverside Medical Centre' }))
+
+    expect(within(form).getByRole('alert')).toHaveTextContent('Enter a whole number from 1 to 4.')
+    expect(transferPosts(fetchMock)).toHaveLength(0)
+  })
+
+  it('shows the server’s reason when it refuses the request, and sends nothing else', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff(CASE)
+
+    const form = await riversideForm()
+    vi.restoreAllMocks()
+    mockApi({
+      'GET /auth/me/': { body: userFor('doctor') },
+      'POST /transfers/': fail(400, { detail: 'Only 2 more can be asked for this need.' }),
+    })
+    await userEvent.click(within(form).getByRole('button', { name: 'Request 3 from Riverside Medical Centre' }))
+
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Only 2 more can be asked for this need.')
+    expect(within(await sources()).queryByText(/Transfer #/)).toBeNull()
+  })
+
+  it('asks for equipment the same way', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'nurse', cases: [sampleNewNeedsCase(new Date())] })
+    renderStaff('/staff/emergencies/EC-2026-0003')
+
+    const form = await within(await sources()).findByRole('form', { name: 'Request transfer from Riverside Medical Centre' })
+    expect(within(form).getByLabelText('Quantity')).toHaveValue(1)
+    await userEvent.click(within(form).getByRole('button', { name: 'Request 1 from Riverside Medical Centre' }))
+
+    expect(await screen.findByText('Transfer #1 requested: 1 from Riverside Medical Centre.')).toBeInTheDocument()
+    expect(JSON.parse(String(transferPosts(fetchMock)[0]![1]!.body))).toEqual({ itemId: 1, supplierId: 2, quantity: 1 })
+  })
+
+  it('offers no request for a bed, which can’t be transferred', async () => {
+    const now = new Date()
+    const base = sampleCandidates(now)['EC-2026-0002']!
+    const bed: CandidateItem = {
+      ...base.items[1]!,
+      candidates: [
+        {
+          hospital: { id: 2, name: 'Riverside Medical Centre' },
+          available: 2,
+          covers: true,
+          distanceKm: 4.2,
+          travelMinutes: 6,
+          rank: 1,
+          recommended: true,
+          score: { total: 90, strategy: 'nearest', factors: [] },
+        },
+      ],
+    }
+    mockStaffApi({ role: 'doctor', candidates: { ...base, items: [bed] } })
+    renderStaff(CASE)
+
+    const icu = (await within(await sources()).findByRole('heading', { name: 'ICU bed: short 1' })).closest('section')!
+    expect(within(icu).getByText('Riverside Medical Centre')).toBeInTheDocument()
+    expect(within(icu).queryByRole('form')).toBeNull()
+    expect(within(icu).queryByRole('button', { name: /^Request/ })).toBeNull()
+  })
+
+  it('gives view-only staff the sources without any request form', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff(CASE)
+
+    const blood = (await within(await sources()).findByRole('heading', { name: 'O− red cells: short 3' })).closest('section')!
+    expect(within(blood).getByText('Riverside Medical Centre')).toBeInTheDocument()
+    expect(screen.queryByRole('form', { name: /Request transfer/ })).toBeNull()
+  })
+})
+
+describe('EmergencyCasePage: transfers on the case (stories #47, #48)', () => {
+  it('lists the case’s transfers with their status, the approved count, and a link to the Transfers page', async () => {
+    mockStaffApi({ role: 'doctor', transfers: sampleTransfers(new Date()) })
+    renderStaff(CASE)
+
+    const panel = await screen.findByRole('region', { name: 'Transfers' })
+    const inTransit = within(panel).getByText('Transfer #3').closest('li')!
+    expect(within(inTransit).getByText('In transit')).toBeInTheDocument()
+    expect(within(inTransit).getByText('3 of 3 approved')).toBeInTheDocument()
+    expect(within(inTransit).getByRole('link', { name: 'Open in Transfers' })).toHaveAttribute('href', '/staff/transfers?direction=outgoing')
+    const requested = within(panel).getByText('Transfer #4').closest('li')!
+    expect(within(requested).getByText('Requested')).toBeInTheDocument()
+    expect(within(requested).getByText('0 of 1 approved')).toBeInTheDocument()
+  })
+
+  it('has no transfers panel when the case has no transfers', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff(CASE)
+
+    await screen.findByRole('region', { name: 'EC-2026-0002' })
+    expect(screen.queryByRole('region', { name: 'Transfers' })).toBeNull()
+  })
+
+  it('shows a hold that belongs to a transfer as "In transfer #N", with no release or allocate', async () => {
+    mockStaffApi({ role: 'admin', transfers: sampleTransfers(new Date()) })
+    renderStaff(CASE)
+
+    const holds = await screen.findByRole('region', { name: 'Reservations' })
+    expect(within(holds).getByText('O− red cells DN-0101')).toBeInTheDocument()
+    expect(within(holds).getAllByText('In transfer #3')).toHaveLength(3)
+    expect(within(holds).queryByText(/Holds until/)).toBeNull()
+    expect(within(holds).queryByRole('button')).toBeNull()
   })
 })

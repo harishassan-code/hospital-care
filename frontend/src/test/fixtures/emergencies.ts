@@ -207,7 +207,7 @@ export function sampleCandidates(now: Date): Record<string, CandidatesResponse> 
       reference: 'EC-2026-0003',
       items: [
         {
-          itemId: 3,
+          itemId: 1,
           need: 'Ventilator',
           shortfall: 1,
           strategy: nearest,
@@ -231,7 +231,7 @@ export function sampleCandidates(now: Date): Record<string, CandidatesResponse> 
             },
           ],
         },
-        { itemId: 4, need: 'Cardiac operating room', shortfall: 1, strategy: nearest, candidates: [] },
+        { itemId: 2, need: 'Cardiac operating room', shortfall: 1, strategy: nearest, candidates: [] },
       ],
       hospitals: [
         {
@@ -245,8 +245,8 @@ export function sampleCandidates(now: Date): Record<string, CandidatesResponse> 
           score: 94.1,
           distanceKm: 4.2,
           travelMinutes: 6,
-          covered: [{ itemId: 3, need: 'Ventilator' }],
-          unmet: [{ itemId: 4, need: 'Cardiac operating room', missing: 1, available: 0 }],
+          covered: [{ itemId: 1, need: 'Ventilator' }],
+          unmet: [{ itemId: 2, need: 'Cardiac operating room', missing: 1, available: 0 }],
         },
       ],
     },
@@ -279,21 +279,21 @@ export function sampleThreeNeedSources(): CandidatesResponse {
     reference: 'EC-2026-0002',
     items: [
       {
-        itemId: 1,
+        itemId: 2,
         need: 'ICU bed',
         shortfall: 1,
         strategy: nearest,
         candidates: [offer(full, 1, 1, 1, 92), offer(partial, 1, 1, 2, 60)],
       },
       {
-        itemId: 2,
+        itemId: 3,
         need: 'Ventilator',
         shortfall: 2,
         strategy: nearest,
         candidates: [offer(full, 2, 2, 1, 94), offer(sea, 1, 2, 2, 30)],
       },
       {
-        itemId: 3,
+        itemId: 1,
         need: 'O- red cells',
         shortfall: 2,
         strategy: nearest,
@@ -313,9 +313,9 @@ export function sampleThreeNeedSources(): CandidatesResponse {
         distanceKm: 4.2,
         travelMinutes: 6,
         covered: [
-          { itemId: 1, need: 'ICU bed' },
-          { itemId: 2, need: 'Ventilator' },
-          { itemId: 3, need: 'O- red cells' },
+          { itemId: 2, need: 'ICU bed' },
+          { itemId: 3, need: 'Ventilator' },
+          { itemId: 1, need: 'O- red cells' },
         ],
         unmet: [],
       },
@@ -330,10 +330,10 @@ export function sampleThreeNeedSources(): CandidatesResponse {
         score: 50,
         distanceKm: null,
         travelMinutes: null,
-        covered: [{ itemId: 1, need: 'ICU bed' }],
+        covered: [{ itemId: 2, need: 'ICU bed' }],
         unmet: [
-          { itemId: 2, need: 'Ventilator', missing: 2, available: 0 },
-          { itemId: 3, need: 'O- red cells', missing: 1, available: 1 },
+          { itemId: 3, need: 'Ventilator', missing: 2, available: 0 },
+          { itemId: 1, need: 'O- red cells', missing: 1, available: 1 },
         ],
       },
       {
@@ -349,9 +349,9 @@ export function sampleThreeNeedSources(): CandidatesResponse {
         travelMinutes: null,
         covered: [],
         unmet: [
-          { itemId: 1, need: 'ICU bed', missing: 1, available: 0 },
-          { itemId: 2, need: 'Ventilator', missing: 1, available: 1 },
-          { itemId: 3, need: 'O- red cells', missing: 2, available: 0 },
+          { itemId: 2, need: 'ICU bed', missing: 1, available: 0 },
+          { itemId: 3, need: 'Ventilator', missing: 1, available: 1 },
+          { itemId: 1, need: 'O- red cells', missing: 2, available: 0 },
         ],
       },
     ],

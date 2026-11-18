@@ -29,6 +29,7 @@ import type {
 } from '../api/operatingRooms'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { PublicStatus } from '../api/publicStatus'
+import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
 import type { UserSummary } from '../api/users'
 import { applyAction } from '../features/beds/beds'
 import { actionsFor, nextStatus, STATUS_LABEL } from '../features/emergencies/emergencies'
@@ -90,6 +91,28 @@ const TYPE_MODULE: Record<ResourceType, Module> = { blood: 'blood', bed: 'beds',
 
 /** The case statuses that still take stock (the server's RESERVABLE). */
 const RESERVABLE_STATUSES: readonly CaseStatus[] = ['open', 'matching', 'partiallyFulfilled', 'escalated']
+
+/** Who may make a transfer move: the supplier's module edit, the case's emergencies edit, or the receiver's module edit. */
+type MoveSide = 'supplier' | 'requester' | 'receiver'
+
+/**
+ * The transfer lifecycle (stories #47 to #49), mirrored from the spec's table: the moves from each status, the status they
+ * reach, and who may make them. Admins may make any move at any hospital.
+ */
+const TRANSFER_MOVES: readonly { action: TransferAction; from: readonly TransferStatus[]; to: TransferStatus; who: MoveSide }[] = [
+  { action: 'approve', from: ['requested'], to: 'approved', who: 'supplier' },
+  { action: 'reject', from: ['requested'], to: 'rejected', who: 'supplier' },
+  { action: 'dispatch', from: ['approved'], to: 'dispatched', who: 'supplier' },
+  { action: 'startTransit', from: ['dispatched'], to: 'inTransit', who: 'supplier' },
+  { action: 'deliver', from: ['dispatched', 'inTransit'], to: 'delivered', who: 'receiver' },
+  { action: 'cancel', from: ['requested', 'approved', 'dispatched', 'inTransit'], to: 'cancelled', who: 'requester' },
+]
+
+/** Transfer holds don't expire: a far-future stamp keeps them out of the expiry sweep, as the server does. */
+const NO_EXPIRY = '9999-12-31T23:59:59.000Z'
+
+/** The transfers the mock supplies when a test doesn't say what the supplier has free. */
+const DEFAULT_SUPPLY = 5
 
 const SEVERITY_RANK: Record<Severity, number> = { critical: 0, high: 1, moderate: 2, low: 3 }
 
@@ -157,6 +180,8 @@ type StaffApiOptions = {
   stock?: Record<string, number[]>
   /** Start with this many units held for a case's need, as if reserved earlier (story #43). */
   held?: { reference: string; itemId: number; count: number }[]
+  /** Start with these transfers (stories #47 to #49). Approved, dispatched and in-transit ones set their units aside. */
+  transfers?: Transfer[]
 }
 
 /** A few pieces of equipment across types and statuses (story #26). */
@@ -238,6 +263,7 @@ export function mockStaffApi({
   candidates: customCandidates,
   stock: customStock,
   held: seedHolds = [],
+  transfers: seedTransfers = [],
 }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
@@ -276,7 +302,7 @@ export function mockStaffApi({
   const allocationsByCase = new Map<string, CaseAllocation[]>()
   /** Whether the signed-in role may allocate this hold: it is held, and the role can edit its type's module. */
   const canAllocateHold = (c: EmergencyCase, hold: CaseReservation) =>
-    hold.status === 'held' && !!role && role !== 'patient' && canEdit(role, TYPE_MODULE[c.items[hold.itemId - 1]!.type])
+    hold.status === 'held' && !transferOfHold.has(hold.id) && !!role && role !== 'patient' && canEdit(role, TYPE_MODULE[c.items[hold.itemId - 1]!.type])
   const heldFor = (reference: string, itemId: number) =>
     holdsOf(reference).filter((hold) => hold.itemId === itemId && hold.status === 'held').length
   /** The case as the server returns it: each need with what this hospital has (story #33) and its holds (story #43). */
@@ -307,8 +333,9 @@ export function mockStaffApi({
       outcome: closes.length ? closes[closes.length - 1].note : null,
       reservations: holdsOf(c.id)
         .filter((hold) => hold.status === 'held' || hold.status === 'allocated')
-        .map((hold) => ({ ...hold, canAllocate: canAllocateHold(c, hold) })),
+        .map((hold) => ({ ...hold, transfer: transferRefOf(hold.id), canAllocate: canAllocateHold(c, hold) })),
       allocations: allocationsByCase.get(c.id) ?? [],
+      transfers: transfersOfCase(c.id),
     }
   }
   /** Hold up to `quantity` free units for a need (story #43). Each hold is one unit; a case that is open starts matching. */
@@ -329,6 +356,7 @@ export function mockStaffApi({
         expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
         reservedBy: role ? NAMES[role] : '',
         canAllocate: false,
+        transfer: null,
       }
     })
     holdsOf(found.id).push(...made)
@@ -358,6 +386,9 @@ export function mockStaffApi({
       return fail(409, {
         detail: hold.status === 'allocated' ? 'This reservation is already allocated.' : `This reservation is ${hold.status}, so it can't be allocated.`,
       })
+    }
+    if (transferOfHold.has(hold.id)) {
+      return fail(409, { detail: `This hold is part of transfer #${transferOfHold.get(hold.id)}; it is allocated when the transfer is received.` })
     }
     if (!RESERVABLE_STATUSES.includes(c.status)) {
       return fail(409, { detail: `Can't allocate for a case that is ${STATUS_LABEL[c.status].toLowerCase()}.` })
@@ -399,6 +430,84 @@ export function mockStaffApi({
     else if (complete && c.status === 'partiallyFulfilled') move('fulfilled', 'fulfil')
     return allocation
   }
+  // ── Transfers between hospitals (stories #47 to #49) ───────────────────────────────────────────────
+  // In memory, following the lifecycle above. Stock only moves between the two ledgers the case page shows: units are set
+  // aside at the supplier (holds, pinned to the transfer) and allocated to the case on delivery. The units themselves don't
+  // move between hospitals here.
+  const transfers: Transfer[] = seedTransfers.map((t) => ({ ...t, history: [...t.history] }))
+  let nextTransferId = Math.max(0, ...transfers.map((t) => t.id)) + 1
+  /** The holds each transfer has set aside at its supplier, and which transfer each hold belongs to. */
+  const holdsByTransfer = new Map<number, CaseReservation[]>()
+  const transferOfHold = new Map<number, number>()
+  /** Units each supplier has free for one need, once transfers have taken or returned some. */
+  const freeAtSupplier = new Map<string, number>()
+  const supplyKey = (t: Pick<Transfer, 'case' | 'itemId' | 'supplier'>) => `${t.case.reference}:${t.itemId}:${t.supplier.id}`
+  /** The candidate list's entry for a hospital that supplies one need of a case (story #38), if the list names it. */
+  const offerFor = (reference: string, itemId: number, supplierId: number) => {
+    const response = customCandidates ?? sampleCandidates(now)[reference]
+    return response?.items.find((item) => item.itemId === itemId)?.candidates.find((c) => c.hospital.id === supplierId)
+  }
+  const supplyFree = (t: Transfer) => {
+    if (!freeAtSupplier.has(supplyKey(t))) freeAtSupplier.set(supplyKey(t), offerFor(t.case.reference, t.itemId, t.supplier.id)?.available ?? DEFAULT_SUPPLY)
+    return freeAtSupplier.get(supplyKey(t))!
+  }
+  const setSupplyFree = (t: Transfer, free: number) => freeAtSupplier.set(supplyKey(t), free)
+  /** A unit's name as staff see it on a transfer hold: "O− red cells DN-0004" or "Ventilator VENT-004" in the case's words. */
+  const transferUnitLabel = (t: Transfer, id: number) =>
+    t.resourceType === 'blood' ? `${t.need} DN-${String(id).padStart(4, '0')}` : `${t.need} VENT-${String(id).padStart(3, '0')}`
+  /** Set aside `count` units of a transfer at its supplier: holds that don't expire and belong to the transfer (story #47). */
+  const pinUnits = (t: Transfer, count: number, labels: readonly string[] = []) => {
+    const made = Array.from({ length: count }, (_, i) => {
+      const id = nextHoldId++
+      const hold: CaseReservation = {
+        id,
+        itemId: t.itemId,
+        resource: labels[i] ?? transferUnitLabel(t, id),
+        hospital: t.supplier,
+        status: 'held',
+        expiresAt: NO_EXPIRY,
+        reservedBy: t.requestedBy,
+        canAllocate: false,
+        transfer: null,
+      }
+      transferOfHold.set(id, t.id)
+      return hold
+    })
+    holdsOf(t.case.reference).push(...made)
+    holdsByTransfer.set(t.id, [...(holdsByTransfer.get(t.id) ?? []), ...made])
+  }
+  const transferHolds = (t: Transfer) => (holdsByTransfer.get(t.id) ?? []).filter((h) => h.status === 'held' || h.status === 'allocated')
+  const transferRefOf = (holdId: number) => {
+    const t = transfers.find((x) => x.id === transferOfHold.get(holdId))
+    return t ? { id: t.id, status: t.status } : null
+  }
+  /** Who may make each move on this transfer, for the signed-in role and hospital. */
+  const reachesHospital = (id: number) => role === 'admin' || (!!role && role !== 'patient' && userFor(role).hospital?.id === id)
+  const mayMove = (t: Transfer, who: MoveSide): boolean => {
+    if (!role || role === 'patient') return false
+    if (who === 'requester') return canEdit(role, 'emergencies') && reachesHospital(t.receiver.id)
+    const hospital = who === 'supplier' ? t.supplier.id : t.receiver.id
+    return canEdit(role, TYPE_MODULE[t.resourceType]) && reachesHospital(hospital)
+  }
+  /** The transfer as this user gets it: its units set aside now, and the moves they may make now. */
+  const transferView = (t: Transfer): Transfer => ({
+    ...t,
+    resources: transferHolds(t).filter((h) => h.status === 'held').map((h) => h.resource),
+    actions: TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who)).map((m) => m.action),
+  })
+  const transfersOfCase = (reference: string) =>
+    transfers
+      .filter((t) => t.case.reference === reference)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id)
+      .map(transferView)
+  /** The sample cases' needs a transfer can carry: blood and equipment (beds and operating rooms stay put). */
+  const transferableType = (need: Need | undefined): TransferResourceType | null =>
+    need?.type === 'blood' || need?.type === 'equipment' ? need.type : null
+  /** Pin the units a seeded transfer already has set aside, so the case page shows them as the server would. */
+  for (const seeded of transfers) {
+    if (['approved', 'dispatched', 'inTransit'].includes(seeded.status)) pinUnits(seeded, seeded.resources.length, seeded.resources)
+  }
+
   const equipment = sampleEquipment(now)
   const rooms = sampleOperatingRooms(now)
   const bookings = sampleOrBookings(now)
@@ -563,6 +672,9 @@ export function mockStaffApi({
       const hold = holdsOf(found.id).find((h) => h.id === Number(params.id))
       if (!hold) return fail(404)
       if (hold.status !== 'held') return fail(409, { detail: `This reservation is ${hold.status}, so it can't be released.` })
+      if (transferOfHold.has(hold.id)) {
+        return fail(409, { detail: `This hold is part of transfer #${transferOfHold.get(hold.id)}; cancel the transfer instead.` })
+      }
       hold.status = 'released'
       stockOf(found)[hold.itemId - 1] += 1
       return ok(hold)
@@ -618,6 +730,116 @@ export function mockStaffApi({
       if (refusal) return refusal
       return { status: 201, body: allocateHold(entry.c, entry.hold, ((body as { note?: string } | undefined)?.note ?? '').trim()) }
     },
+    // Transfers between hospitals (stories #47 to #49). Reads need view, asks and moves need edit; each move is then checked
+    // against the lifecycle (409), the role at the hospital concerned (403), and whether the user's hospital is involved at all (404).
+    'GET /transfers/': view('transfers', ({ query }) => {
+      const direction = query.get('direction')
+      const status = query.get('status')
+      if (direction && direction !== 'incoming' && direction !== 'outgoing') {
+        return fail(400, { direction: ['Use incoming or outgoing.'] })
+      }
+      const listed = transfers
+        .filter((t) => (direction !== 'outgoing' && reachesHospital(t.supplier.id)) || (direction !== 'incoming' && reachesHospital(t.receiver.id)))
+        .filter((t) => !status || t.status === status)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id)
+      return ok(listed.map(transferView))
+    }),
+    'POST /transfers/': edit('transfers', ({ body }) => {
+      const input = body as TransferRequestInput
+      if (!Number.isInteger(input.quantity) || input.quantity < 1) return fail(400, { quantity: ['Enter a whole number of 1 or more.'] })
+      if (role && role !== 'patient' && input.supplierId === userFor(role).hospital?.id) {
+        return fail(400, { detail: 'A hospital can’t ask itself for stock.' })
+      }
+      // The API keys a need by its item alone, and the mock keeps item ids per case, so the request is matched to the first of
+      // this hospital's cases whose need has that id, is blood or equipment, and is supplied by the hospital named.
+      const found = cases.find(
+        (c) =>
+          !!c.hospital && reachesHospital(c.hospital.id) && transferableType(c.items[input.itemId - 1]) !== null && !!offerFor(c.id, input.itemId, input.supplierId),
+      )
+      if (!found) return fail(400, { supplierId: ['Pick a hospital that has this need.'] })
+      const need = found.items[input.itemId - 1]!
+      if (!RESERVABLE_STATUSES.includes(found.status)) {
+        return fail(400, { detail: `Can't request a transfer for a case that is ${STATUS_LABEL[found.status].toLowerCase()}.` })
+      }
+      const waiting = transfers
+        .filter((t) => t.case.reference === found.id && t.itemId === input.itemId && t.status === 'requested')
+        .reduce((sum, t) => sum + t.quantity, 0)
+      const askable = need.quantity - fulfilledFor(found.id, input.itemId) - heldFor(found.id, input.itemId) - waiting
+      if (input.quantity > askable) return fail(400, { detail: `Only ${Math.max(askable, 0)} more can be asked for this need.` })
+      const created: Transfer = {
+        id: nextTransferId++,
+        case: { reference: found.id, severity: found.severity },
+        itemId: input.itemId,
+        resourceType: transferableType(need)!,
+        need: needLabel(need),
+        supplier: { id: input.supplierId, name: offerFor(found.id, input.itemId, input.supplierId)!.hospital.name },
+        receiver: found.hospital ?? { id: 0, name: '' },
+        quantity: input.quantity,
+        approved: 0,
+        resources: [],
+        status: 'requested',
+        reason: '',
+        requestedBy: role ? NAMES[role] : '',
+        createdAt: new Date().toISOString(),
+        history: [
+          {
+            fromStatus: '',
+            toStatus: 'requested',
+            action: 'request',
+            note: (input.note ?? '').trim(),
+            actor: role ? NAMES[role] : null,
+            at: new Date().toISOString(),
+          },
+        ],
+        actions: [],
+      }
+      transfers.push(created)
+      return { status: 201, body: transferView(created) }
+    }),
+    'GET /transfers/:id/': view('transfers', ({ params }) => {
+      const t = transfers.find((x) => x.id === Number(params.id))
+      return t && (reachesHospital(t.supplier.id) || reachesHospital(t.receiver.id)) ? ok(transferView(t)) : fail(404)
+    }),
+    'POST /transfers/:id/actions/': edit('transfers', ({ params, body }) => {
+      const t = transfers.find((x) => x.id === Number(params.id))
+      if (!t || !(reachesHospital(t.supplier.id) || reachesHospital(t.receiver.id))) return fail(404)
+      const { action, reason = '', note = '' } = body as { action: TransferAction; reason?: string; note?: string }
+      const move = TRANSFER_MOVES.find((m) => m.action === action)
+      if (!move) return fail(400, { action: ['Not a transfer action.'] })
+      if (!move.from.includes(t.status)) {
+        return fail(409, { detail: `Can't ${action} a transfer that is ${TRANSFER_STATUS_LABEL[t.status].toLowerCase()}.` })
+      }
+      if (!mayMove(t, move.who)) return fail(403, { detail: 'Your role can’t make this move on this transfer.' })
+      if (action === 'reject' && !reason.trim()) return fail(400, { reason: ['Say why this request is rejected.'] })
+      if (action === 'approve') {
+        // Partial approval: approve what the supplier has free, as the server's reserve does. None free is a refusal.
+        const free = supplyFree(t)
+        if (free === 0) return fail(409, { detail: `No ${t.need} is free at ${t.supplier.name} right now.` })
+        const taken = Math.min(free, t.quantity)
+        setSupplyFree(t, free - taken)
+        pinUnits(t, taken)
+        t.approved = taken
+      }
+      if (action === 'deliver') {
+        // Receipt allocates the units to the case (story #49). Only the case's own ledger changes here.
+        const found = findCase(t.case.reference)
+        if (found) for (const hold of transferHolds(t).filter((h) => h.status === 'held')) allocateHold(found, hold, note.trim())
+      }
+      if (action === 'cancel') {
+        // Cancelling releases the holds, so the units go back on the supplier's shelf (story #48).
+        for (const hold of transferHolds(t).filter((h) => h.status === 'held')) {
+          hold.status = 'released'
+          setSupplyFree(t, supplyFree(t) + 1)
+        }
+      }
+      t.reason = action === 'reject' || action === 'cancel' ? reason.trim() : t.reason
+      t.history = [
+        ...t.history,
+        { fromStatus: t.status, toStatus: move.to, action, note: (reason || note).trim(), actor: role ? NAMES[role] : null, at: new Date().toISOString() },
+      ]
+      t.status = move.to
+      return ok(transferView(t))
+    }),
     'GET /users/': view('users', () => ok(users)),
     'PATCH /users/:id/': edit('users', ({ params, body }) => {
       const user = users.find((u) => u.id === Number(params.id))

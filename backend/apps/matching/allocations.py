@@ -17,7 +17,7 @@ from apps.emergencies.services import move_case
 from apps.resources.services import change_status
 
 from .models import Allocation, Reservation, ReservationStatus
-from .reservations import RESERVABLE, ReservationNotHeld, resource_label
+from .reservations import RESERVABLE, ReservationNotHeld, live_transfer, resource_label
 
 # The module whose edit right lets a user allocate each type (apps.accounts.permissions.ACCESS).
 ALLOCATION_MODULE = {
@@ -72,11 +72,12 @@ def _recompute_case(case: EmergencyRequest, *, now) -> None:
 
 
 @transaction.atomic
-def allocate(reservation_id: int, *, actor, note: str = "") -> Allocation:
+def allocate(reservation_id: int, *, actor, note: str = "", transfer_ok: bool = False) -> Allocation:
     """Allocate one held reservation, in one transaction. Raises PermissionDenied (403) for a role or hospital
-    that can't, ReservationNotHeld (409) for a hold that is allocated, released or expired, AllocationRefused
-    (409) for a case that is closed, cancelled or fulfilled, and TransitionNotAllowed (409) when the resource
-    has moved on. Nothing is saved when any of these is raised."""
+    that can't, ReservationNotHeld (409) for a hold that is allocated, released or expired, or that belongs to
+    a live transfer (unless `transfer_ok`, which only the transfer's receipt passes), AllocationRefused (409)
+    for a case that is closed, cancelled or fulfilled, and TransitionNotAllowed (409) when the resource has
+    moved on. Nothing is saved when any of these is raised."""
     now = timezone.now()
     case_id, item_id = Reservation.objects.values_list("request_item__request_id", "request_item_id").get(
         pk=reservation_id
@@ -93,7 +94,13 @@ def allocate(reservation_id: int, *, actor, note: str = "") -> Allocation:
             if not may_change(actor, resource)
             else "Your role can't allocate this."
         )
-    if hold.status != ReservationStatus.HELD or hold.expires_at <= now:
+    if hold.status != ReservationStatus.HELD:
+        raise ReservationNotHeld(_not_held_message(hold))
+    if not transfer_ok and (transfer := live_transfer(hold)):
+        raise ReservationNotHeld(
+            f"This hold is part of transfer #{transfer.pk}; receive the transfer instead."
+        )
+    if not transfer_ok and hold.expires_at <= now:
         raise ReservationNotHeld(_not_held_message(hold))
     if case.status not in RESERVABLE:
         raise AllocationRefused(f"Can't allocate for a case that is {case.get_status_display().lower()}.")

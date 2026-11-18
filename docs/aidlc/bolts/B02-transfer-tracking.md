@@ -6,8 +6,8 @@ points: 5
 priority: high
 sprint: 7
 depends_on: B01
-owner: unassigned
-status: Backlog
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B02 · Transfer tracking

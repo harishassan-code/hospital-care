@@ -171,6 +171,27 @@ describe('QA · staff workspace', () => {
     expect(labels).not.toContain('Blood bank')
   })
 
+  it('doctor nav links to transfers; pharmacist nav does not', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff('/staff')
+    await screen.findByRole('navigation', { name: 'Staff' })
+    const doctorLabels = within(screen.getByRole('navigation', { name: 'Staff' }))
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+    expect(doctorLabels).toEqual(expect.arrayContaining(['Transfers']))
+    expect(screen.getByRole('link', { name: 'Transfers' })).toHaveAttribute('href', '/staff/transfers')
+  })
+
+  it('pharmacist nav hides transfers', async () => {
+    mockStaffApi({ role: 'pharmacist' })
+    renderStaff('/staff')
+    await screen.findByRole('navigation', { name: 'Staff' })
+    const labels = within(screen.getByRole('navigation', { name: 'Staff' }))
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+    expect(labels).not.toContain('Transfers')
+  })
+
   it('nurse cannot open blood bank by URL', async () => {
     mockStaffApi({ role: 'nurse' })
     renderStaff('/staff/blood')

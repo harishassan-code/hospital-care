@@ -132,7 +132,13 @@ def apply_case_action(reference: str, action: str, *, note: str, actor) -> Emerg
     REQUEST_LIFECYCLE.next(case.status, action)
     if action == "close" and not note.strip():
         raise OutcomeNoteRequired()
-    return move_case(case, action, note=note, actor=actor)
+    moved = move_case(case, action, note=note, actor=actor)
+    if action in ("close", "cancel"):
+        # Story #48: a finished case releases the stock its unfinished transfers pinned at other hospitals.
+        from apps.transfers.services import cancel_for_case  # transfers builds on emergencies
+
+        cancel_for_case(moved, actor=actor, reason=f"Case {moved.reference} {moved.status}")
+    return moved
 
 
 def _overdue_ids(cutoff):

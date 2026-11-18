@@ -8,7 +8,7 @@ from apps.hospitals.models import BedType
 from apps.matching.allocations import may_allocate
 from apps.matching.models import ACTIVE, Allocation, Reservation, ReservationStatus
 from apps.matching.multi import HospitalMatch
-from apps.matching.reservations import resource_label
+from apps.matching.reservations import live_transfer, resource_label
 from apps.matching.scoring import FACTOR_LABELS, rank, strategy_for
 from apps.operating_rooms.models import OrCapability
 
@@ -177,6 +177,7 @@ class ReservationSerializer(serializers.ModelSerializer):
     expiresAt = serializers.DateTimeField(source="expires_at", read_only=True)
     reservedBy = serializers.SerializerMethodField()
     canAllocate = serializers.SerializerMethodField()
+    transfer = serializers.SerializerMethodField()
 
     class Meta:
         model = Reservation
@@ -189,6 +190,7 @@ class ReservationSerializer(serializers.ModelSerializer):
             "expiresAt",
             "reservedBy",
             "canAllocate",
+            "transfer",
         ]
 
     def get_resource(self, hold):
@@ -204,10 +206,16 @@ class ReservationSerializer(serializers.ModelSerializer):
     def get_canAllocate(self, hold):
         return can_allocate_hold(self.context.get("user"), hold)
 
+    def get_transfer(self, hold):
+        """The live transfer this hold is pinned to (story #47): `{id, status}`, or None."""
+        live = live_transfer(hold)
+        return None if live is None else {"id": live.pk, "status": live.status}
+
 
 def can_allocate_hold(user, hold: Reservation) -> bool:
-    """Whether `user` may allocate this hold now: it is held, and the user may allocate its type here."""
-    if user is None or hold.status != ReservationStatus.HELD:
+    """Whether `user` may allocate this hold now: it is held, it isn't pinned to a live transfer (only the
+    transfer receives it, story #47), and the user may allocate its type here."""
+    if user is None or hold.status != ReservationStatus.HELD or live_transfer(hold) is not None:
         return False
     return may_allocate(user, hold.request_item.resource_type, hold.resource)
 
@@ -355,9 +363,15 @@ class CaseDetailSerializer(CaseSerializer):
         holds = (
             Reservation.objects.filter(request_item__request=case, status__in=ACTIVE)
             .select_related("hospital", "reserved_by", "request_item")
-            .prefetch_related("resource")
+            .prefetch_related("resource", "transfers")
         )
         data["reservations"] = ReservationSerializer(holds, many=True, context=self.context).data
+        # Transfers build on this module, so their modules load late (story #47).
+        from apps.transfers.models import Transfer
+        from apps.transfers.serializers import TransferSerializer
+
+        transfers = Transfer.objects.filter(request_item__request=case).with_details()
+        data["transfers"] = TransferSerializer(transfers, many=True, context=self.context).data
         allocations = (
             Allocation.objects.filter(request=case)
             .select_related("hospital", "allocated_by", "request_item")

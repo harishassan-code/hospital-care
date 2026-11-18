@@ -24,7 +24,7 @@ def test_seed_demo_is_repeatable():
         "Ward": 12,
         "StorageLocation": 10,
         "Bed": 164,
-        "BloodUnit": 320,
+        "BloodUnit": 352,  # 320 at CityCare General, 16 at each other hospital (Sprint 7 transfers)
         "Medicine": 23,
         "User": 6,
     }
