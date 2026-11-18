@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import Prefetch
 from django.utils import timezone
 
+from apps.ambulances.models import Trip
 from apps.matching.models import Reservation
 from apps.resources.state_machine import StateMachine
 
@@ -55,9 +56,12 @@ class TransferQuerySet(models.QuerySet):
         queries, however many transfers it has."""
         holds = Prefetch("reservations", queryset=Reservation.objects.prefetch_related("resource"))
         history = Prefetch("history", queryset=TransferStatusChange.objects.select_related("actor"))
+        trips = Prefetch(
+            "trips", queryset=Trip.objects.select_related("ambulance", "dispatched_by", "transfer")
+        )
         return self.select_related(
             "request_item__request", "supplier", "receiver", "requested_by"
-        ).prefetch_related(holds, history)
+        ).prefetch_related(holds, history, trips)
 
 
 class Transfer(models.Model):

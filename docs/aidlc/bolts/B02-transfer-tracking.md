@@ -7,7 +7,7 @@ priority: high
 sprint: 7
 depends_on: B01
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B02 · Transfer tracking

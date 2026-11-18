@@ -12,20 +12,36 @@ unknown id, **400** `{field: ["message"]}` for invalid input.
 `ACCESS` in `backend/apps/accounts/permissions.py` and `frontend/src/features/staff/roles.ts` must stay
 identical. Reads need *view*, writes need *edit*.
 
-| Role | overview | emergencies | beds | blood | pharmacy | hospitals | users | equipment | operatingRooms | orBookings | transfers |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| admin | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit |
-| doctor | view | edit | view | view | view | view | – | view | view | edit | edit |
-| nurse | view | edit | edit | – | view | view | – | edit | edit | edit | edit |
-| bloodBank | view | view | – | edit | – | view | – | – | – | – | edit |
-| pharmacist | view | view | – | – | edit | view | – | – | – | – | – |
-| patient | – | – | – | – | – | – | – | – | – | – | – |
+| Role | overview | alerts | emergencies | beds | blood | donors | pharmacy | hospitals | users | equipment | operatingRooms | orBookings | transfers | ambulances | commandCentre | audit |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| admin | view | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | view | view |
+| doctor | view | view | edit | view | view | – | view | view | – | view | view | edit | edit | view | – | – |
+| nurse | view | view | edit | edit | – | – | view | view | – | edit | edit | edit | edit | edit | – | – |
+| bloodBank | view | view | view | – | edit | edit | – | view | – | – | – | – | edit | – | – | – |
+| pharmacist | view | view | view | – | – | – | edit | view | – | – | – | – | – | – | – | – |
+| patient | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – |
 
 `emergencies` was added in Sprint 7 with #30 (see [api.md](api.md#emergency-cases-30-32)). `transfers` was added with
 B01 (#47): it lets a role use the transfer endpoints at all. Who may ask, approve, ship or receive is narrowed per move
 (see [transfers](api.md#transfers-47-48-49)).
 
+`ambulances` (B04, #50) is the ambulance registry: admin and nurse edit, doctor views. Blood bank and pharmacist have no access (see [ambulances](api.md#ambulances-b04-50)).
+Trips (B05, #51) add two endpoints under it: `POST /transfers/<id>/trips/` and `POST /trips/<id>/actions/`. They need edit on
+`ambulances` at the supplying hospital, so the receiving hospital's staff (and blood bank, which has no `ambulances` access)
+can't send or step a trip. Trips add no module (see [trips](api.md#trips-b05-51)).
+
 `orBookings` (story #29) is the module for booking and cancelling operating room slots. It has no nav item of its own: the day schedule is part of operating rooms.
+
+`commandCentre` (story #55) is the city-wide figures page. Admins only, and view only: nobody can change anything through it. The page's
+endpoint is in [api.md](api.md#city-command-centre-55).
+
+`audit` (#56) is the audit trail: admins only, and read only (`view`). Its endpoints are in [api.md](api.md#audit-trail-56).
+
+`alerts` (B07, #53) is the Alerts page: every staff role views it. It lists only the user's own notifications, so nobody edits
+through it. The endpoints stay on `IsStaff` (`apps/accounts/permissions.py`), so patients and signed-out users get 403 (see
+[api.md](api.md#notifications-52)).
+
+`donors` (B11) covers the donor endpoints: names, phones and emails, screening and donation appointments. Only admin and blood bank may use it, so doctors, nurses and pharmacists get **403** there (they can still read blood units). It has its own nav item, **Donors**.
 
 **Own hospital only:** a user who isn't an admin may change a resource only if it belongs to their own
 hospital (`resource.hospital == user.hospital`); otherwise **403**. Admins manage the whole network.
@@ -126,6 +142,6 @@ There's no new endpoint. `POST /beds/<id>/actions/` now runs through the shared 
 
 ## Audit (story 8.1)
 
-There's no endpoint in Sprint 2. Entries are append-only (the model refuses update and delete), so the API can
-neither edit nor delete them. Admins read them in Django admin (`/admin/audit/auditlog/`, read-only). Search and
-export come with issue #56 in Sprint 8.
+Entries are append-only (the model refuses update and delete), so the API can neither edit nor delete them. Admins
+search and export them with `GET /api/audit/entries/` and `GET /api/audit/entries/export/` (issue #56, see
+[api.md](api.md#audit-trail-56)). Django admin stays read-only as well (`/admin/audit/auditlog/`).

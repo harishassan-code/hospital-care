@@ -231,3 +231,12 @@
     grid-column: 1;
   }
 }
+
+/* ── Refresh line ──────────────────────────────────────── */
+
+.updated {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+}
