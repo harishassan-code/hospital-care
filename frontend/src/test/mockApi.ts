@@ -852,6 +852,17 @@ export function mockStaffApi({
     // Before /hospitals/:id/, which would otherwise match it.
     'GET /hospitals/capabilities/': view('hospitals', () => ok(sampleCapabilities)),
     'GET /hospitals/': view('hospitals', () => ok(hospitals)),
+    'GET /ambulances/': view('ambulances', () =>
+      ok([
+        { id: 1, identifier: 'AMB-1', type: 'basic', status: 'available', statusSince: now.toISOString(), hospital: 'CityCare General Hospital' },
+        { id: 2, identifier: 'AMB-2', type: 'transport', status: 'inUse', statusSince: now.toISOString(), hospital: 'CityCare General Hospital' },
+      ]),
+    ),
+    'POST /ambulances/': edit('ambulances', ({ body }) => {
+      const input = body as { identifier: string; type: string; status?: string }
+      const tag = input.identifier.toUpperCase()
+      return { status: 201, body: { id: 99, identifier: tag, type: input.type, status: input.status ?? 'available', statusSince: now.toISOString(), hospital: 'CityCare General Hospital' } }
+    }),
     'GET /equipment/': view('equipment', () => ok(equipment)),
     'POST /equipment/': edit('equipment', ({ body }) => {
       const input = body as EquipmentInput
