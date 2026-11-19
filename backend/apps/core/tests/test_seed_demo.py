@@ -136,6 +136,14 @@ def test_a_rerun_fills_in_a_missing_window_and_duplicates_nothing():
     assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
 
 
+def test_a_rerun_leaves_a_specialist_added_by_staff_alone():
+    call_command("seed_demo", stdout=None)
+    Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Added Later", specialty="Oncology")
+    call_command("seed_demo", stdout=None)
+    assert Specialist.objects.get(name="Dr. Added Later").on_call_windows.count() == 0
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+
+
 def test_reset_starts_the_specialists_over():
     call_command("seed_demo", stdout=None)
     Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Extra", specialty="ENT")

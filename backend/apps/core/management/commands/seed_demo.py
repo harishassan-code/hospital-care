@@ -604,6 +604,8 @@ class Command(BaseCommand):
         today = timezone.localdate(now)
         missing = []
         for specialist in Specialist.objects.all():
+            if specialist.name not in shifts:
+                continue  # added by staff, not a demo doctor: the seed leaves its windows alone
             start, end = (time.fromisoformat(clock) for clock in shifts[specialist.name])
             booked = set(specialist.on_call_windows.values_list("starts_at", flat=True))
             for offset in range(SPECIALIST_DAYS):
