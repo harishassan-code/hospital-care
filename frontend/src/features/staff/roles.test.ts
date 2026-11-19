@@ -3,17 +3,17 @@ import { canEdit, canSee, moduleForPath, MODULES, ROLES, type Module, type Role 
 
 // The access table from the design spec: v = view only, e = edit, - = no access.
 const TABLE: Record<Role, Record<Module, 'v' | 'e' | '-'>> = {
-  admin: { overview: 'v', emergencies: 'e', transfers: 'e', beds: 'e', blood: 'e', pharmacy: 'e', equipment: 'e', operatingRooms: 'e', orBookings: 'e', hospitals: 'e', users: 'e' },
-  doctor: { overview: 'v', emergencies: 'e', transfers: 'e', beds: 'v', blood: 'v', pharmacy: 'v', equipment: 'v', operatingRooms: 'v', orBookings: 'e', hospitals: 'v', users: '-' },
-  nurse: { overview: 'v', emergencies: 'e', transfers: 'e', beds: 'e', blood: '-', pharmacy: 'v', equipment: 'e', operatingRooms: 'e', orBookings: 'e', hospitals: 'v', users: '-' },
-  bloodBank: { overview: 'v', emergencies: 'v', transfers: 'e', beds: '-', blood: 'e', pharmacy: '-', equipment: '-', operatingRooms: '-', orBookings: '-', hospitals: 'v', users: '-' },
-  pharmacist: { overview: 'v', emergencies: 'v', transfers: '-', beds: '-', blood: '-', pharmacy: 'e', equipment: '-', operatingRooms: '-', orBookings: '-', hospitals: 'v', users: '-' },
+  admin: { overview: 'v', emergencies: 'e', transfers: 'e', beds: 'e', blood: 'e', pharmacy: 'e', equipment: 'e', operatingRooms: 'e', orBookings: 'e', hospitals: 'e', specialists: 'e', users: 'e' },
+  doctor: { overview: 'v', emergencies: 'e', transfers: 'e', beds: 'v', blood: 'v', pharmacy: 'v', equipment: 'v', operatingRooms: 'v', orBookings: 'e', hospitals: 'v', specialists: 'v', users: '-' },
+  nurse: { overview: 'v', emergencies: 'e', transfers: 'e', beds: 'e', blood: '-', pharmacy: 'v', equipment: 'e', operatingRooms: 'e', orBookings: 'e', hospitals: 'v', specialists: 'e', users: '-' },
+  bloodBank: { overview: 'v', emergencies: 'v', transfers: 'e', beds: '-', blood: 'e', pharmacy: '-', equipment: '-', operatingRooms: '-', orBookings: '-', hospitals: 'v', specialists: 'v', users: '-' },
+  pharmacist: { overview: 'v', emergencies: 'v', transfers: '-', beds: '-', blood: '-', pharmacy: 'e', equipment: '-', operatingRooms: '-', orBookings: '-', hospitals: 'v', specialists: 'v', users: '-' },
 }
 
 describe('roles', () => {
   it('lists every role and module', () => {
     expect(ROLES.map((r) => r.id)).toEqual(Object.keys(TABLE))
-    expect(MODULES.map((m) => m.id)).toEqual(['overview', 'emergencies', 'transfers', 'beds', 'blood', 'pharmacy', 'equipment', 'operatingRooms', 'hospitals', 'users'])
+    expect(MODULES.map((m) => m.id)).toEqual(['overview', 'emergencies', 'transfers', 'beds', 'blood', 'pharmacy', 'equipment', 'operatingRooms', 'hospitals', 'specialists', 'users'])
   })
 
   it.each([
@@ -27,6 +27,9 @@ describe('roles', () => {
     ['/staff/users', 'users'],
     ['/staff/equipment', 'equipment'],
     ['/staff/operating-rooms', 'operatingRooms'],
+    ['/staff/specialists', 'specialists'],
+    ['/staff/specialists/3', 'specialists'],
+    ['/staff/specialists/3/edit', 'specialists'],
     ['/staff/hospitalsx', 'overview'],
   ])('maps %s to the %s module', (path, module) => {
     expect(moduleForPath(path).id).toBe(module)

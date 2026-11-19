@@ -10,6 +10,7 @@ export type Module =
   | 'operatingRooms'
   | 'orBookings'
   | 'hospitals'
+  | 'specialists'
   | 'users'
 
 export const ROLES: readonly { id: Role; label: string }[] = [
@@ -30,6 +31,7 @@ export const MODULES: readonly { id: Module; label: string; path: string }[] = [
   { id: 'equipment', label: 'Equipment', path: '/staff/equipment' },
   { id: 'operatingRooms', label: 'Operating rooms', path: '/staff/operating-rooms' },
   { id: 'hospitals', label: 'Hospitals', path: '/staff/hospitals' },
+  { id: 'specialists', label: 'Specialists', path: '/staff/specialists' },
   { id: 'users', label: 'Users and roles', path: '/staff/users' },
 ]
 
@@ -57,6 +59,7 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     operatingRooms: 'edit',
     orBookings: 'edit',
     hospitals: 'edit',
+    specialists: 'edit',
     users: 'edit',
   },
   doctor: {
@@ -70,6 +73,7 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     operatingRooms: 'view',
     orBookings: 'edit', // surgeons book their own slots (story #29)
     hospitals: 'view',
+    specialists: 'view',
   },
   nurse: {
     overview: 'view',
@@ -81,9 +85,10 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     operatingRooms: 'edit',
     orBookings: 'edit',
     hospitals: 'view',
+    specialists: 'edit', // own hospital only; the API refuses other hospitals (apps.specialists.services)
   },
-  bloodBank: { overview: 'view', emergencies: 'view', transfers: 'edit', blood: 'edit', hospitals: 'view' },
-  pharmacist: { overview: 'view', emergencies: 'view', pharmacy: 'edit', hospitals: 'view' },
+  bloodBank: { overview: 'view', emergencies: 'view', transfers: 'edit', blood: 'edit', hospitals: 'view', specialists: 'view' },
+  pharmacist: { overview: 'view', emergencies: 'view', pharmacy: 'edit', hospitals: 'view', specialists: 'view' },
 }
 
 export function canSee(role: Role, module: Module): boolean {

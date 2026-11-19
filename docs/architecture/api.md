@@ -716,7 +716,8 @@ docker compose exec backend python manage.py seed_demo --reset  # start the demo
 
 Creates 3 hospitals (CityCare General, Seaview, Northside Children's) with 10 departments, 12 wards / 164 beds
 (ICU, emergency, general, isolation and NICU) and 10 storage locations, plus 320 blood units (with screening results), 60 synthetic donors (two deferred) and 6 upcoming donation
-appointments, 23 medicines, 14 doctor shifts, three operating rooms per hospital with a few bookings today and
+appointments, 23 medicines, 14 doctor shifts, the same 14 doctors as specialists at their hospitals with an on-call
+window for each of the next seven days (B16), three operating rooms per hospital with a few bookings today and
 tomorrow, the ER status, and one login per
 role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@demo.citycare.pk`, password
 `CityCare-demo-1`). Demo only: never run it against real data.

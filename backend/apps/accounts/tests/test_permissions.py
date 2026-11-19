@@ -10,6 +10,7 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import ACCESS, EDIT
 from apps.blood.models import BloodUnit
 from apps.hospitals.models import Bed, BedStatus, Ward
+from apps.specialists.models import Specialist
 
 pytestmark = pytest.mark.django_db
 
@@ -41,6 +42,12 @@ ENDPOINTS = [
     ("hospitals", "post", "hospital-list", [], {}),
     ("users", "get", "user-list", [], None),
     ("users", "patch", "user-role", [999], {"role": "doctor"}),
+    ("specialists", "get", "specialist-list", [], None),
+    ("specialists", "post", "specialist-list", [], {}),
+    ("specialists", "get", "specialist-detail", [999], None),
+    ("specialists", "patch", "specialist-detail", [999], {"isActive": False}),
+    ("specialists", "post", "specialist-on-call", [999], {}),
+    ("specialists", "delete", "specialist-on-call-detail", [999, 999], {}),
 ]
 
 
@@ -111,3 +118,13 @@ class TestOwnHospitalOnly:
         data = client_as(Role.DOCTOR, hospital=here).get(reverse("bed-board")).json()
         assert [b["id"] for b in data["beds"]] == ["H-01"]
         assert [w["id"] for w in data["wards"]] == [f"w{here.pk}"]
+
+    def test_nurse_reads_every_hospitals_specialists_but_writes_only_her_own(self, client_as, make_hospital):
+        here, there = make_hospital("Here"), make_hospital("There")
+        Specialist.objects.create(hospital=there, name="Dr. There", specialty="Cardiology")
+        nurse = client_as(Role.NURSE, hospital=here)
+        assert [row["name"] for row in nurse.get(reverse("specialist-list")).json()] == ["Dr. There"]
+        listed = {"name": "Dr. Here", "specialty": "ENT", "hospitalId": here.pk}
+        assert nurse.post(reverse("specialist-list"), listed, format="json").status_code == 201
+        elsewhere = {**listed, "hospitalId": there.pk}
+        assert nurse.post(reverse("specialist-list"), elsewhere, format="json").status_code == 403

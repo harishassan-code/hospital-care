@@ -1,12 +1,19 @@
+from datetime import timedelta
+
 import pytest
 from django.core.management import call_command
+from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.blood.models import BloodUnit
+from apps.core.management.commands.seed_demo import DOCTORS, SPECIALIST_DAYS
 from apps.hospitals.models import Bed, BedType, Department, Hospital, StorageLocation, Ward
 from apps.pharmacy.models import Medicine
+from apps.specialists.models import OnCallWindow, Specialist
 
 pytestmark = pytest.mark.django_db
+
+SEAVIEW, NORTHSIDE, MAIN = "Seaview Hospital", "Northside Children's Hospital", "CityCare General Hospital"
 
 
 def counts():
@@ -77,3 +84,69 @@ def test_reset_starts_over():
     Department.objects.create(hospital=Hospital.objects.first(), name="Extra")
     call_command("seed_demo", "--reset", stdout=None)
     assert counts()["Department"] == 10
+
+
+def test_specialists_are_the_demo_doctors_at_their_hospitals():
+    call_command("seed_demo", stdout=None)
+    hospital_of = {s.name: s.hospital.name for s in Specialist.objects.select_related("hospital")}
+    assert set(hospital_of) == {name for name, *_ in DOCTORS}
+    assert set(hospital_of.values()) == {SEAVIEW, NORTHSIDE, MAIN}
+    assert hospital_of["Dr. Ayesha Khan"] == SEAVIEW  # Cardiology
+    assert hospital_of["Dr. Sana Malik"] == NORTHSIDE  # Paediatrics
+    assert hospital_of["Dr. Kamran Shah"] == MAIN  # Emergency medicine
+    assert {s.specialty for s in Specialist.objects.all()} == {department for _, department, *_ in DOCTORS}
+
+
+def test_every_specialist_has_a_window_for_each_of_the_next_days_in_karachi():
+    call_command("seed_demo", stdout=None)
+    today = timezone.localdate()
+    for specialist in Specialist.objects.all():
+        days = [
+            timezone.localtime(w.starts_at).date() for w in specialist.on_call_windows.order_by("starts_at")
+        ]
+        assert days == [today + timedelta(days=offset) for offset in range(SPECIALIST_DAYS)], specialist.name
+
+
+def test_windows_never_overlap_and_an_overnight_shift_ends_the_next_morning():
+    call_command("seed_demo", stdout=None)
+    for specialist in Specialist.objects.all():
+        windows = list(specialist.on_call_windows.order_by("starts_at"))
+        for earlier, later in zip(windows, windows[1:], strict=False):
+            assert earlier.ends_at <= later.starts_at, specialist.name
+    usman = Specialist.objects.get(name="Dr. Usman Farooq").on_call_windows.order_by("starts_at").first()
+    starts, ends = timezone.localtime(usman.starts_at), timezone.localtime(usman.ends_at)
+    assert (starts.hour, starts.minute) == (20, 0)
+    assert (ends.hour, ends.minute) == (8, 0)
+    assert ends.date() == starts.date() + timedelta(days=1)
+
+
+def test_a_rerun_adds_no_specialist_and_no_window_it_already_has():
+    call_command("seed_demo", stdout=None)
+    first = (Specialist.objects.count(), OnCallWindow.objects.count())
+    call_command("seed_demo", stdout=None)
+    assert first == (len(DOCTORS), len(DOCTORS) * SPECIALIST_DAYS)
+    assert (Specialist.objects.count(), OnCallWindow.objects.count()) == first
+
+
+def test_a_rerun_fills_in_a_missing_window_and_duplicates_nothing():
+    call_command("seed_demo", stdout=None)
+    OnCallWindow.objects.filter(specialist__name="Dr. Kamran Shah").order_by("starts_at").first().delete()
+    call_command("seed_demo", stdout=None)
+    assert OnCallWindow.objects.filter(specialist__name="Dr. Kamran Shah").count() == SPECIALIST_DAYS
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+
+
+def test_a_rerun_leaves_a_specialist_added_by_staff_alone():
+    call_command("seed_demo", stdout=None)
+    Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Added Later", specialty="Oncology")
+    call_command("seed_demo", stdout=None)
+    assert Specialist.objects.get(name="Dr. Added Later").on_call_windows.count() == 0
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+
+
+def test_reset_starts_the_specialists_over():
+    call_command("seed_demo", stdout=None)
+    Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Extra", specialty="ENT")
+    call_command("seed_demo", "--reset", stdout=None)
+    assert Specialist.objects.count() == len(DOCTORS)
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
