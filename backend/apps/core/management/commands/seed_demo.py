@@ -782,9 +782,11 @@ class Command(BaseCommand):
             (f"AMB-{hospital.id}-2", T.TRANSPORT, St.AVAILABLE),
             (f"AMB-{hospital.id}-3", T.ADVANCED, St.MAINTENANCE),
         ]
-        Ambulance.objects.bulk_create(
-            [Ambulance(hospital=hospital, identifier=code, ambulance_type=t, status=st) for code, t, st in items]
-        )
+        rows = [
+            Ambulance(hospital=hospital, identifier=code, ambulance_type=t, status=st)
+            for code, t, st in items
+        ]
+        Ambulance.objects.bulk_create(rows)
 
     def seed_equipment(self, hospital: Hospital):
         """Sprint 4 (#26): a small, fixed set of critical equipment in the main hospital."""

@@ -3,7 +3,6 @@ import {
   AMBULANCE_STATUSES,
   AMBULANCE_TYPES,
   getAmbulances,
-  type Ambulance,
   type AmbulanceStatus,
   type AmbulanceType,
 } from '../../api/ambulances'

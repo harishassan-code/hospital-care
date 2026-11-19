@@ -97,7 +97,7 @@ function AmbulanceForm({ onRegistered, onClose }: { onRegistered: (item: Ambulan
           </select>
         </Field>
         <div className={styles.formActions}>
-          <Button type="submit" disabled={pending} aria-busy={pending}>
+          <Button type="submit" pending={pending} pendingLabel="Registering…">
             Register ambulance
           </Button>
           <button type="button" className={styles.linkButton} onClick={onClose}>
