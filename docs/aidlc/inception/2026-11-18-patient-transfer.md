@@ -110,7 +110,7 @@ Notes:
 |---|---|---|---|
 | POST | `/api/emergencies/<reference>/patient-transfer/` | `{destinationId, note?}` | 201 `PatientTransfer` |
 | GET | `/api/patient-transfers/?direction=incoming` or `outgoing`, `&status=` | none | 200 `PatientTransfer[]`, newest first |
-| POST | `/api/patient-transfers/<id>/actions/` | `{action: "arrive" or "cancel", note?, reason?}` | 200 `PatientTransfer`, after the move |
+| POST | `/api/patient-transfers/<id>/actions/` | `{action: "arrive" or "cancel", reason?}` | 200 `PatientTransfer`, after the move |
 
 The list sits at the API root. The case route `emergencies/<str:reference>/` would otherwise catch it. The case detail gains `transferFlag` and `patientTransfers`.
 

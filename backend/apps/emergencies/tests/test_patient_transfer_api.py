@@ -457,6 +457,38 @@ def test_an_unknown_action_is_a_400(s):
     assert act(as_user(s.receiver), transfer, "teleport").status_code == 400
 
 
+@pytest.mark.parametrize("extra", [{}, {"note": "Sent with the arrival"}], ids=["without-note", "with-note"])
+def test_arrival_answers_the_same_whether_or_not_a_note_is_sent(s, extra):
+    """The action body is {action} only. A `note` key is not part of the contract: it is ignored, and the
+    row keeps the note it was requested with."""
+    transfer = requested_transfer(s)
+
+    response = act(as_user(s.receiver), transfer, "arrive", **extra)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == ROW_KEYS
+    assert body["status"] == "arrived"
+    assert body["note"] == ""
+    row = PatientTransfer.objects.get(pk=transfer.pk)
+    assert (row.status, row.note) == ("arrived", "")
+
+
+@pytest.mark.parametrize("extra", [{}, {"note": "Sent with the cancel"}], ids=["without-note", "with-note"])
+def test_cancel_answers_the_same_whether_or_not_a_note_is_sent(s, extra):
+    """Cancel takes a reason and nothing else. A `note` key is ignored: the reason is kept, not the note."""
+    transfer = requested_transfer(s)
+
+    response = act(as_user(s.doctor), transfer, "cancel", reason="Patient stable", **extra)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == ROW_KEYS
+    assert (body["status"], body["reason"], body["note"]) == ("cancelled", "Patient stable", "")
+    row = PatientTransfer.objects.get(pk=transfer.pk)
+    assert (row.status, row.reason, row.note) == ("cancelled", "Patient stable", "")
+
+
 # ── The case (#63 to #65) ─────────────────────────────────────────────────────────────────────────
 
 
