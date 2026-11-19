@@ -12,7 +12,7 @@ Demo data only: never run against a database with real patients.
 import random
 from datetime import date, datetime, time, timedelta
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -20,6 +20,7 @@ from apps.accounts.models import Role, User
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
+    BloodGroup,
     BloodUnit,
     Component,
     DonationAppointment,
@@ -27,6 +28,7 @@ from apps.blood.models import (
     TestResult,
     UnitStatus,
 )
+from apps.blood.services import usable_units
 from apps.emergencies.models import EmergencyStatus, ErStatus
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
@@ -550,6 +552,7 @@ class Command(BaseCommand):
         self.seed_users(main)
         if not BloodUnit.objects.exists():
             self.seed_blood(rand, now, main)
+            self.seed_scenario_stock(main, now)
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
         if not Equipment.objects.exists():
             self.seed_equipment(main)
@@ -668,6 +671,32 @@ class Command(BaseCommand):
                     bed.status = BedStatus.OUT_OF_SERVICE
             beds.append(bed)
         Bed.objects.bulk_create(beds)
+
+    def seed_scenario_stock(self, hospital: Hospital, now):
+        """MVP scenario (B12): the main hospital has exactly one usable O- red-cell unit, the local stock the
+        end-to-end test reserves from. Runs right after the blood draws and draws nothing, so every other
+        unit keeps its random values. Surplus usable units become `issued` (already given out). The unit
+        that expires last stays usable, so a slow run can't watch it expire. With none usable, the
+        unexpired reserved or issued unit that expires last is made available again. Raises CommandError
+        when there is neither."""
+        units = BloodUnit.objects.filter(
+            hospital=hospital, group=BloodGroup.O_NEG, component=Component.RED_CELLS
+        )
+        usable = list(usable_units(units, now).order_by("-expires_at", "donation_number"))
+        if len(usable) > 1:
+            BloodUnit.objects.filter(pk__in=[unit.pk for unit in usable[1:]]).update(status=UnitStatus.ISSUED)
+        elif not usable:
+            spare = (
+                units.filter(expires_at__gt=now, status__in=(UnitStatus.RESERVED, UnitStatus.ISSUED))
+                .order_by("-expires_at", "donation_number")
+                .first()
+            )
+            if spare is None:
+                raise CommandError(
+                    "No unexpired O- red cells to use for the MVP scenario: try another --seed."
+                )
+            spare.status = UnitStatus.AVAILABLE
+            spare.save(update_fields=["status"])
 
     def seed_blood(self, rand: random.Random, now, hospital: Hospital, count=320):
         storage = {loc.name: loc for loc in StorageLocation.objects.filter(hospital=hospital)}
