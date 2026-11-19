@@ -28,6 +28,7 @@ from apps.blood.models import (
     UnitStatus,
 )
 from apps.emergencies.models import EmergencyStatus, ErStatus
+from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
@@ -557,6 +558,9 @@ class Command(BaseCommand):
             if not BloodUnit.objects.filter(hospital=partner).exists():
                 self.seed_partner_stock(partner, index, now)
         for hospital in hospitals:
+            if not Ambulance.objects.filter(hospital=hospital).exists():
+                self.seed_ambulances(hospital)
+        for hospital in hospitals:
             if not OperatingRoom.objects.filter(hospital=hospital).exists():
                 self.seed_operating_rooms(hospital)
         for hospital in hospitals:
@@ -768,6 +772,18 @@ class Command(BaseCommand):
                 status=AppointmentStatus.BOOKED,
             )
             for i, d in enumerate(free)
+        )
+
+    def seed_ambulances(self, hospital: Hospital):
+        """Sprint 8 (#50): two ambulances per hospital, one available."""
+        T, St = AmbulanceType, AmbulanceStatus
+        items = [
+            (f"AMB-{hospital.id}-1", T.BASIC, St.AVAILABLE),
+            (f"AMB-{hospital.id}-2", T.TRANSPORT, St.AVAILABLE),
+            (f"AMB-{hospital.id}-3", T.ADVANCED, St.MAINTENANCE),
+        ]
+        Ambulance.objects.bulk_create(
+            Ambulance(hospital=hospital, identifier=code, ambulance_type=t, status=st) for code, t, st in items
         )
 
     def seed_equipment(self, hospital: Hospital):

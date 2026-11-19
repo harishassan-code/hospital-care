@@ -22,6 +22,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "operatingRooms": EDIT,
         "orBookings": EDIT,
         "transfers": EDIT,
+        "ambulances": EDIT,
     },
     Role.DOCTOR: {
         "overview": VIEW,
@@ -34,6 +35,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "operatingRooms": VIEW,
         "orBookings": EDIT,  # surgeons book their own slots; the room registry stays admin/nurse
         "transfers": EDIT,  # who may approve or receive is narrowed per move in apps.transfers.services
+        "ambulances": VIEW,
     },
     Role.NURSE: {
         "overview": VIEW,
@@ -45,6 +47,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "operatingRooms": EDIT,
         "orBookings": EDIT,
         "transfers": EDIT,
+        "ambulances": EDIT,
     },
     Role.BLOOD_BANK: {
         "overview": VIEW,
