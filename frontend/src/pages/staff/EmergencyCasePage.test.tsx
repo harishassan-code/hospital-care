@@ -5,6 +5,7 @@ import { fail, mockApi, mockStaffApi, userFor } from '../../test/mockApi'
 import { renderStaff } from '../../test/renderStaff'
 import { sampleCandidates, sampleCases, sampleNewNeedsCase, sampleThreeNeedSources } from '../../test/fixtures/emergencies'
 import { sampleTransfers } from '../../test/fixtures/transfers'
+import { sampleCaseTransfer } from '../../test/fixtures/patientTransfers'
 import { allocateReservation, type CandidateItem, type StatusChange } from '../../api/emergencies'
 
 afterEach(() => vi.restoreAllMocks())
@@ -718,5 +719,128 @@ describe('EmergencyCasePage: transfers on the case (stories #47, #48)', () => {
     expect(within(holds).getAllByText('In transfer #3')).toHaveLength(3)
     expect(within(holds).queryByText(/Holds until/)).toBeNull()
     expect(within(holds).queryByRole('button')).toBeNull()
+  })
+})
+
+describe('EmergencyCasePage patient transfers (B17, stories #63 to #65)', () => {
+  const RIVERSIDE = 'Riverside Medical Centre'
+  /** The sample sources for EC-2026-0002, with Riverside as the complete, recommended destination (story #42). */
+  const recommendedSources = () => {
+    const base = sampleCandidates(new Date())['EC-2026-0002']!
+    return { ...base, hospitals: base.hospitals.map((m) => ({ ...m, complete: true, recommended: true })) }
+  }
+
+  it('says a transfer may be needed for a critical case that is short, naming what is short', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff(CASE)
+
+    const notice = await screen.findByRole('region', { name: 'Transfer may be needed' })
+    expect(within(notice).getByRole('status')).toHaveTextContent(
+      'Short here: 4 × O− red cells (3 short), 1 × ICU bed (1 short).',
+    )
+  })
+
+  it('drops the notice once local stock covers the case', async () => {
+    mockStaffApi({ role: 'doctor', stock: { 'EC-2026-0002': [4, 1] } })
+    renderStaff(CASE)
+
+    await details()
+    expect(screen.queryByRole('region', { name: 'Transfer may be needed' })).toBeNull()
+  })
+
+  it('offers "Transfer patient" on the recommended destination and on each candidate, to staff who may edit emergencies', async () => {
+    mockStaffApi({ role: 'doctor', candidates: recommendedSources() })
+    renderStaff(CASE)
+
+    const sources = await screen.findByRole('region', { name: 'Sources in the network' })
+    const best = (await within(sources).findByRole('heading', { name: 'Best single destination' })).closest('section')!
+    expect(await within(best).findAllByRole('button', { name: `Transfer patient to ${RIVERSIDE}` })).toHaveLength(1)
+    // Riverside is also a candidate for the blood need, so its row there offers the move too.
+    expect(within(sources).getAllByRole('button', { name: `Transfer patient to ${RIVERSIDE}` })).toHaveLength(2)
+  })
+
+  it('offers the move from a short need’s candidate row when there is only one short need (no best-destination panel)', async () => {
+    const base = sampleCandidates(new Date())['EC-2026-0002']!
+    mockStaffApi({ role: 'doctor', candidates: { ...base, items: [base.items[0]!] } })
+    renderStaff(CASE)
+
+    const sources = await screen.findByRole('region', { name: 'Sources in the network' })
+    expect(await within(sources).findAllByRole('button', { name: `Transfer patient to ${RIVERSIDE}` })).toHaveLength(1)
+    expect(within(sources).queryByRole('heading', { name: 'Best single destination' })).toBeNull()
+  })
+
+  it('does not offer "Transfer patient" to staff who may only view emergencies', async () => {
+    mockStaffApi({ role: 'bloodBank' })
+    renderStaff(CASE)
+
+    await screen.findByRole('region', { name: 'Sources in the network' })
+    expect(screen.queryByRole('button', { name: /Transfer patient/ })).toBeNull()
+  })
+
+  it('asks for a move from the note form, then shows it on the case and takes the other offers away', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'doctor', candidates: recommendedSources() })
+    renderStaff(CASE)
+
+    const sources = await screen.findByRole('region', { name: 'Sources in the network' })
+    // The first offer is the recommended destination's, in the panel above the per-need lists.
+    const offers = await within(sources).findAllByRole('button', { name: `Transfer patient to ${RIVERSIDE}` })
+    await userEvent.click(offers[0]!)
+    const form = screen.getByRole('form', { name: `Transfer patient to ${RIVERSIDE}` })
+    await userEvent.type(within(form).getByLabelText(/Note/), 'Cath lab')
+    await userEvent.click(within(form).getByRole('button', { name: `Transfer patient to ${RIVERSIDE}` }))
+
+    const panel = await screen.findByRole('region', { name: 'Patient transfer' })
+    expect(within(panel).getByText(RIVERSIDE, { selector: 'strong' })).toBeInTheDocument()
+    expect(within(panel).getByRole('status')).toHaveTextContent(`Patient transfer to ${RIVERSIDE} requested.`)
+    expect(screen.queryByRole('button', { name: /Transfer patient/ })).toBeNull()
+    const post = fetchMock.mock.calls.find(([url, init]) => init?.method === 'POST' && String(url).includes('patient-transfer'))!
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ destinationId: 2, note: 'Cath lab' })
+  })
+
+  it('shows a transfer already on its way, and lets the sending hospital cancel it with a reason', async () => {
+    mockStaffApi({ role: 'doctor', patientTransfers: [sampleCaseTransfer(new Date())] })
+    renderStaff(CASE)
+
+    const panel = await screen.findByRole('region', { name: 'Patient transfer' })
+    expect(within(panel).getByText(RIVERSIDE, { selector: 'strong' })).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: 'Cancel transfer' }))
+    await userEvent.click(within(panel).getByRole('button', { name: 'Confirm cancellation' }))
+    expect(await within(panel).findByText('Say why the transfer is cancelled.')).toBeInTheDocument()
+
+    await userEvent.type(within(panel).getByLabelText(/Reason/), 'Patient stable')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Confirm cancellation' }))
+
+    expect(await within(panel).findByRole('status')).toHaveTextContent(`Transfer to ${RIVERSIDE} cancelled.`)
+    expect(within(panel).queryByRole('button', { name: 'Cancel transfer' })).toBeNull()
+    expect(await entryHeadings()).toEqual(['Case opened', `Transfer to ${RIVERSIDE} cancelled`])
+  })
+
+  it('shows the transfer to a pharmacist, who may read the case but not cancel it', async () => {
+    mockStaffApi({ role: 'pharmacist', patientTransfers: [sampleCaseTransfer(new Date())] })
+    renderStaff(CASE)
+
+    const panel = await screen.findByRole('region', { name: 'Patient transfer' })
+    expect(within(panel).getByText(RIVERSIDE, { selector: 'strong' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: 'Cancel transfer' })).toBeNull()
+  })
+
+  it('shows the arrival in the timeline as "Arrived at X from Y", after the request', async () => {
+    const now = new Date()
+    const arrived = {
+      ...sampleCaseTransfer(now),
+      status: 'arrived' as const,
+      arrivedAt: new Date(now.getTime() - 60_000).toISOString(),
+      arrivedBy: 'Dr. Omar Siddiqui',
+      actions: [],
+    }
+    mockStaffApi({ role: 'doctor', patientTransfers: [arrived] })
+    renderStaff(CASE)
+
+    await details()
+    expect(await entryHeadings()).toEqual([
+      'Case opened',
+      `Transfer to ${RIVERSIDE} requested`,
+      `Arrived at ${RIVERSIDE} from CityCare General Hospital`,
+    ])
   })
 })

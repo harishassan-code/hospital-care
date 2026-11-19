@@ -6,8 +6,6 @@ locks (select_for_update, skip_locked) are what the service relies on, and SQLit
 skipped there. The database constraint that backs them up on every backend is tested in
 test_reservation_constraints.py."""
 
-import threading
-from collections.abc import Callable
 from functools import partial
 
 import pytest
@@ -20,7 +18,7 @@ from apps.hospitals.models import Hospital
 from apps.matching.models import Reservation, ReservationStatus
 from apps.matching.reservations import ReservationUnavailable, reserve
 
-from .reservation_support import blood_need, case, staff, status_of, unit
+from .reservation_support import blood_need, case, fire_together, staff, status_of, unit
 
 THREADS = 8
 
@@ -42,30 +40,6 @@ def reserve_one(item_pk: int, hospital_pk: int, actor_pk: int) -> list[Reservati
         quantity=1,
         actor=User.objects.get(pk=actor_pk),
     )
-
-
-def fire_together(attempts: list[Callable[[], object]]) -> list[object]:
-    """Run each attempt in its own thread, all released at once. Returns what each one got: its holds, or the
-    exception it raised. Each thread closes its own connection when it is done."""
-    barrier = threading.Barrier(len(attempts))
-    results: list[object] = [None] * len(attempts)
-
-    def run(index: int, attempt: Callable[[], object]) -> None:
-        try:
-            barrier.wait(timeout=30)
-            results[index] = attempt()
-        except Exception as exc:  # the test reads what each thread got, so it must not escape the thread
-            results[index] = exc
-        finally:
-            connection.close()
-
-    threads = [threading.Thread(target=run, args=(i, attempt)) for i, attempt in enumerate(attempts)]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join(timeout=120)
-    assert not any(thread.is_alive() for thread in threads), "a reservation hung"
-    return results
 
 
 @pytest.mark.parametrize("same_case", [False, True], ids=["eight cases", "one case and need"])

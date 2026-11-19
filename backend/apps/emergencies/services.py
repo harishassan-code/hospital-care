@@ -138,6 +138,10 @@ def apply_case_action(reference: str, action: str, *, note: str, actor) -> Emerg
         from apps.transfers.services import cancel_for_case  # transfers builds on emergencies
 
         cancel_for_case(moved, actor=actor, reason=f"Case {moved.reference} {moved.status}")
+        # B17: a case that is over can't have its patient arrive elsewhere, so its requested move ends too.
+        from .patient_transfers import cancel_open_patient_transfer  # patient transfers build on matching
+
+        cancel_open_patient_transfer(moved, actor=actor, reason=f"Case {moved.reference} {moved.status}")
     return moved
 
 

@@ -12,6 +12,7 @@ import LoginPage from '../pages/LoginPage'
 import SignupPage from '../pages/SignupPage'
 import { at } from '../test/clock'
 import { samplePublicStatus } from '../test/fixtures/publicStatus'
+import { sampleIncomingPatient } from '../test/fixtures/patientTransfers'
 import { mockApi, mockStaffApi, ok, fail, userFor } from '../test/mockApi'
 import { renderStaff } from '../test/renderStaff'
 
@@ -225,6 +226,24 @@ describe('QA · staff workspace', () => {
     mockStaffApi({ role: 'admin' })
     renderStaff('/staff/users')
     expect(await screen.findByRole('table', { name: 'Users and their roles' })).toBeInTheDocument()
+  })
+})
+
+describe('QA · patient transfers (B17)', () => {
+  it('a doctor at the receiving hospital sees the patient on her way, and can confirm her arrival', async () => {
+    mockStaffApi({ role: 'doctor', patientTransfers: [sampleIncomingPatient(new Date())] })
+    renderStaff('/staff/emergencies')
+
+    const panel = await screen.findByRole('region', { name: 'Incoming patients' })
+    expect(await within(panel).findByRole('button', { name: 'Confirm arrival of EC-2026-0009' })).toBeInTheDocument()
+  })
+
+  it('a pharmacist sees the outgoing list but not the incoming patients', async () => {
+    mockStaffApi({ role: 'pharmacist', patientTransfers: [sampleIncomingPatient(new Date())] })
+    renderStaff('/staff/emergencies')
+
+    await screen.findByRole('region', { name: 'Outgoing patients' })
+    expect(screen.queryByRole('region', { name: 'Incoming patients' })).toBeNull()
   })
 })
 

@@ -129,3 +129,15 @@ There's no new endpoint. `POST /beds/<id>/actions/` now runs through the shared 
 There's no endpoint in Sprint 2. Entries are append-only (the model refuses update and delete), so the API can
 neither edit nor delete them. Admins read them in Django admin (`/admin/audit/auditlog/`, read-only). Search and
 export come with issue #56 in Sprint 8.
+
+## Patient transfers (B17, #63 to #65)
+
+No new module and no change to `ACCESS`: the endpoints use `emergencies`. Who may do what is narrowed per move, as
+[api.md](api.md#patient-transfers-63-to-65) describes. Shapes are in `frontend/src/api/emergencies.ts`.
+
+| Action | Path | Module | Object rule | Refused |
+|---|---|---|---|---|
+| Read the list | `GET /patient-transfers/` | emergencies: view | Your hospital receives the patient (incoming) or sends it (outgoing). Admins: all | 403 for a patient |
+| Ask | `POST /emergencies/<reference>/patient-transfer/` | emergencies: edit | The case's hospital. Admins: any | 403 without edit on emergencies; 404 for a case you can't see |
+| Confirm arrival | `POST /patient-transfers/<id>/actions/` `arrive` | emergencies: edit | The receiving hospital. Admins: any | 403 at the sending hospital; 404 at neither |
+| Cancel | `POST /patient-transfers/<id>/actions/` `cancel` | emergencies: edit | The sending hospital. Admins: any | 403 at the receiving hospital; 404 at neither |
