@@ -83,9 +83,7 @@ class Ambulance(Resource):
     class Meta:
         ordering = ["identifier"]
         verbose_name_plural = "ambulances"
-        indexes = [
-            models.Index(fields=["ambulance_type", "status"], name="ambulances__ambulan_db757c_idx")
-        ]
+        indexes = [models.Index(fields=["ambulance_type", "status"], name="ambulances__ambulan_db757c_idx")]
         constraints = [
             models.UniqueConstraint(
                 "hospital",
