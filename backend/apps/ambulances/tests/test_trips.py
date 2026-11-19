@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 
 from apps.accounts.models import Role
-from apps.ambulances.models import Ambulance, AmbulanceStatus, Trip, TripStatus
+from apps.ambulances.models import Ambulance, AmbulanceStatus, TripStatus
 from apps.ambulances.services import TripConflict, advance_trip, dispatch_for_transfer
 from apps.transfers.models import TransferStatus
 from apps.transfers.tests.transfer_support import reach, scenario

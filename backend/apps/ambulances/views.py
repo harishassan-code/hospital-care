@@ -10,6 +10,7 @@ from apps.resources.state_machine import TransitionNotAllowed
 from apps.transfers.models import Transfer
 from apps.transfers.serializers import TransferSerializer
 from apps.transfers.services import visible_to
+
 from .models import Ambulance, AmbulanceStatus, AmbulanceType, Trip
 from .serializers import (
     AmbulanceActionSerializer,
@@ -17,8 +18,14 @@ from .serializers import (
     DispatchTripSerializer,
     TripActionSerializer,
 )
-from .services import TripConflict, TripRefused, advance_trip, dispatch_for_transfer, register_ambulance
-from .services import apply_ambulance_action
+from .services import (
+    TripConflict,
+    TripRefused,
+    advance_trip,
+    apply_ambulance_action,
+    dispatch_for_transfer,
+    register_ambulance,
+)
 
 
 class AmbulanceListView(APIView):
@@ -80,7 +87,9 @@ class TransferTripView(APIView):
         serializer = DispatchTripSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            dispatch_for_transfer(transfer, ambulance_id=serializer.validated_data["ambulanceId"], actor=request.user)
+            dispatch_for_transfer(
+                transfer, ambulance_id=serializer.validated_data["ambulanceId"], actor=request.user
+            )
         except TripRefused as exc:
             return trip_refused(exc)
         except TripConflict as exc:

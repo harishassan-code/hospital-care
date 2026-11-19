@@ -4,8 +4,8 @@ import pytest
 from django.urls import reverse
 
 from apps.accounts.models import Role
-from apps.audit.models import AuditLog
 from apps.ambulances.models import Ambulance, AmbulanceStatus
+from apps.audit.models import AuditLog
 
 pytestmark = pytest.mark.django_db
 

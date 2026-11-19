@@ -17,6 +17,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
+from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
@@ -28,7 +29,6 @@ from apps.blood.models import (
     UnitStatus,
 )
 from apps.emergencies.models import EmergencyStatus, ErStatus
-from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
@@ -783,7 +783,7 @@ class Command(BaseCommand):
             (f"AMB-{hospital.id}-3", T.ADVANCED, St.MAINTENANCE),
         ]
         Ambulance.objects.bulk_create(
-            Ambulance(hospital=hospital, identifier=code, ambulance_type=t, status=st) for code, t, st in items
+            [Ambulance(hospital=hospital, identifier=code, ambulance_type=t, status=st) for code, t, st in items]
         )
 
     def seed_equipment(self, hospital: Hospital):

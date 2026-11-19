@@ -72,7 +72,9 @@ class Ambulance(Resource):
     machine = AMBULANCE_LIFECYCLE
     objects = AmbulanceQuerySet.as_manager()
 
-    identifier = models.CharField(max_length=40, help_text="Call sign, e.g. AMB-12. Unique within a hospital.")
+    identifier = models.CharField(
+        max_length=40, help_text="Call sign, e.g. AMB-12. Unique within a hospital."
+    )
     ambulance_type = models.CharField(max_length=20, choices=AmbulanceType.choices)
     status = models.CharField(
         max_length=20, choices=AmbulanceStatus.choices, default=AmbulanceStatus.AVAILABLE

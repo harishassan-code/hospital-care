@@ -13,7 +13,7 @@ from apps.matching.distance import estimated_travel_minutes, hospital_distance
 from apps.resources.services import change_status
 from apps.resources.state_machine import TransitionNotAllowed
 from apps.transfers.models import Transfer, TransferStatus
-from apps.transfers.services import TransferConflict, dispatch, start_transit
+from apps.transfers.services import dispatch, start_transit
 
 from .models import ACTIVE_TRIP, TRIP_LIFECYCLE, Ambulance, AmbulanceStatus, Trip, TripStatus
 

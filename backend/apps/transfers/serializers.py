@@ -3,11 +3,10 @@ The case detail (apps.emergencies) lists the same shape, so it imports this modu
 
 from rest_framework import serializers
 
+from apps.ambulances.models import Trip
 from apps.emergencies.serializers import need_label
 from apps.hospitals.models import Hospital
 from apps.matching.reservations import resource_label
-
-from apps.ambulances.models import Trip
 
 from .models import Transfer, TransferStatus
 from .services import actions_for
