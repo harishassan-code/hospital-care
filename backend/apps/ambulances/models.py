@@ -100,9 +100,7 @@ class Ambulance(Resource):
 class Trip(models.Model):
     """Simulated ambulance run for one transfer (story #51)."""
 
-    transfer = models.OneToOneField(
-        "transfers.Transfer", on_delete=models.PROTECT, related_name="trip"
-    )
+    transfer = models.OneToOneField("transfers.Transfer", on_delete=models.PROTECT, related_name="trip")
     ambulance = models.ForeignKey(Ambulance, on_delete=models.PROTECT, related_name="trips")
     status = models.CharField(max_length=12, choices=TripStatus.choices, default=TripStatus.DISPATCHED)
     eta_minutes = models.PositiveSmallIntegerField(
@@ -110,9 +108,7 @@ class Trip(models.Model):
     )
     dispatched_at = models.DateTimeField(default=timezone.now)
     status_since = models.DateTimeField(default=timezone.now)
-    dispatched_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
-    )
+    dispatched_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
 
     class Meta:
         ordering = ["-dispatched_at", "-id"]
