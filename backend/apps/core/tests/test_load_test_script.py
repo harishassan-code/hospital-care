@@ -1,12 +1,18 @@
 """B13 search load test (spec Q1, Q2): scripts/load_test_search.py times the candidate search over HTTP. These
-tests check its arithmetic, its failure messages, and one real run against Django's live server."""
+tests check its arithmetic, its failure messages, and one real run against a gunicorn server."""
 
 import importlib.util
+import socket
+import subprocess
+import sys
+import time
+import urllib.request
 from io import StringIO
 from pathlib import Path
 
 import pytest
-from django.core.management import call_command
+
+from apps.core.tests.django_subprocess import BACKEND, child_env, manage
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -51,11 +57,54 @@ def test_a_wrong_password_stops_with_a_message_that_names_the_fix(live_server):
         script.main(["--base-url", live_server.url, "--password", "not-the-password"], out=StringIO())
 
 
-def test_a_run_against_the_live_server_reports_every_level(live_server):
-    call_command("seed_demo", stdout=StringIO())
+def free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def wait_until_up(url: str, seconds: float = 30) -> None:
+    deadline = time.monotonic() + seconds
+    while True:
+        try:
+            with urllib.request.urlopen(url, timeout=2):
+                return
+        except OSError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.2)
+
+
+@pytest.fixture
+def served_network(tmp_path):
+    """Gunicorn with its default single synchronous worker, as render.yaml runs it, on a file database seeded
+    with the demo data. Django's in-process live server is not used here: it gives every thread the same
+    in-memory SQLite connection, which is not safe for concurrent requests."""
+    env = {"DJANGO_DEBUG": "true", "DATABASE_URL": f"sqlite:///{tmp_path / 'loadtest.sqlite3'}"}
+    for command in (("migrate", "--noinput"), ("seed_demo",)):
+        done = manage(*command, env=env)
+        assert done.returncode == 0, done.stderr
+    address = f"127.0.0.1:{free_port()}"
+    with open(tmp_path / "gunicorn.log", "w") as log:
+        server = subprocess.Popen(
+            [sys.executable, "-m", "gunicorn", "config.wsgi:application", "--bind", address],
+            cwd=BACKEND,
+            env=child_env(env),
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
+        try:
+            wait_until_up(f"http://{address}/api/health/")
+            yield f"http://{address}"
+        finally:
+            server.terminate()
+            server.wait(timeout=10)
+
+
+def test_a_run_against_a_gunicorn_server_reports_every_level(served_network):
     out = StringIO()
     code = script.main(
-        ["--base-url", live_server.url, "--requests", "6", "--warmup", "2", "--concurrency", "1", "3"],
+        ["--base-url", served_network, "--requests", "6", "--warmup", "2", "--concurrency", "1", "3"],
         out=out,
     )
     lines = out.getvalue().splitlines()
