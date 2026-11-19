@@ -4,6 +4,7 @@ blood units, medicines, doctors, and one login per role. Every name, patient and
 
     python manage.py seed_demo            # safe to re-run: adds only what's missing, never duplicates
     python manage.py seed_demo --reset    # wipes the demo hospitals, beds, blood, pharmacy, doctors first
+    python manage.py seed_demo --hospitals 50   # the 3 named hospitals plus 47 synthetic (load tests)
 
 Also links data from before Sprint 2 (wards, beds, units and staff with no hospital) to the first hospital.
 Demo data only: never run against a database with real patients.
@@ -12,7 +13,7 @@ Demo data only: never run against a database with real patients.
 import random
 from datetime import date, datetime, time, timedelta
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -128,6 +129,43 @@ HOSPITALS = [
         ],
     ),
 ]
+
+# Synthetic hospitals for `--hospitals N` (B13, load tests). Each takes the number after the three named ones,
+# so its ward codes and bed labels carry that number and never collide with another hospital's.
+CITY_CENTRE = (24.8607, 67.0011)  # latitude, longitude; made-up hospitals sit in a box around it
+SYNTHETIC_CAPABILITIES = ["icu", "bloodBank"]
+SYNTHETIC_DEPARTMENTS = ["Emergency medicine", "General medicine", "Surgery", "Paediatrics", "Obstetrics"]
+SYNTHETIC_LOCATIONS = ["Blood fridge", "Main store"]
+# code, name, kind, label prefix, size, occupancy, (min age, max age), department
+SYNTHETIC_WARDS = [
+    ("emer", "Emergency", "Emergency department", "EM", 8, 0.6, (16, 90), "Emergency medicine"),
+    ("med", "Medical", "General medicine", "MED", 12, 0.75, (18, 90), "General medicine"),
+    ("surg", "Surgical", "General surgery", "SRG", 12, 0.7, (16, 88), "Surgery"),
+]
+
+
+def synthetic_hospital(number: int, rand: random.Random):
+    """The spec for hospital `number` (4 and on): a made-up name, a random spot near the city centre, and the
+    generic structure. `rand` is that hospital's own stream, so no other hospital's data changes."""
+    lat = CITY_CENTRE[0] + rand.uniform(-0.25, 0.25)
+    lng = CITY_CENTRE[1] + rand.uniform(-0.25, 0.25)
+    wards = [
+        (f"s{number:02d}-{code}", name, kind, f"S{number:02d}-{prefix}", size, occupancy, ages, department)
+        for code, name, kind, prefix, size, occupancy, ages, department in SYNTHETIC_WARDS
+    ]
+    return (
+        f"Synthetic Hospital {number:02d}",
+        "hospital",
+        "Karachi (synthetic)",
+        f"{lat:.6f}",
+        f"{lng:.6f}",
+        f"+92 21 555 {number:04d}",
+        SYNTHETIC_CAPABILITIES,
+        SYNTHETIC_DEPARTMENTS,
+        SYNTHETIC_LOCATIONS,
+        wards,
+    )
+
 
 DOCTORS = [
     ("Dr. Kamran Shah", "Emergency medicine", "08:00", "20:00"),
@@ -515,9 +553,21 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Delete existing demo-module data first.")
         parser.add_argument("--seed", type=int, default=7, help="Random seed, for repeatable data.")
+        parser.add_argument(
+            "--hospitals",
+            type=int,
+            default=len(HOSPITALS),
+            help="How many hospitals to seed: 3 or more. The three named demo hospitals come first; the rest "
+            "are synthetic.",
+        )
 
     @transaction.atomic
     def handle(self, *args, reset=False, seed=7, **options):
+        count = options["hospitals"]
+        if count < len(HOSPITALS):  # refused before anything is written or reset
+            raise CommandError(
+                f"--hospitals must be {len(HOSPITALS)} or more; the named demo hospitals come first."
+            )
         rand = random.Random(seed)
         now = timezone.now()
         if reset:
@@ -541,9 +591,13 @@ class Command(BaseCommand):
                 model.objects.all().delete()
 
         hospitals = []
-        for index, spec in enumerate(HOSPITALS):
+        for index in range(count):
             # The first hospital keeps the Sprint 1 random sequence, so its beds and blood look as before.
             hospital_rand = rand if index == 0 else random.Random(seed * 100 + index)
+            if index < len(HOSPITALS):
+                spec = HOSPITALS[index]
+            else:
+                spec = synthetic_hospital(index + 1, hospital_rand)
             hospitals.append(self.seed_hospital(spec, hospital_rand, now))
         main = hospitals[0]
 

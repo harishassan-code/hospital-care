@@ -50,6 +50,11 @@ jobs:
         run: python manage.py makemigrations --check --dry-run
       - name: Tests
         run: pytest -q
+      - name: Deploy checks (DEBUG off, dummy key; B13)
+        env:
+          DJANGO_DEBUG: "false"
+          DJANGO_SECRET_KEY: ci-only-dummy-key-not-a-secret-0123456789abcdefghijklmnopqrstuvwxyz
+        run: python manage.py check --deploy --fail-level WARNING
 
   frontend:
     runs-on: ubuntu-latest

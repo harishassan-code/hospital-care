@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Max
+from django.http import Http404
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
@@ -55,6 +56,8 @@ def register_unit(serializer, actor) -> BloodUnit:
     """Create a blood unit from a valid serializer, scoped to the actor's hospital, and audit-log it."""
     donor = serializer.validated_data.get("donor")
     if donor is not None:
+        if not may_change(actor, donor):  # F2: another hospital's donor is as good as an unknown one
+            raise Http404("No donor with that id.")
         check_donation_interval(donor, serializer.validated_data["collected_at"])
     unit = serializer.save(hospital=getattr(actor, "hospital", None))
     after = BloodUnitSerializer(unit, context={"now": timezone.now()}).data
@@ -217,6 +220,8 @@ def screen_donor(donor: Donor, *, eligible: bool, reason: str, deferred_until, a
 
 
 def book_appointment(donor: Donor, starts_at: datetime, *, actor) -> DonationAppointment:
+    if not may_change(actor, donor):  # F1: another hospital's donor is as good as an unknown one
+        raise Http404("No donor with that id.")
     slot = settings.BLOOD_APPOINTMENT_SLOT_MINUTES
     local = timezone.localtime(starts_at)
     if local.second or local.microsecond or (local.hour * 60 + local.minute) % slot:
