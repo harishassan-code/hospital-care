@@ -93,7 +93,7 @@ endpoints, health and public status. The Django admin at `/admin/` is not a DRF 
 - **F3 (low), fixed.** Donor screening, appointment cancel, unit test and unit action, and bed action looked the record
   up across all hospitals, then the service answered 403, which showed the record exists. Each now looks the record up
   within `changeable_by` first. The service's 403 remains as a second guard. Tests: `apps/blood/tests/test_hospital_scope.py`,
-  and the bed case in `apps/hospitals/tests/test_beds.py`.
+  and the bed case in `apps/accounts/tests/test_permissions.py` (`TestOwnHospitalOnly`).
 - **F4 (medium), fixed.** Login and signup had no per-address limit, and the login lockout is per account. Now both have a
   DRF throttle keyed on the client address. The address comes from `X-Forwarded-For` only as far as the trusted proxies
   (`DJANGO_TRUSTED_PROXY_COUNT`) recorded it, and otherwise from `REMOTE_ADDR`. Defaults: login 30 per minute, signup 30
