@@ -123,7 +123,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="ambulance",
-            index=models.Index(fields=["ambulance_type", "status"], name="ambulances__ambulan_0f4e5a_idx"),
+            index=models.Index(fields=["ambulance_type", "status"], name="ambulances__ambulan_db757c_idx"),
         ),
         migrations.AddConstraint(
             model_name="ambulance",
