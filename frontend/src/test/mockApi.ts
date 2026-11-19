@@ -492,8 +492,11 @@ export function mockStaffApi({
   /** The transfer as this user gets it: its units set aside now, and the moves they may make now. */
   const transferView = (t: Transfer): Transfer => ({
     ...t,
+    trip: t.trip ?? null,
     resources: transferHolds(t).filter((h) => h.status === 'held').map((h) => h.resource),
-    actions: TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who)).map((m) => m.action),
+    actions: TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who))
+      .map((m) => m.action)
+      .filter((action) => !(t.trip && t.trip.status !== 'completed' && (action === 'dispatch' || action === 'startTransit'))),
   })
   const transfersOfCase = (reference: string) =>
     transfers
@@ -792,6 +795,7 @@ export function mockStaffApi({
           },
         ],
         actions: [],
+        trip: null,
       }
       transfers.push(created)
       return { status: 201, body: transferView(created) }
