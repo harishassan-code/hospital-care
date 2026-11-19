@@ -7,6 +7,8 @@ from apps.emergencies.serializers import need_label
 from apps.hospitals.models import Hospital
 from apps.matching.reservations import resource_label
 
+from apps.ambulances.models import Trip
+
 from .models import Transfer, TransferStatus
 from .services import actions_for
 
@@ -55,6 +57,13 @@ class TransferSerializer(serializers.Serializer):
         holds = list(transfer.reservations.all())
         requester = transfer.requested_by
         user = self.context.get("user")
+        trip = None
+        try:
+            from apps.ambulances.serializers import trip_payload
+
+            trip = trip_payload(transfer.trip, user=user)
+        except Trip.DoesNotExist:
+            pass
         return {
             "id": transfer.pk,
             "case": {"reference": case.reference, "severity": case.severity},
@@ -82,4 +91,5 @@ class TransferSerializer(serializers.Serializer):
                 for change in transfer.history.all()
             ],
             "actions": actions_for(user, transfer) if user is not None else [],
+            "trip": trip,
         }
