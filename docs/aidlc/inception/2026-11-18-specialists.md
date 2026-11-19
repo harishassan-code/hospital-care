@@ -30,30 +30,30 @@ shows doctors without sign-in, and that stays as it is.
 
 ### #61 Specialist doctor profiles
 
-- [ ] Profile has specialty and hospital. Each profile has a name, a specialty (free text, e.g. "Cardiology") and one
+- [x] Profile has specialty and hospital. Each profile has a name, a specialty (free text, e.g. "Cardiology") and one
       hospital. The hospital is required.
-- [ ] The profile shows its hospital, and the staff list can be filtered by hospital and by specialty.
-- [ ] A profile is deactivated, never deleted. A deactivated profile stays in the list, marked, and is never on call.
-- [ ] Creating or editing a profile needs edit rights on `specialists` (see Design). A non-admin gets 403 for another
+- [x] The profile shows its hospital, and the staff list can be filtered by hospital and by specialty.
+- [x] A profile is deactivated, never deleted. A deactivated profile stays in the list, marked, and is never on call.
+- [x] Creating or editing a profile needs edit rights on `specialists` (see Design). A non-admin gets 403 for another
       hospital's profile.
 
 ### #62 On-call schedule per specialist; "Available now" filter
 
-- [ ] Each specialist has on-call windows, each with a start and an end (date and time). Windows can be added and
+- [x] Each specialist has on-call windows, each with a start and an end (date and time). Windows can be added and
       removed.
-- [ ] "Available now" filter: the list can show only the specialists on call at the moment of the request. Each row
+- [x] "Available now" filter: the list can show only the specialists on call at the moment of the request. Each row
       says until when ("On call until 08:00") or "Not on call".
-- [ ] A window must end after it starts. Two windows for the same specialist may not overlap (400).
-- [ ] A window can be added only if it has not ended yet. Only a window that has not started can be removed (409
+- [x] A window must end after it starts. Two windows for the same specialist may not overlap (400).
+- [x] A window can be added only if it has not ended yet. Only a window that has not started can be removed (409
       otherwise). Past windows stay as history.
-- [ ] The public landing page and `/api/public/status/` do not change.
+- [x] The public landing page and `/api/public/status/` do not change.
 
 ### Common
 
-- [ ] Each change (profile created or updated, window added or removed) writes an audit record (see Design).
-- [ ] Every endpoint has a permission class and a test. The access table is identical in the backend, in `roles.ts`
+- [x] Each change (profile created or updated, window added or removed) writes an audit record (see Design).
+- [x] Every endpoint has a permission class and a test. The access table is identical in the backend, in `roles.ts`
       and in `docs/architecture/api-contracts.md`.
-- [ ] Seed data gives every demo hospital specialists with on-call windows. `seed_demo --reset` removes them.
+- [x] Seed data gives every demo hospital specialists with on-call windows. `seed_demo --reset` removes them.
 
 ## Non-goals
 
