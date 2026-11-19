@@ -33,6 +33,7 @@ TRANSFER_KEYS = {
     "requestedBy",
     "createdAt",
     "history",
+    "trip",
     "actions",
 }
 HISTORY_KEYS = {"fromStatus", "toStatus", "action", "note", "actor", "at"}

@@ -17,7 +17,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
-from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
+from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType, Trip
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
@@ -523,6 +523,8 @@ class Command(BaseCommand):
         now = timezone.now()
         if reset:
             models = (
+                Trip,
+                Ambulance,
                 Equipment,
                 OrBooking,  # before the rooms: a booking holds its room (PROTECT)
                 OperatingRoom,

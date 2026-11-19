@@ -131,9 +131,7 @@ def dispatch_for_transfer(transfer: Transfer, *, ambulance_id: int, actor) -> Tr
 
 @transaction.atomic
 def advance_trip(trip_id: int, action: str, *, actor) -> Trip:
-    trip = get_object_or_404(
-        Trip.objects.select_for_update().select_related("transfer", "ambulance__hospital"), pk=trip_id
-    )
+    trip = get_object_or_404(Trip.objects.select_for_update(), pk=trip_id)
     transfer = Transfer.objects.select_for_update().get(pk=trip.transfer_id)
     ambulance = Ambulance.objects.select_for_update().get(pk=trip.ambulance_id)
     if not _may_advance_trip(actor, transfer):
