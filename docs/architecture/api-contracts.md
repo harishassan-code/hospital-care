@@ -13,7 +13,7 @@ unknown id, **400** `{field: ["message"]}` for invalid input.
 identical. Reads need *view*, writes need *edit*.
 
 | Role | overview | emergencies | beds | blood | pharmacy | hospitals | specialists | users | equipment | operatingRooms | orBookings | transfers |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | admin | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit |
 | doctor | view | edit | view | view | view | view | view | – | view | view | edit | edit |
 | nurse | view | edit | edit | – | view | view | edit | – | edit | edit | edit | edit |

@@ -47,6 +47,7 @@ ENDPOINTS = [
     ("specialists", "get", "specialist-detail", [999], None),
     ("specialists", "patch", "specialist-detail", [999], {"isActive": False}),
     ("specialists", "post", "specialist-on-call", [999], {}),
+    ("specialists", "delete", "specialist-on-call-detail", [999, 999], {}),
 ]
 
 
