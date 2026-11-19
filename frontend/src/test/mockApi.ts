@@ -492,8 +492,11 @@ export function mockStaffApi({
   /** The transfer as this user gets it: its units set aside now, and the moves they may make now. */
   const transferView = (t: Transfer): Transfer => ({
     ...t,
+    trip: t.trip ?? null,
     resources: transferHolds(t).filter((h) => h.status === 'held').map((h) => h.resource),
-    actions: TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who)).map((m) => m.action),
+    actions: TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who))
+      .map((m) => m.action)
+      .filter((action) => !(t.trip && t.trip.status !== 'completed' && (action === 'dispatch' || action === 'startTransit'))),
   })
   const transfersOfCase = (reference: string) =>
     transfers
@@ -792,6 +795,7 @@ export function mockStaffApi({
           },
         ],
         actions: [],
+        trip: null,
       }
       transfers.push(created)
       return { status: 201, body: transferView(created) }
@@ -852,6 +856,17 @@ export function mockStaffApi({
     // Before /hospitals/:id/, which would otherwise match it.
     'GET /hospitals/capabilities/': view('hospitals', () => ok(sampleCapabilities)),
     'GET /hospitals/': view('hospitals', () => ok(hospitals)),
+    'GET /ambulances/': view('ambulances', () =>
+      ok([
+        { id: 1, identifier: 'AMB-1', type: 'basic', status: 'available', statusSince: now.toISOString(), hospital: 'CityCare General Hospital' },
+        { id: 2, identifier: 'AMB-2', type: 'transport', status: 'inUse', statusSince: now.toISOString(), hospital: 'CityCare General Hospital' },
+      ]),
+    ),
+    'POST /ambulances/': edit('ambulances', ({ body }) => {
+      const input = body as { identifier: string; type: string; status?: string }
+      const tag = input.identifier.toUpperCase()
+      return { status: 201, body: { id: 99, identifier: tag, type: input.type, status: input.status ?? 'available', statusSince: now.toISOString(), hospital: 'CityCare General Hospital' } }
+    }),
     'GET /equipment/': view('equipment', () => ok(equipment)),
     'POST /equipment/': edit('equipment', ({ body }) => {
       const input = body as EquipmentInput

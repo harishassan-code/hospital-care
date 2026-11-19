@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { TRIP_STATUS_LABEL } from '../../api/ambulances'
 import {
   listTransfers,
   postTransferAction,
@@ -133,6 +134,15 @@ function TransferList({ direction, status }: { direction: TransferDirection; sta
                 direction={direction}
                 busy={working !== undefined}
                 onAction={act}
+                onTripUpdate={(updated) => {
+                  setData((current) => current.map((t) => (t.id === updated.id ? updated : t)))
+                  setFocusId(updated.id)
+                  setAnnouncement(
+                    updated.trip
+                      ? `Ambulance ${updated.trip.ambulance.identifier} · ${TRIP_STATUS_LABEL[updated.trip.status].toLowerCase()}.`
+                      : `Transfer #${updated.id} is now ${TRANSFER_STATUS_LABEL[updated.status].toLowerCase()}.`,
+                  )
+                }}
                 focus={focusId === transfer.id}
               />
             </li>

@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  TRIP_ACTION_LABEL,
+  TRIP_STATUS_LABEL,
+  dispatchTransferTrip,
+  getAmbulances,
+  postTripAction,
+  type TripAction,
+} from '../../api/ambulances'
 import { TRANSFER_ACTION_LABEL, TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferDirection } from '../../api/transfers'
 import { TextField } from '../../components/form/TextField'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -22,6 +30,8 @@ type CardProps = {
   busy: boolean
   /** Move the transfer; the page saves it and shows the server's copy. */
   onAction: (transfer: Transfer, action: TransferAction, extra?: { reason?: string }) => void
+  /** After a trip-related update, replace the card with the server copy. */
+  onTripUpdate?: (transfer: Transfer) => void
   /** Put focus on the heading, so keyboard users land on the card after a move that replaced its buttons. */
   focus: boolean
 }
@@ -31,10 +41,12 @@ type CardProps = {
  * and the moves the server allows the user now, as buttons. Reject and cancel ask for a reason first; confirming receipt
  * asks first too.
  */
-export function TransferCard({ transfer, direction, busy, onAction, focus }: CardProps) {
+export function TransferCard({ transfer, direction, busy, onAction, onTripUpdate, focus }: CardProps) {
   const [reasonFor, setReasonFor] = useState<ReasonAction>()
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string>()
+  const [ambulanceId, setAmbulanceId] = useState<number>()
+  const [ambulanceOptions, setAmbulanceOptions] = useState<{ id: number; label: string }[]>([])
   const headingRef = useRef<HTMLHeadingElement>(null)
   const headingId = `transfer-${transfer.id}-title`
   const incoming = direction === 'incoming'
@@ -46,10 +58,43 @@ export function TransferCard({ transfer, direction, busy, onAction, focus }: Car
     if (focus) headingRef.current?.focus()
   }, [focus])
 
+  useEffect(() => {
+    if (!incoming || transfer.status !== 'approved' || transfer.actions.includes('dispatch') === false) return
+    let alive = true
+    getAmbulances()
+      .then((items) => {
+        if (!alive) return
+        setAmbulanceOptions(
+          items.filter((a) => a.status === 'available').map((a) => ({ id: a.id, label: `${a.identifier} (${a.type})` })),
+        )
+        if (items.some((a) => a.status === 'available')) setAmbulanceId(items.find((a) => a.status === 'available')!.id)
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [incoming, transfer.status, transfer.actions])
+
   function openReason(action: ReasonAction) {
     setReason('')
     setReasonError(undefined)
     setReasonFor(action)
+  }
+
+  async function dispatchAmbulance() {
+    if (ambulanceId === undefined || !onTripUpdate) return
+    try {
+      const updated = await dispatchTransferTrip(transfer.id, ambulanceId)
+      onTripUpdate(updated)
+    } catch {
+      /* parent shows errors via transferFailure on normal actions; trip errors surface as 409 detail */
+    }
+  }
+
+  async function tripAction(action: TripAction) {
+    if (!transfer.trip || !onTripUpdate) return
+    const updated = await postTripAction(transfer.trip.id, action)
+    onTripUpdate(updated)
   }
 
   function perform(action: TransferAction) {
@@ -129,6 +174,55 @@ export function TransferCard({ transfer, direction, busy, onAction, focus }: Car
           {transfer.requestedBy && ` by ${transfer.requestedBy}`}
         </dd>
       </dl>
+
+      {transfer.trip && (
+        <div className={styles.trip}>
+          <p>
+            Ambulance <strong>{transfer.trip.ambulance.identifier}</strong> · {TRIP_STATUS_LABEL[transfer.trip.status]}
+            {transfer.trip.etaMinutes != null && transfer.trip.status === 'dispatched' && (
+              <> · about {transfer.trip.etaMinutes} min</>
+            )}
+          </p>
+          {transfer.trip.actions.length > 0 && (
+            <div className={styles.actions}>
+              {transfer.trip.actions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  className={styles.button}
+                  disabled={busy}
+                  onClick={() => tripAction(action)}
+                >
+                  {TRIP_ACTION_LABEL[action]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {incoming && transfer.status === 'approved' && transfer.actions.includes('dispatch') && !transfer.trip && ambulanceOptions.length > 0 && (
+        <div className={styles.trip}>
+          <label htmlFor={`transfer-${transfer.id}-ambulance`}>Dispatch ambulance</label>
+          <select
+            id={`transfer-${transfer.id}-ambulance`}
+            className={styles.select}
+            value={ambulanceId ?? ''}
+            onChange={(e) => setAmbulanceId(Number(e.target.value))}
+          >
+            {ambulanceOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <div className={styles.actions}>
+            <button type="button" className={styles.button} disabled={busy || ambulanceId === undefined} onClick={dispatchAmbulance}>
+              Dispatch ambulance
+            </button>
+          </div>
+        </div>
+      )}
 
       <details className={styles.history}>
         <summary>History</summary>

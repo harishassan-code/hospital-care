@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.ambulances.views import TripActionView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.core.urls")),
@@ -14,6 +16,8 @@ urlpatterns = [
     path("api/emergencies/", include("apps.emergencies.case_urls")),
     path("api/reservations/", include("apps.matching.urls")),
     path("api/equipment/", include("apps.equipment.urls")),
+    path("api/ambulances/", include("apps.ambulances.urls")),
+    path("api/trips/<int:pk>/actions/", TripActionView.as_view(), name="trip-action"),
     path("api/operating-rooms/", include("apps.operating_rooms.urls")),
     path("api/transfers/", include("apps.transfers.urls")),
 ]

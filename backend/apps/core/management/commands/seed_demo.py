@@ -17,6 +17,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
+from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType, Trip
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
@@ -522,6 +523,8 @@ class Command(BaseCommand):
         now = timezone.now()
         if reset:
             models = (
+                Trip,
+                Ambulance,
                 Equipment,
                 OrBooking,  # before the rooms: a booking holds its room (PROTECT)
                 OperatingRoom,
@@ -556,6 +559,9 @@ class Command(BaseCommand):
         for index, partner in enumerate(hospitals[1:], start=1):
             if not BloodUnit.objects.filter(hospital=partner).exists():
                 self.seed_partner_stock(partner, index, now)
+        for hospital in hospitals:
+            if not Ambulance.objects.filter(hospital=hospital).exists():
+                self.seed_ambulances(hospital)
         for hospital in hospitals:
             if not OperatingRoom.objects.filter(hospital=hospital).exists():
                 self.seed_operating_rooms(hospital)
@@ -769,6 +775,20 @@ class Command(BaseCommand):
             )
             for i, d in enumerate(free)
         )
+
+    def seed_ambulances(self, hospital: Hospital):
+        """Sprint 8 (#50): two ambulances per hospital, one available."""
+        T, St = AmbulanceType, AmbulanceStatus
+        items = [
+            (f"AMB-{hospital.id}-1", T.BASIC, St.AVAILABLE),
+            (f"AMB-{hospital.id}-2", T.TRANSPORT, St.AVAILABLE),
+            (f"AMB-{hospital.id}-3", T.ADVANCED, St.MAINTENANCE),
+        ]
+        rows = [
+            Ambulance(hospital=hospital, identifier=code, ambulance_type=t, status=st)
+            for code, t, st in items
+        ]
+        Ambulance.objects.bulk_create(rows)
 
     def seed_equipment(self, hospital: Hospital):
         """Sprint 4 (#26): a small, fixed set of critical equipment in the main hospital."""

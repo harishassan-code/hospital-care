@@ -1,3 +1,4 @@
+import type { Trip } from './ambulances'
 import { apiGet, apiPost } from './client'
 
 /** Where a transfer stands (stories #47 to #49). The names match TRANSFER_LIFECYCLE in backend/apps/transfers/models.py. */
@@ -53,6 +54,8 @@ export interface Transfer {
   history: TransferHistoryEntry[]
   /** The moves the signed-in user may make now. The page shows only these, as buttons. */
   actions: TransferAction[]
+  /** An active or completed ambulance trip for this transfer, if any (story #51). */
+  trip: Trip | null
 }
 
 export const TRANSFER_STATUS_LABEL: Record<TransferStatus, string> = {

@@ -56,7 +56,7 @@ class TransferQuerySet(models.QuerySet):
         holds = Prefetch("reservations", queryset=Reservation.objects.prefetch_related("resource"))
         history = Prefetch("history", queryset=TransferStatusChange.objects.select_related("actor"))
         return self.select_related(
-            "request_item__request", "supplier", "receiver", "requested_by"
+            "request_item__request", "supplier", "receiver", "requested_by", "trip__ambulance"
         ).prefetch_related(holds, history)
 
 
