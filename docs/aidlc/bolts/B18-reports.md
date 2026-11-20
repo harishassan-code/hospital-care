@@ -6,8 +6,8 @@ points: 5
 priority: low
 sprint: stretch
 depends_on: B10
-owner: unassigned
-status: Backlog
+owner: Hassan27521
+status: In Progress
 ---
 
 # B18 · Operational reports and export
