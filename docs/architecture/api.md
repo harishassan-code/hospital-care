@@ -45,8 +45,9 @@ updated its stored status yet.
 
 ## Blood bank (Sprint 3)
 
-Every endpoint needs **blood: view** to read and **blood: edit** to change (admin, bloodBank). Staff only see and
-change their own hospital's units, donors and appointments (**403** otherwise). Every change is audit-logged.
+Units need **blood: view** to read and **blood: edit** to change (admin, bloodBank). Donors and appointments need
+**donors: view** / **donors: edit** (admin, bloodBank; see [api-contracts](api-contracts.md#access-stories-12)). Staff only see
+and change their own hospital's units, donors and appointments (**403** otherwise). Every change is audit-logged.
 
 | Method | Path | Body | Success | Story |
 |---|---|---|---|---|
@@ -79,10 +80,11 @@ BloodStock = {
 Donor = {
   id: string, fullName: string, bloodGroup: string, phone: string, email: string,
   lastDonationAt: string | null,
-  eligible: boolean, ineligibleReason: string, eligibleFrom: string | null  // null + ineligible = permanent
+  eligible: boolean, ineligibleReason: string, eligibleFrom: string | null,  // null + ineligible = permanent
+  hospitalId: number | null  // read-only; null for a donor an admin registered with no hospital
 }
 Appointment = { id: number, donorId: string, donorName: string, startsAt: string, slotMinutes: number,
-                status: 'booked' | 'cancelled' }
+                status: 'booked' | 'cancelled', hospitalId: number | null }  // hospitalId read-only
 ```
 
 **Rules**
@@ -103,6 +105,8 @@ Appointment = { id: number, donorId: string, donorName: string, startsAt: string
 - **Appointments (#22):** on a `BLOOD_APPOINTMENT_SLOT_MINUTES` (30) boundary, in the future. One booked donor
   per hospital per slot (the database enforces it, so two people booking at once can't both win → 400).
   Ineligible donors and donors who already have an upcoming appointment → 400. A cancelled slot can be rebooked.
+- **Cross-hospital (B11):** booking, screening or cancelling a donor or appointment of another hospital → **403**
+  (admins: any hospital). The booking goes to the actor's hospital, or the donor's if the actor has none.
 
 All four `BLOOD_*` settings can be changed with environment variables of the same name.
 
@@ -706,6 +710,250 @@ Transfer = {
 - **Case detail** gains `transfers`: the case's transfers, newest first, in the same shape, with the moves this user may make.
   Each reservation gains `transfer`, as above.
 - **Admin:** read-only. Transfers are asked, answered and received in the app, so every move is checked and recorded.
+- **Trips (#51).** While an ambulance carries a transfer, no manual move is offered and the move is **409**
+  `{"detail": "An ambulance is carrying this transfer. Use the trip's steps instead."}`: `approve`, `reject`, `dispatch`,
+  `startTransit`, `deliver` and `cancel` alike. A case that closes or is cancelled while its trip is on the road is **409**
+  too, and nothing changes. The transfer gains `trip` (its latest [trip](#trips-51), or null), `etaMinutes` (the supplier to
+  receiver estimate) and, when it is approved and the user may dispatch, the move `dispatchAmbulance` in `actions`.
+
+## Ambulances (B04, #50)
+
+The ambulance registry: each ambulance at its base hospital, with its type and status. Access: admin and nurse **edit**,
+doctor **view**; other roles 403. Staff see their own hospital's ambulances; admins see all. Every registration and move is
+audit-logged. Trips use the same ambulances: see [Trips](#trips-51).
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| GET | `/ambulances/?type=&status=&q=&hospital=` | – | `Ambulance[]`, by type then asset tag (`q` searches the asset tag, `hospital` is a hospital id) |
+| POST | `/ambulances/` | `{identifier, type, hospitalId?}` | 201 `Ambulance` |
+| POST | `/ambulances/<id>/actions/` | `{action, reason?}` | 200 `Ambulance` |
+
+```ts
+Ambulance = {
+  id: number, identifier: string,   // asset tag, stored upper-case, unique within a hospital (400 otherwise)
+  type: 'basic' | 'advanced' | 'patientTransport',
+  status: 'available' | 'dispatched' | 'maintenance' | 'outOfService',  // a new ambulance starts available; 'dispatched' is "On trip"
+  statusSince: string,
+  hospital: string | null,          // the base hospital's name
+  trip: { id: number, status: 'dispatched' | 'enRoute' | 'arrived', transferId: number } | null  // the trip on the road, if any
+}
+```
+
+- **Registering.** A non-admin registers at their own hospital; a `hospitalId` they send is ignored. An admin sends
+  `hospitalId`, or uses their own hospital. With neither: 400 `{"hospitalId": [...]}`. A tag already used at that hospital
+  (any case): 400 `{"identifier": [...]}`. A 400 saves nothing. `status` can't be set on registration.
+- **Moves** (the lifecycle is in `apps/ambulances/models.py`): `startMaintenance` (available → maintenance),
+  `finishMaintenance` (maintenance → available), `outOfService` (available or maintenance → out of service) and
+  `returnToService` (out of service → maintenance). A move the status doesn't allow is **409** `{"detail": "Can't
+  outOfService a vehicle that is out of service."}` and changes nothing. Unknown action → 400. `dispatch` and `release`
+  are the trip's moves: this endpoint refuses them with **409** `{"detail": "A trip moves this vehicle. Use the transfer's
+  trip instead."}`, and a vehicle on a trip can't be moved by hand (**409**, "Can't startMaintenance a vehicle that is on trip.").
+- Another hospital's ambulance is **404** for a non-admin. A role without access gets **403**, signed out too.
+- **Audit:** `ambulance.registered` (identifier, type, status) and `ambulance.status_changed` (status before and after,
+  with the optional `reason`).
+
+## Dashboard refresh (#54, B08)
+
+No new endpoint. The staff workspace reloads the data its pages share every 30 seconds, with the same GET calls as its first
+load for the user's role: beds, blood units, pharmacy stock, `GET /emergencies/`, `GET /transfers/?direction=incoming` and
+`?direction=outgoing` (the transfers module only), and the public ER status. The reload is skipped while the tab is hidden
+and while another reload is running, and runs once when the tab is shown again. A reload that fails keeps the data on
+screen. The next one tries again.
+
+Each reload runs the escalation sweep of `GET /emergencies/` again, as the first load does. That is fine at MVP scale.
+
+## City command centre (#55)
+
+Module `commandCentre`: admin only, view. Every other role, and a signed-out caller, gets **403**. The page lives at
+`/staff/command-centre`. Shapes are in `frontend/src/api/commandCentre.ts`.
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| GET | `/command-centre/` | – | 200 `CommandCentre` |
+
+```ts
+CommandCentre = {
+  updatedAt: string,                     // when the figures were taken; the page shows it
+  nearExpiryDays: number,                // the window "near expiry" means, from BLOOD_NEAR_EXPIRY_DAYS (3)
+  totals: Figures,                       // sums of the hospital rows; redCells carry no level
+  hospitals: (Figures & { id: number, name: string })[]   // active hospitals only
+}
+Figures = {
+  redCells: { group, available, minimum, level: 'ok' | 'low' | 'critical' }[],  // 8 groups; totals: { group, available }
+  components: { redCells | plasma | platelets | cryo: { usable, nearExpiry } },
+  beds: { icu, emergency, general, isolation, nicu },        // free beds
+  equipment: { ventilator, monitor, defibrillator, dialysis }, // available
+  operatingRooms: number,                                     // available
+  cases: { active, escalated },
+  open: { blood, bed, equipment, operatingRoom }              // quantity − fulfilled − held, over active cases
+}
+```
+
+- **Who is counted.** Active hospitals only (`is_active`), as matching counts them. Usable stock is `available` and not past
+  expiry, so reserved, quarantined, issued and expired units don't count. Free beds are `free`; equipment and rooms are
+  `available`, so held or busy ones don't. Active cases are `open`, `matching`, `partiallyFulfilled` and `escalated`.
+- **Levels.** Red cells only, judged per hospital against the minimum in `RED_CELL_MINIMUM` (a copy of `MINIMUM_STOCK.redCells`
+  in `blood.ts`; a test keeps them equal). `critical` below half the minimum, `low` below it, otherwise `ok`. The totals never
+  carry a level.
+- **Order.** Hospitals with a critical red-cell group come first, then the rest by name.
+- **Sweeps first.** The read runs `escalate_overdue()` and `release_expired()`, as the feed and the case pages do, so held
+  stock and escalated cases match those pages.
+- **Read only.** A write is refused (403), even for an admin.
+- **Contents.** Counts, hospital names and ids. No patient field, case reference, unit or asset identifier, and no staff name.
+- **Cost.** A fixed number of queries whatever the number of hospitals: seven grouped reads for the figures, plus the two
+  sweeps (10 in all on the seeded network, budget 15). A test adds two hospitals and checks the count doesn't change.
+- **Refresh.** The server holds nothing; the page reads again every 60 seconds while the tab is visible. Each read runs
+  the sweeps, which is why the period is a minute.
+
+## Audit trail (#56)
+
+Admins search the audit trail and export it to CSV. Both endpoints are read only: POST, PUT, PATCH and DELETE answer
+**405**. Anyone else, and a signed-out user, gets **403** (`audit: view`, admins only; superusers act as admins). The rules
+are in `apps/audit/services.py`.
+
+| Method | Path | Returns | Access |
+|---|---|---|---|
+| GET | `/api/audit/entries/` | `{count, limit, offset, results}` | audit: view |
+| GET | `/api/audit/entries/export/` | CSV attachment, `audit-<date>.csv` | audit: view |
+
+- **Filters** are optional and combine with AND. `actor` is the account's email, exact and ignoring case; it still matches
+  after the account is deleted. `action` is a starts-with match (`bed.` finds every bed action). `targetType` and `targetId`
+  are exact (use both for one object's history). `from` and `to` are `YYYY-MM-DD`, each a whole day in `Asia/Karachi`, and
+  both ends are included. `q` is a case-insensitive contains match over `actorEmail`, `action`, `targetRepr`, `targetId` and
+  `reason`, not over `before` or `after`.
+- **400** `{"detail": "..."}` for a date that doesn't parse, a `to` before `from`, or a `limit` or `offset` that isn't a whole
+  number (negative values included).
+- **Paging** on the search: `limit` defaults to 50 and is cut to 200; `offset` defaults to 0. Results are newest first (`at`
+  descending, then `id` descending).
+- **Result rows:** `{id, at, actorEmail, action, targetType, targetId, targetRepr, reason, before, after}`. `at` is ISO 8601 in
+  UTC. `before` and `after` are the recorded JSON values, or `null`.
+- **Export:** the same filters, in the same column order as the rows above, with `at` in UTC. `before` and `after` are JSON
+  text in one cell each, empty when there is no value. A cell starting with `=`, `+`, `-`, `@`, a tab or a carriage return
+  gets a leading `'`. The file holds at most **10,000** rows: over that, the answer is **400** `{"detail": "..."}` and no file.
+  Rows are read in chunks, not loaded all at once.
+- **Audit:** each completed export writes `audit.exported` (target: the exporting admin's account; `after` holds the filters
+  and the row count). An export that is refused, or never read to the end, writes nothing. Searches and page views aren't
+  logged.
+- **Queries:** a page costs two queries (one count, one select), however many rows it holds.
+
+## Operational reports (B18, #66, #67)
+
+Management (the admin role) sees requests, fulfilment time and blood wastage for a date range, and exports them. Both
+endpoints are read only: POST, PUT, PATCH and DELETE answer **405**. Anyone else, and a signed-out user, gets **403**
+(`reports: view`). The rules are in `apps/reports/services.py`; the files are laid out in `apps/reports/exports.py`.
+
+| Method | Path | Returns | Access |
+|---|---|---|---|
+| GET | `/api/reports/?from=&to=&hospital=` | `{range, hospital, generatedAt, requests, fulfilment, wastage}` | reports: view |
+| GET | `/api/reports/export/?format=csv\|pdf&from=&to=&hospital=` | attachment `reports-<from>-to-<to>.csv` or `.pdf` | reports: view |
+
+- **Range:** `from` and `to` are `YYYY-MM-DD`, whole days in `Asia/Karachi`, both included. Neither: the 30 days ending
+  today. Only `from`: up to today. Only `to`: the 30 days ending then. At most **366** days. `hospital` (optional) is a
+  hospital id; without it the report covers the whole network. **400** `{"detail": "..."}` for a malformed date, `to`
+  before `from`, a longer range, an unknown hospital, or (export) a `format` other than `csv` or `pdf`.
+- **requests:** cases opened in the range (`total`, `bySeverity`, `byStatus` by current status), `byResourceType`
+  (`needs`, `unitsAsked`, and `unitsAllocated` by allocations made in the range), and `allocations` (count). With a
+  hospital: cases at that hospital.
+- **fulfilment:** minutes from opening a case to the first time it reached fulfilled, for cases whose first fulfilment
+  is in the range: `overall` and `bySeverity`, each `{count, medianMinutes, averageMinutes, p90Minutes}` (nearest-rank
+  90th percentile; `null` with no cases). `notFulfilled`: cases opened in the range that never reached fulfilled, by
+  current status (only statuses with cases).
+- **wastage:** blood units whose expiry fell in the range and has passed, never issued or discarded (`expired`), and
+  units discarded on a day in the range (`discarded`), with `rows` of `{hospital, group, component, expired, discarded}`.
+- **Export:** the same figures as six tables. CSV: a title row and a header row per table; a cell starting with `=`, `+`,
+  `-`, `@`, a tab or a carriage return gets a leading `'`. PDF: A4, built with `fpdf2`; text outside Latin-1 shows as `?`.
+- **Audit:** each export writes `report.exported` (target: the exporting admin's account; `after` holds the range, the
+  hospital and the format). Viewing the report isn't logged.
+- The overdue-case sweep (#35) runs first, so case statuses match the case pages.
+
+## Notifications (#52)
+
+Staff are told about events at their hospital (see the [notification spec](../aidlc/inception/2026-11-18-notification-service.md)).
+Each row belongs to one person. Anyone signed in as staff (`IsStaff`) may read their own rows: patients and signed-out
+users get **403**. Admins without a hospital get an empty list. Shapes are in `frontend/src/api/notifications.ts`.
+
+| Method | Path | Success |
+|---|---|---|
+| GET | `/notifications/?unread=true` | 200 `Notification[]`, the user's 50 newest, newest first. `unread` is optional: `true` or `1` keeps only unread, `false` or `0` (or none) returns all. Any other value is 400. |
+| GET | `/notifications/unread-count/` | 200 `{count}` |
+| POST | `/notifications/<id>/read/` | 200 `Notification`, with `readAt` set |
+
+```ts
+Notification = {
+  id: number,
+  kind: string,                 // "case.created", "case.escalated", "reservation.created", "reservation.released",
+                                // "reservation.expired", "transfer.requested", "transfer.approved", "transfer.rejected",
+                                // "transfer.dispatched", "transfer.cancelled", "transfer.delivered"
+  severity: 'critical' | 'info',
+  message: string,              // up to 300 characters
+  link: string,                 // "/staff/emergencies/EC-2026-0001", "/staff/transfers", or "" when there is none
+  createdAt: string,
+  readAt: string | null         // null until read
+}
+```
+
+- **Who is told.** `notify` (in `apps/notifications/services.py`) is called next to the audit record of each event. It
+  writes one row for each active user whose hospital is the one named and whose role can edit the module named. The
+  actor who made the move is left out. A user with no hospital gets nothing.
+  - **Case side** (`emergencies` at the case's hospital): a critical case created (`critical`), a case escalated by hand or
+    automatically (`critical`), holds made, released or expired at the case's own hospital (`info`, one row per move, not
+    per unit), and the transfer answers approved, rejected and dispatched (`info`).
+  - **Supplier side** (the resource's module at the supplying hospital): a transfer requested (`critical`), and cancelled or
+    delivered (`info`). Blood goes to the blood bank and admins; equipment to nurses and admins.
+  - Starting transit notifies nobody. A hold at another hospital (a transfer's, at the supplier) notifies nobody.
+- **Rollback.** `notify` runs inside the move's transaction, so a move that rolls back keeps no notification.
+- **Read.** `readAt` is set once. A second call returns the row with the first time. Another person's row, or an unknown
+  id, is **404**.
+- **Audit.** Rows are not audit-logged: each copies an event that already is. Marking one read the first time writes
+  `notification.read` (target: the notification). A repeat call changes nothing and writes nothing.
+- **Web UI (B07, #53).** The bell, the critical banners and the Alerts page poll the list (all, and `?unread=true`) and the count
+  every 30 seconds while the tab is visible, and once when it is shown again. A 401 or 403 stops polling. There is no read-all
+  endpoint: each alert is marked read on its own.
+- **Admin.** Read-only. Rows are written by `notify` and only `read_at` is set by the API.
+
+## Trips (B05, #51)
+
+An approved transfer is carried by one available ambulance from its supplying hospital. The trip records the ETA, who sent
+it and when, and steps through the road: dispatched → en route → arrived → completed. The trip is simulated: buttons, no
+GPS. Access: edit on `ambulances` at the **supplying** hospital (admin: any hospital) for dispatch and every step. The
+receiving hospital sees the trip on the transfer, read only. Outsiders get 404. Spec:
+[B05](../aidlc/bolts/B05-ambulance-dispatch.md) and [its inception spec](../aidlc/inception/2026-11-18-ambulance-dispatch.md).
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| POST | `/transfers/<id>/trips/` | `{ambulance}` | 201 `Trip` |
+| POST | `/trips/<id>/actions/` | `{action: "depart" \| "arrive" \| "complete", note?}` | 200 `Trip`, after the step |
+
+```ts
+Trip = {
+  id: number, transferId: number,
+  status: 'dispatched' | 'enRoute' | 'arrived' | 'completed',
+  ambulance: { id: number, identifier: string, type: string },
+  etaMinutes: number,               // set once, at dispatch: the supplier-to-receiver estimate, rounded to whole minutes
+  dispatchedBy: string,             // the person's name, or their email
+  dispatchedAt: string, departedAt: string | null, arrivedAt: string | null, completedAt: string | null,
+  actions: ('depart' | 'arrive' | 'complete')[]   // the steps this user may take now
+}
+```
+
+- **Dispatch (201).** The transfer must be **approved** (**409**, "Can't dispatch a transfer that is requested."). The
+  ambulance must be **available** (**409**, "Can't dispatch a vehicle that is on trip."). It must be based at the transfer's
+  supplier (**400** `{"ambulance": [...]}`). A transfer has at most one active trip and an ambulance has at most one: a second
+  is **409**, and the database enforces both (partial unique constraints). A transfer or ambulance the user can't see is
+  **404**. A user who may not edit ambulances at the supplier is **403** (the receiving hospital included). A missing
+  ambulance is 400. Refusals change nothing.
+- **Steps.** `depart`: dispatched → en route, and the transfer moves to **in transit** through the transfer service.
+  `arrive`: en route → arrived; the transfer stays in transit. `complete`: arrived → completed; the ambulance goes back to
+  **available**, and the transfer **stays in transit**: receipt is the receiver's confirmation (B03), never a side effect of
+  a trip. Any other step is **409** `{"detail": "Can't arrive a trip that is dispatched."}` and changes nothing. A completed
+  trip is final.
+- **Locks.** Every write is one `transaction.atomic()` that locks the case, the need, the transfer, then the trip and the
+  ambulance (the order transfers use). A failure after either move undoes both.
+- **Audit:** `trip.dispatched`, `trip.departed`, `trip.arrived`, `trip.completed`, each with the status before and after,
+  plus the moves the trip makes: `ambulance.status_changed` (dispatch and release), `transfer.dispatched` and
+  `transfer.inTransit`.
+- **Lists.** `GET /ambulances/` shows each ambulance's `trip`. Dispatch offers only available ambulances at the supplier
+  (`?status=available&hospital=<supplier id>`).
 
 ## Demo data
 
@@ -716,7 +964,7 @@ docker compose exec backend python manage.py seed_demo --reset  # start the demo
 
 Creates 3 hospitals (CityCare General, Seaview, Northside Children's) with 10 departments, 12 wards / 164 beds
 (ICU, emergency, general, isolation and NICU) and 10 storage locations, plus 320 blood units (with screening results), 60 synthetic donors (two deferred) and 6 upcoming donation
-appointments, 23 medicines, 14 doctor shifts, three operating rooms per hospital with a few bookings today and
+appointments, 23 medicines, 14 doctor shifts, seven ambulances (two per hospital and a patient transport at CityCare General), three operating rooms per hospital with a few bookings today and
 tomorrow, the ER status, and one login per
 role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@demo.citycare.pk`, password
 `CityCare-demo-1`). Demo only: never run it against real data.

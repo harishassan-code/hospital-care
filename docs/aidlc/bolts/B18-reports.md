@@ -6,8 +6,8 @@ points: 5
 priority: low
 sprint: stretch
 depends_on: B10
-owner: unassigned
-status: Backlog
+owner: Hassan27521
+status: In Review
 ---
 
 # B18 · Operational reports and export
@@ -18,8 +18,8 @@ status: Backlog
 
 [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67):
 
-- [ ] Reports for a selectable date range
-- [ ] CSV and PDF export
+- [x] Reports for a selectable date range
+- [x] CSV and PDF export
 
 ## Build on
 
@@ -37,8 +37,8 @@ status: Backlog
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-reports.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-reports.md` written
+- [x] Inception spec [`docs/aidlc/inception/2026-11-20-reports.md`](../inception/2026-11-20-reports.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-20-reports.md`](../construction/2026-11-20-reports.md) written
 - [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-reports.md` written after it's live on staging
 - [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed

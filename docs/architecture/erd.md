@@ -165,7 +165,7 @@ erDiagram
     TransferRequest }o--|| Hospital : "supplied by"
     TransferRequest ||--|{ TransferItem : moves
     TransferItem }o--|| BloodUnit : unit
-    TransferRequest |o--o| Trip : "carried by"
+    TransferRequest ||--o{ Trip : "carried by"
     Ambulance ||--o{ Trip : drives
     Hospital ||--o{ Ambulance : "based at"
     Hospital ||--o{ Equipment : owns
@@ -233,15 +233,17 @@ erDiagram
     }
     Ambulance {
         bigint id PK
-        string code UK
-        string type
-        bigint base_hospital_id FK
-        string status "Resource"
+        string identifier "unique per hospital, any case"
+        string type "basic|advanced|patientTransport"
+        bigint hospital_id FK "base hospital"
+        string status "available|dispatched|maintenance|outOfService"
     }
     Trip {
         bigint id PK
-        bigint ambulance_id FK
+        bigint transfer_id FK "at most one active trip per transfer"
+        bigint ambulance_id FK "at most one active trip per ambulance"
         string status "dispatched|enRoute|arrived|completed"
+        int eta_minutes "set at dispatch"
     }
     Equipment {
         bigint id PK
@@ -262,9 +264,13 @@ erDiagram
     }
     Notification {
         bigint id PK
-        bigint user_id FK
-        string event
-        bool read
+        bigint user_id FK "one row per recipient; index (user_id, read_at)"
+        string kind "the event, e.g. transfer.requested"
+        string severity "critical or info"
+        string message "up to 300 characters"
+        string link "a staff page path, may be empty"
+        datetime created_at
+        datetime read_at "empty until the person marks it read"
     }
 ```
 

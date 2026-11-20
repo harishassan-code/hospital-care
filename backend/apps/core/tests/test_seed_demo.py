@@ -2,6 +2,7 @@ import pytest
 from django.core.management import call_command
 
 from apps.accounts.models import Role, User
+from apps.ambulances.models import Ambulance, AmbulanceType
 from apps.blood.models import BloodUnit
 from apps.hospitals.models import Bed, BedType, Department, Hospital, StorageLocation, Ward
 from apps.pharmacy.models import Medicine
@@ -10,7 +11,7 @@ pytestmark = pytest.mark.django_db
 
 
 def counts():
-    models = (Hospital, Department, Ward, StorageLocation, Bed, BloodUnit, Medicine, User)
+    models = (Hospital, Department, Ward, StorageLocation, Bed, BloodUnit, Medicine, User, Ambulance)
     return {model.__name__: model.objects.count() for model in models}
 
 
@@ -27,6 +28,7 @@ def test_seed_demo_is_repeatable():
         "BloodUnit": 352,  # 320 at CityCare General, 16 at each other hospital (Sprint 7 transfers)
         "Medicine": 23,
         "User": 6,
+        "Ambulance": 7,  # two per hospital, and a patient transport at CityCare General (story #50)
     }
     assert counts() == first
 
@@ -70,6 +72,21 @@ def test_links_data_from_before_sprint_2_without_duplicating_it(make_user):
     assert Bed.objects.get(label="ICU-01").hospital == main
     assert nurse.hospital == main
     assert Ward.objects.filter(code="icu").count() == 1
+
+
+def test_ambulances_per_hospital_and_a_rerun_adds_only_the_missing_ones():
+    """Story #50: advanced and basic at every hospital, and a patient transport at the main one."""
+    call_command("seed_demo", stdout=None)
+    main = Hospital.objects.get(name="CityCare General Hospital")
+    assert Ambulance.objects.filter(hospital=main, type=AmbulanceType.PATIENT_TRANSPORT).count() == 1
+    for hospital in Hospital.objects.all():
+        kinds = sorted(Ambulance.objects.filter(hospital=hospital).values_list("type", flat=True))
+        expected = ["advanced", "basic", "patientTransport"] if hospital == main else ["advanced", "basic"]
+        assert kinds == sorted(expected)
+    Ambulance.objects.filter(identifier="AMB-05").delete()
+    call_command("seed_demo", stdout=None)
+    assert Ambulance.objects.count() == 7
+    assert Ambulance.objects.get(identifier="AMB-05").hospital.name == "Seaview Hospital"
 
 
 def test_reset_starts_over():

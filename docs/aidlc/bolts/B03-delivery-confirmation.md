@@ -7,7 +7,7 @@ priority: high
 sprint: 7
 depends_on: B02
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B03 · Delivery confirmation

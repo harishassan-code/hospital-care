@@ -29,6 +29,8 @@ export function sampleTransfers(now: Date): Transfer[] {
       requestedBy: 'Dr. Ayesha Khan',
       createdAt: minutesAgo(5),
       history: asked(minutesAgo(5), 'Dr. Ayesha Khan'),
+      trip: null,
+      etaMinutes: 25,
       actions: [],
     },
     {
@@ -52,6 +54,8 @@ export function sampleTransfers(now: Date): Transfer[] {
         { fromStatus: 'approved', toStatus: 'dispatched', action: 'dispatch', note: '', actor: 'Sadia Admin', at: minutesAgo(60) },
         { fromStatus: 'dispatched', toStatus: 'inTransit', action: 'startTransit', note: 'Van left Riverside', actor: 'Sadia Admin', at: minutesAgo(45) },
       ],
+      trip: null,
+      etaMinutes: 25,
       actions: [],
     },
     {
@@ -73,6 +77,8 @@ export function sampleTransfers(now: Date): Transfer[] {
         ...asked(minutesAgo(40), 'Dr. Usman Farooq'),
         { fromStatus: 'requested', toStatus: 'approved', action: 'approve', note: 'One free; the other is in use', actor: 'Hina Javed', at: minutesAgo(35) },
       ],
+      trip: null,
+      etaMinutes: 25,
       actions: [],
     },
     {
@@ -91,6 +97,8 @@ export function sampleTransfers(now: Date): Transfer[] {
       requestedBy: 'Dr. Usman Farooq',
       createdAt: minutesAgo(20),
       history: asked(minutesAgo(20), 'Dr. Usman Farooq'),
+      trip: null,
+      etaMinutes: 25,
       actions: [],
     },
   ]
