@@ -47,8 +47,8 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 |---|---|---|---|---|---|---|---|
 | [B16](B16-specialists.md) | Specialist profiles and on-call availability | [#61](https://github.com/harishassan-code/hospital-care/issues/61), [#62](https://github.com/harishassan-code/hospital-care/issues/62) | 5 | low | – | _unassigned_ | 🟢 Ready |
 | [B17](B17-patient-transfer.md) | Patient transfer: need check, destination and arrival | [#63](https://github.com/harishassan-code/hospital-care/issues/63), [#64](https://github.com/harishassan-code/hospital-care/issues/64), [#65](https://github.com/harishassan-code/hospital-care/issues/65) | 5 | low | B01 | _unassigned_ | ⚪ Backlog |
-| [B18](B18-reports.md) | Operational reports and export | [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67) | 5 | low | B10 | _unassigned_ | ⚪ Backlog |
+| [B18](B18-reports.md) | Operational reports and export | [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67) | 5 | low | B10 | Hassan27521 | 🔵 In Review |
 
 ## Progress
 
-⚪ Backlog: 4 · 🟢 Ready: 4 · 🟡 In Progress: 0 · 🔵 In Review: 8 · ✅ Done: 3
+⚪ Backlog: 3 · 🟢 Ready: 4 · 🟡 In Progress: 0 · 🔵 In Review: 9 · ✅ Done: 3
