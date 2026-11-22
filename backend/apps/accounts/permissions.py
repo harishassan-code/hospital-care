@@ -109,6 +109,14 @@ def own_hospital(queryset, user):
     return queryset.filter(hospital_id=user.hospital_id) if user.hospital_id else queryset.all()
 
 
+def changeable_by(queryset, user):
+    """The rows the user may change, filtered the way may_change() checks them: admins see every row, everyone
+    else only their own hospital's. A row outside this is a 404, as if it didn't exist (B13, F1 to F3)."""
+    if user.effective_role == Role.ADMIN:
+        return queryset.all()
+    return queryset.filter(hospital_id=user.hospital_id)
+
+
 def may_change(user, resource) -> bool:
     """
     Own-hospital rule: admins manage the whole network; everyone else only their own hospital's resources.

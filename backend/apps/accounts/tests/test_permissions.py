@@ -5,6 +5,7 @@ from datetime import timedelta
 import pytest
 from django.urls import URLPattern, URLResolver, get_resolver, reverse
 from django.utils import timezone
+from rest_framework.permissions import AllowAny
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import ACCESS, EDIT
@@ -14,21 +15,34 @@ from apps.hospitals.models import Bed, BedStatus, Ward
 pytestmark = pytest.mark.django_db
 
 
+# The only endpoints anyone may call without signing in (B13, F5 and F10): the CSRF cookie, sign-in, sign-out,
+# sign-up, Render's health check and the public status board. A new AllowAny route is added here on purpose.
+PUBLIC_ENDPOINTS = {"auth-csrf", "auth-login", "auth-logout", "auth-signup", "public-status", "health"}
+
+
 def api_views(patterns=None, prefix=""):
     for p in patterns if patterns is not None else get_resolver().url_patterns:
         route = prefix + str(p.pattern)
         if isinstance(p, URLResolver):
             yield from api_views(p.url_patterns, route)
         elif isinstance(p, URLPattern) and route.startswith("api/"):
-            yield route, p.callback
+            yield route, p
 
 
 def test_every_api_endpoint_declares_its_permission_classes():
     views = list(api_views())
     assert len(views) >= 18
-    for route, callback in views:
-        view_class = callback.cls
+    for route, pattern in views:
+        view_class = pattern.callback.cls
         assert "permission_classes" in vars(view_class), f"{route} relies on the default permission"
+
+
+def test_only_the_public_endpoints_allow_anyone():
+    """F10: an AllowAny view that isn't listed fails, and so does a listed view that is no longer AllowAny."""
+    open_to_all = {
+        pattern.name for _, pattern in api_views() if AllowAny in pattern.callback.cls.permission_classes
+    }
+    assert open_to_all == PUBLIC_ENDPOINTS
 
 
 # (module, method, url name, url args, body) for one read and one write per module.
@@ -85,7 +99,10 @@ class TestOwnHospitalOnly:
         nurse = client_as(Role.NURSE, hospital=here)
         assert self.act(nurse, "H-01").status_code == 200
         response = self.act(nurse, "T-01")
-        assert response.status_code == 403
+        # B13, F3: another hospital's bed is a 404, the same reply as a label that doesn't exist.
+        unknown = self.act(nurse, "NO-SUCH-BED")
+        assert response.status_code == 404
+        assert (response.status_code, response.json()) == (unknown.status_code, unknown.json())
         assert Bed.objects.get(label="T-01").status == BedStatus.FREE
 
     def test_admin_changes_beds_anywhere(self, client_as, beds):
