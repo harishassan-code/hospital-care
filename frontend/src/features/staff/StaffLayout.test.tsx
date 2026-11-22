@@ -79,8 +79,10 @@ describe('StaffLayout', () => {
       'Operating rooms',
       'Ambulances',
       'Hospitals',
+      'Specialists',
       'Users and roles',
       'Audit log',
+      'Reports',
     ])
     expect(screen.getByRole('link', { name: 'Beds' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Sadia Admin')).toBeInTheDocument()
@@ -90,7 +92,7 @@ describe('StaffLayout', () => {
     const { fetchMock } = mockStaffApi({ role: 'pharmacist' })
     renderAt('/staff')
     expect(await screen.findByText('overview content')).toBeInTheDocument()
-    expect(navLinks()).toEqual(['Overview', 'Alerts', 'Emergencies', 'Pharmacy', 'Hospitals'])
+    expect(navLinks()).toEqual(['Overview', 'Alerts', 'Emergencies', 'Pharmacy', 'Hospitals', 'Specialists'])
     // Module data loads after the layout appears, so wait for it rather than racing it.
     await waitFor(() => expect(requested(fetchMock)).toContain('/api/pharmacy/stock/'))
     expect(requested(fetchMock)).not.toContain('/api/beds/')

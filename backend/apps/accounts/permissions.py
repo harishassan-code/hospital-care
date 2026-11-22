@@ -19,6 +19,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "donors": EDIT,
         "pharmacy": EDIT,
         "hospitals": EDIT,
+        "specialists": EDIT,
         "users": EDIT,
         "equipment": EDIT,
         "operatingRooms": EDIT,
@@ -27,6 +28,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "ambulances": EDIT,
         "commandCentre": VIEW,  # the whole network's figures, read-only (story #55)
         "audit": VIEW,
+        "reports": VIEW,  # operational reports and their export (B18, #66, #67); "management" is the admin
     },
     Role.DOCTOR: {
         "overview": VIEW,
@@ -36,6 +38,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "blood": VIEW,
         "pharmacy": VIEW,
         "hospitals": VIEW,
+        "specialists": VIEW,
         "equipment": VIEW,
         "operatingRooms": VIEW,
         "orBookings": EDIT,  # surgeons book their own slots; the room registry stays admin/nurse
@@ -49,6 +52,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "beds": EDIT,
         "pharmacy": VIEW,
         "hospitals": VIEW,
+        "specialists": EDIT,
         "equipment": EDIT,
         "operatingRooms": EDIT,
         "orBookings": EDIT,
@@ -62,6 +66,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "blood": EDIT,
         "donors": EDIT,  # personal data (names, phones, emails): doctors and nurses don't see donors
         "hospitals": VIEW,
+        "specialists": VIEW,
         "transfers": EDIT,
     },
     Role.PHARMACIST: {
@@ -70,6 +75,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "emergencies": VIEW,
         "pharmacy": EDIT,
         "hospitals": VIEW,
+        "specialists": VIEW,
     },
     Role.PATIENT: {},
 }

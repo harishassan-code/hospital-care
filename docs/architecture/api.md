@@ -840,6 +840,36 @@ are in `apps/audit/services.py`.
   logged.
 - **Queries:** a page costs two queries (one count, one select), however many rows it holds.
 
+## Operational reports (B18, #66, #67)
+
+Management (the admin role) sees requests, fulfilment time and blood wastage for a date range, and exports them. Both
+endpoints are read only: POST, PUT, PATCH and DELETE answer **405**. Anyone else, and a signed-out user, gets **403**
+(`reports: view`). The rules are in `apps/reports/services.py`; the files are laid out in `apps/reports/exports.py`.
+
+| Method | Path | Returns | Access |
+|---|---|---|---|
+| GET | `/api/reports/?from=&to=&hospital=` | `{range, hospital, generatedAt, requests, fulfilment, wastage}` | reports: view |
+| GET | `/api/reports/export/?format=csv\|pdf&from=&to=&hospital=` | attachment `reports-<from>-to-<to>.csv` or `.pdf` | reports: view |
+
+- **Range:** `from` and `to` are `YYYY-MM-DD`, whole days in `Asia/Karachi`, both included. Neither: the 30 days ending
+  today. Only `from`: up to today. Only `to`: the 30 days ending then. At most **366** days. `hospital` (optional) is a
+  hospital id; without it the report covers the whole network. **400** `{"detail": "..."}` for a malformed date, `to`
+  before `from`, a longer range, an unknown hospital, or (export) a `format` other than `csv` or `pdf`.
+- **requests:** cases opened in the range (`total`, `bySeverity`, `byStatus` by current status), `byResourceType`
+  (`needs`, `unitsAsked`, and `unitsAllocated` by allocations made in the range), and `allocations` (count). With a
+  hospital: cases at that hospital.
+- **fulfilment:** minutes from opening a case to the first time it reached fulfilled, for cases whose first fulfilment
+  is in the range: `overall` and `bySeverity`, each `{count, medianMinutes, averageMinutes, p90Minutes}` (nearest-rank
+  90th percentile; `null` with no cases). `notFulfilled`: cases opened in the range that never reached fulfilled, by
+  current status (only statuses with cases).
+- **wastage:** blood units whose expiry fell in the range and has passed, never issued or discarded (`expired`), and
+  units discarded on a day in the range (`discarded`), with `rows` of `{hospital, group, component, expired, discarded}`.
+- **Export:** the same figures as six tables. CSV: a title row and a header row per table; a cell starting with `=`, `+`,
+  `-`, `@`, a tab or a carriage return gets a leading `'`. PDF: A4, built with `fpdf2`; text outside Latin-1 shows as `?`.
+- **Audit:** each export writes `report.exported` (target: the exporting admin's account; `after` holds the range, the
+  hospital and the format). Viewing the report isn't logged.
+- The overdue-case sweep (#35) runs first, so case statuses match the case pages.
+
 ## Notifications (#52)
 
 Staff are told about events at their hospital (see the [notification spec](../aidlc/inception/2026-11-18-notification-service.md)).
@@ -1004,7 +1034,9 @@ docker compose exec backend python manage.py seed_demo --reset  # start the demo
 
 Creates 3 hospitals (CityCare General, Seaview, Northside Children's) with 10 departments, 12 wards / 164 beds
 (ICU, emergency, general, isolation and NICU) and 10 storage locations, plus 320 blood units (with screening results), 60 synthetic donors (two deferred) and 6 upcoming donation
-appointments, 23 medicines, 14 doctor shifts, seven ambulances (two per hospital and a patient transport at CityCare General), three operating rooms per hospital with a few bookings today and
+appointments, 23 medicines, 14 doctor shifts, the same 14 doctors as specialists at their hospitals with an on-call
+window for each of the next seven days (B16), seven ambulances (two per hospital and a patient transport at CityCare
+General), three operating rooms per hospital with a few bookings today and
 tomorrow, the ER status, and one login per
 role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@demo.citycare.pk`, password
 `CityCare-demo-1`). Demo only: never run it against real data.

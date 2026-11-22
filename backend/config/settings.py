@@ -88,8 +88,10 @@ INSTALLED_APPS = [
     "apps.equipment",
     "apps.operating_rooms",
     "apps.ambulances",
+    "apps.specialists",
     "apps.notifications",
     "apps.audit",
+    "apps.reports",
 ]
 
 MIDDLEWARE = [

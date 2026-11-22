@@ -35,7 +35,9 @@ import type {
 } from '../api/operatingRooms'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { Notification } from '../api/notifications'
+import type { OnCallWindow, SpecialistChanges, SpecialistDetail, SpecialistInput, SpecialistSummary } from '../api/specialists'
 import type { PublicStatus } from '../api/publicStatus'
+import type { Report } from '../api/reports'
 import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferMove, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
 import { TRIP_STATUS_LABEL, type Trip, type TripAction, type TripStatus } from '../api/trips'
 import type { UserSummary } from '../api/users'
@@ -44,6 +46,7 @@ import { actionsFor, nextStatus, STATUS_LABEL } from '../features/emergencies/em
 import { applyEquipmentAction } from '../features/equipment/equipment'
 import { applyAmbulanceAction } from '../features/ambulances/ambulances'
 import { applyOperatingRoomAction } from '../features/operatingRooms/operatingRooms'
+import { clashing, clashMessage, coversNow, hasStarted } from '../features/specialists/rules'
 import { canEdit, canSee, type Module, type Role } from '../features/staff/roles'
 import { dateKey } from '../lib/time'
 import { sampleBedBoard } from './fixtures/beds'
@@ -55,6 +58,8 @@ import { sampleCandidates, sampleCases, sampleLocalAvailable, sampleNetworkReque
 import { sampleCapabilities, sampleHospitals, sampleUsers } from './fixtures/hospitals'
 import { sampleMedicines } from './fixtures/pharmacy'
 import { samplePublicStatus } from './fixtures/publicStatus'
+import { sampleReport } from './fixtures/reports'
+import { sampleSpecialists, type SpecialistRecord } from './fixtures/specialists'
 
 /** A reply is JSON (`body`), or a file (`file`): its text, sent with the type and the name the server gives it. */
 export type Reply = { status?: number; body?: unknown; file?: { name: string; type: string; text: string } }
@@ -221,8 +226,12 @@ type StaffApiOptions = {
   appointments?: Appointment[]
   /** Use these ambulances (story #50) instead of the sample ones. */
   ambulances?: Ambulance[]
+  /** Answer every report request (B18, #66) with this status instead of the sample figures, e.g. 500. */
+  reportsStatus?: number
   /** Start with these patient transfers (B17): the moves of a case's patient between hospitals. */
   patientTransfers?: PatientTransfer[]
+  /** Use these specialists (B16) instead of the sample ones. */
+  specialists?: SpecialistRecord[]
 }
 
 /** A few pieces of equipment across types and statuses (story #26). */
@@ -328,7 +337,9 @@ export function mockStaffApi({
   donors: customDonors,
   appointments: customAppointments,
   ambulances: customAmbulances,
+  reportsStatus,
   patientTransfers: seedPatientTransfers = [],
+  specialists: seedSpecialists = sampleSpecialists(),
 }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
@@ -755,6 +766,30 @@ export function mockStaffApi({
   const inMyHospital = (row: { hospitalId: number | null }) => role === 'admin' || row.hospitalId === HOSPITAL_ID
   const findDonor = (code: string) => donors.find((d) => d.id === code)
   const bookings = sampleOrBookings(now)
+  /** The specialists the fake server keeps (B16). Summaries are worked out per request, from the clock. */
+  const specialistStore: SpecialistRecord[] = seedSpecialists.map((s) => ({ ...s, windows: [...s.windows] }))
+  const findSpecialist = (id: string) => specialistStore.find((s) => s.id === Number(id))
+  const specialistSummaryOf = (record: SpecialistRecord, at: Date): SpecialistSummary => {
+    const covering = record.isActive ? record.windows.find((w) => coversNow(w, at)) : undefined
+    return {
+      id: record.id,
+      name: record.name,
+      specialty: record.specialty,
+      isActive: record.isActive,
+      hospital: record.hospital,
+      onCallNow: covering !== undefined,
+      onCallUntil: covering?.endsAt ?? null,
+    }
+  }
+  const specialistDetailOf = (record: SpecialistRecord, at: Date): SpecialistDetail => ({
+    ...specialistSummaryOf(record, at),
+    onCall: record.windows.filter((w) => Date.parse(w.endsAt) > at.getTime()),
+  })
+  /** The hospital a staff member works at, as userFor gives it. Admins may change any hospital's specialists. */
+  const ownHospitalId = role && role !== 'patient' ? userFor(role).hospital?.id : undefined
+  const mayChangeAt = (hospitalId: number) => role === 'admin' || (ownHospitalId !== undefined && hospitalId === ownHospitalId)
+  const OWN_HOSPITAL_ONLY = 'You can only change specialists at your own hospital.'
+  const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
   const gate = (module: Module, reply: () => Reply): Route => () =>
     role && role !== 'patient' && canSee(role, module) ? reply() : fail(403)
   /** Like gate, but the reply sees the request, and `networkDown` fails it. Reads need view, writes need edit. */
@@ -768,6 +803,20 @@ export function mockStaffApi({
   const view = allowed(canSee)
   const edit = allowed(canEdit)
   const findHospital = (id: string) => hospitals.find((h) => h.id === Number(id))
+  /** The report for `from`/`to`/`hospital` with the server's rules: 30 days ending today by default, at most 366. */
+  const reportFor = (query: URLSearchParams): Report | { detail: string } => {
+    if (reportsStatus) return { detail: 'Request failed' }
+    const day = (iso: string) => new Date(`${iso}T00:00:00Z`)
+    const shift = (iso: string, days: number) => new Date(day(iso).getTime() + days * 86_400_000).toISOString().slice(0, 10)
+    const to = query.get('to') || karachiDay(now.toISOString())
+    const from = query.get('from') || shift(to, -29)
+    if (to < from) return { detail: 'to must be the same day as from, or later.' }
+    const days = Math.round((day(to).getTime() - day(from).getTime()) / 86_400_000) + 1
+    if (days > 366) return { detail: 'A report covers at most 366 days. Choose a shorter range.' }
+    const picked = query.get('hospital') ? findHospital(query.get('hospital')!) : undefined
+    if (query.get('hospital') && !picked) return { detail: 'No hospital with that id.' }
+    return sampleReport({ from, to, days }, picked ? { id: picked.id, name: picked.name } : null)
+  }
   const unitTests = new Map<string, TestResult[]>()
   const unitDetailBody = (unit: BloodUnit) => {
     const tests = unitTests.get(unit.id) ?? []
@@ -1233,6 +1282,90 @@ export function mockStaffApi({
       return ok(user)
     }),
 
+    'GET /specialists/': view('specialists', ({ query }) => {
+      const hospital = query.get('hospital')
+      const specialty = query.get('specialty')?.toLowerCase()
+      const availableNow = query.get('availableNow') === 'true'
+      const at = new Date()
+      return ok(
+        specialistStore
+          .filter((s) => !hospital || s.hospital.id === Number(hospital))
+          .filter((s) => !specialty || s.specialty.toLowerCase() === specialty)
+          .map((s) => specialistSummaryOf(s, at))
+          .filter((s) => !availableNow || s.onCallNow)
+          .sort(
+            (a, b) =>
+              a.hospital.name.localeCompare(b.hospital.name) || a.specialty.localeCompare(b.specialty) || a.name.localeCompare(b.name),
+          ),
+      )
+    }),
+    'POST /specialists/': edit('specialists', ({ body }) => {
+      const input = body as SpecialistInput
+      const hospital = hospitals.find((h) => h.id === input.hospitalId && h.isActive)
+      if (!hospital) return fail(400, { hospitalId: ['No active hospital with that id.'] })
+      if (!input.name.trim()) return fail(400, { name: ['This field may not be blank.'] })
+      if (!input.specialty.trim()) return fail(400, { specialty: ['This field may not be blank.'] })
+      if (!mayChangeAt(hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      if (specialistStore.some((s) => s.hospital.id === hospital.id && sameName(s.name, input.name))) {
+        return fail(400, { name: ['A specialist with this name is already listed at this hospital.'] })
+      }
+      const created: SpecialistRecord = {
+        id: nextId++,
+        name: input.name.trim(),
+        specialty: input.specialty.trim(),
+        isActive: true,
+        hospital: { id: hospital.id, name: hospital.name },
+        windows: [],
+      }
+      specialistStore.push(created)
+      return { status: 201, body: specialistDetailOf(created, new Date()) }
+    }),
+    'GET /specialists/:id/': view('specialists', ({ params }) => {
+      const record = findSpecialist(params.id)
+      return record ? ok(specialistDetailOf(record, new Date())) : fail(404)
+    }),
+    'PATCH /specialists/:id/': edit('specialists', ({ params, body }) => {
+      const record = findSpecialist(params.id)
+      if (!record) return fail(404)
+      if (!mayChangeAt(record.hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      const changes = body as SpecialistChanges
+      if (
+        changes.name !== undefined &&
+        specialistStore.some((s) => s !== record && s.hospital.id === record.hospital.id && sameName(s.name, changes.name!))
+      ) {
+        return fail(400, { name: ['A specialist with this name is already listed at this hospital.'] })
+      }
+      if (changes.name !== undefined) record.name = changes.name.trim()
+      if (changes.specialty !== undefined) record.specialty = changes.specialty.trim()
+      if (changes.isActive !== undefined) record.isActive = changes.isActive
+      return ok(specialistDetailOf(record, new Date()))
+    }),
+    'POST /specialists/:id/on-call/': edit('specialists', ({ params, body }) => {
+      const record = findSpecialist(params.id)
+      if (!record) return fail(404)
+      if (!mayChangeAt(record.hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      const { startsAt, endsAt } = body as Pick<OnCallWindow, 'startsAt' | 'endsAt'>
+      if (Date.parse(endsAt) <= Date.parse(startsAt)) return fail(400, { endsAt: ['The window must end after it starts.'] })
+      if (Date.parse(endsAt) <= Date.now()) {
+        return fail(400, { endsAt: ['This window has already ended. Add a window that is still to come, or one that is on now.'] })
+      }
+      const clash = clashing(record.windows, startsAt, endsAt)
+      if (clash) return fail(400, { startsAt: [clashMessage(clash)] })
+      const created: OnCallWindow = { id: nextId++, startsAt, endsAt }
+      record.windows = [...record.windows, created].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+      return { status: 201, body: created }
+    }),
+    'DELETE /specialists/:id/on-call/:window/': edit('specialists', ({ params }) => {
+      const record = findSpecialist(params.id)
+      if (!record) return fail(404)
+      if (!mayChangeAt(record.hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      const target = record.windows.find((w) => w.id === Number(params.window))
+      if (!target) return fail(404)
+      if (hasStarted(target, new Date())) return fail(409, { detail: 'This window has started, so it stays as history.' })
+      record.windows = record.windows.filter((w) => w !== target)
+      return { status: 204 }
+    }),
+
     // Before /hospitals/:id/, which would otherwise match it.
     'GET /hospitals/capabilities/': view('hospitals', () => ok(sampleCapabilities)),
     'GET /hospitals/': view('hospitals', () => ok(hospitals)),
@@ -1253,6 +1386,20 @@ export function mockStaffApi({
       }
       const name = `audit-${karachiDay(now.toISOString())}.csv`
       return { file: { name, type: 'text/csv; charset=utf-8', text: auditCsv(found.entries) } }
+    }),
+    // Operational reports (B18, #66, #67): admins only. Same range rules as the server; the export is a file.
+    'GET /reports/': view('reports', ({ query }) => {
+      const found = reportFor(query)
+      return 'detail' in found ? fail(reportsStatus ?? 400, found) : ok(found)
+    }),
+    'GET /reports/export/': view('reports', ({ query }) => {
+      const format = query.get('format')
+      if (format !== 'csv' && format !== 'pdf') return fail(400, { detail: 'format must be csv or pdf.' })
+      const found = reportFor(query)
+      if ('detail' in found) return fail(reportsStatus ?? 400, found)
+      const name = `reports-${found.range.from}-to-${found.range.to}.${format}`
+      const type = format === 'csv' ? 'text/csv; charset=utf-8' : 'application/pdf'
+      return { file: { name, type, text: format === 'csv' ? `CityCare operational reports\r\nPeriod,${found.range.from} to ${found.range.to}\r\n` : '%PDF-1.3 sample' } }
     }),
     'POST /equipment/': edit('equipment', ({ body }) => {
       const input = body as EquipmentInput
