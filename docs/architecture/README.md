@@ -33,7 +33,8 @@ can be unit-tested without HTTP.
 | `core` | - | health check, shared base classes/utilities |
 | `accounts` | 1.1, 1.2 | `User` (custom, already created), roles, permissions |
 | `hospitals` | 1.3 | Hospital, Department/Ward, StorageLocation, Capability |
-| `resources` | 2.x | abstract Resource + status state machine; Bed, Equipment, OperatingRoom, Ambulance, Specialist |
+| `resources` | 2.x | abstract Resource + status state machine; Bed, Equipment, OperatingRoom, Ambulance |
+| `specialists` | 2.4 | Specialist (staff-only profile) and OnCallWindow; the public doctor schedule stays `hospitals.DoctorShift` |
 | `blood` | 3.x | Donor, Donation, BloodUnit, TestResult, CompatibilityRule, BloodRequest |
 | `emergencies` | 4.x | EmergencyCase, RequirementItem, status history, escalation |
 | `matching` | 5.x | candidate search, scoring strategies, Reservation, Allocation |
