@@ -133,7 +133,8 @@ describe('polling', () => {
     failWhile(fetchMock, '/api/notifications/', () => true, 403)
     renderStaff('/staff')
     await screen.findByRole('button', { name: bellName(0) })
-    expect(listCalls(fetchMock)).toBe(1)
+    // The bell shows 0 before the first request goes out, so wait for that request rather than assume it was made.
+    await waitFor(() => expect(listCalls(fetchMock)).toBe(1))
 
     await advance(5 * NOTIFICATION_POLL_MS)
     expect(listCalls(fetchMock)).toBe(1)
