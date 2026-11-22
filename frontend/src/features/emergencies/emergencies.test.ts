@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../../api/client'
-import type { CaseAllocation, HeldReservation, StatusChange } from '../../api/emergencies'
+import type { CaseAllocation, HeldReservation, PatientTransfer, StatusChange } from '../../api/emergencies'
+import { sampleCaseTransfer } from '../../test/fixtures/patientTransfers'
 import {
   actionsFor,
+  canMovePatient,
   describeMove,
+  describePatientTransfer,
   groupHeld,
   describeNeed,
   emptyCase,
   newNeed,
   nextStatus,
+  openTransferOf,
+  patientTransferFailure,
   serverErrors,
   shortfallSummary,
   stepWithErrors,
@@ -177,7 +182,7 @@ describe('timelineOf (story #45)', () => {
       [move('2026-11-17T09:00:00+05:00', 'startMatching'), move('2026-11-17T11:00:00+05:00', 'fulfil')],
       [allocation(7, '2026-11-17T10:00:00+05:00')],
     )
-    expect(entries.map((e) => (e.kind === 'move' ? e.change.action : `allocated ${e.allocation.id}`))).toEqual([
+    expect(entries.map((e) => (e.kind === 'move' ? e.change.action : e.kind === 'allocation' ? `allocated ${e.allocation.id}` : 'transfer'))).toEqual([
       'startMatching',
       'allocated 7',
       'fulfil',
@@ -217,5 +222,80 @@ describe('groupHeld (story #46)', () => {
       [1, [1, 4]],
       [2, [3]],
     ])
+  })
+})
+
+describe('patient transfer helpers (B17, stories #63 to #65)', () => {
+  /** The sample request from CityCare General to Riverside, asked for at 09:57 (three minutes before the sample's now). */
+  const requestedAt = '2026-11-18T09:57:00.000Z'
+  const patient = (overrides: Partial<PatientTransfer> = {}): PatientTransfer => ({
+    ...sampleCaseTransfer(new Date('2026-11-18T10:00:00.000Z')),
+    ...overrides,
+  })
+  const statusMove = (at: string): StatusChange => ({
+    fromStatus: 'open',
+    toStatus: 'matching',
+    action: 'startMatching',
+    note: '',
+    actor: null,
+    at,
+  })
+
+  it('adds a transfer’s request to the timeline, and its arrival once the patient has arrived, in time order', () => {
+    const arrived = patient({ status: 'arrived', arrivedAt: '2026-11-18T10:30:00.000Z', arrivedBy: 'Dr. Omar Siddiqui', actions: [] })
+
+    const entries = timelineOf([statusMove('2026-11-18T09:00:00.000Z')], [], [arrived])
+
+    expect(entries.map((e) => (e.kind === 'transfer' ? e.step : e.kind))).toEqual(['move', 'requested', 'arrived'])
+    expect(entries[1]!.at).toBe(requestedAt)
+    expect(entries[2]!.at).toBe('2026-11-18T10:30:00.000Z')
+  })
+
+  it('gives a cancelled transfer only its request row: the server keeps no cancellation time', () => {
+    const entries = timelineOf([], [], [patient({ status: 'cancelled', reason: 'Patient stable', actions: [] })])
+
+    expect(entries.map((e) => (e.kind === 'transfer' ? e.step : e.kind))).toEqual(['requested'])
+  })
+
+  it('words a transfer’s step: where it went, that it was cancelled, or that it arrived from where it was', () => {
+    expect(describePatientTransfer(patient(), 'requested')).toBe('Transfer to Riverside Medical Centre requested')
+    expect(describePatientTransfer(patient({ status: 'cancelled' }), 'requested')).toBe(
+      'Transfer to Riverside Medical Centre cancelled',
+    )
+    expect(describePatientTransfer(patient({ status: 'arrived' }), 'arrived')).toBe(
+      'Arrived at Riverside Medical Centre from CityCare General Hospital',
+    )
+  })
+
+  it('offers a move only from a case that has a hospital, a shortage, a status that takes stock and no transfer on its way', () => {
+    const short = { hospital: { id: 1, name: 'CityCare General Hospital' }, shortfallTotal: 3, status: 'open' as const, patientTransfers: [] }
+
+    expect(canMovePatient(short)).toBe(true)
+    expect(canMovePatient({ ...short, status: 'partiallyFulfilled' })).toBe(true)
+    expect(canMovePatient({ ...short, hospital: null })).toBe(false)
+    expect(canMovePatient({ ...short, shortfallTotal: 0 })).toBe(false)
+    expect(canMovePatient({ ...short, status: 'closed' })).toBe(false)
+    expect(canMovePatient({ ...short, status: 'fulfilled' })).toBe(false)
+    expect(canMovePatient({ ...short, patientTransfers: [patient()] })).toBe(false)
+  })
+
+  it('finds the transfer on its way, if there is one', () => {
+    expect(openTransferOf({ patientTransfers: [patient()] })?.id).toBe(2)
+    expect(openTransferOf({ patientTransfers: [patient({ status: 'arrived' })] })).toBeUndefined()
+    expect(openTransferOf({ patientTransfers: [] })).toBeUndefined()
+  })
+
+  it('says why a move was refused in the server’s words, or that nothing changed when the server didn’t answer', () => {
+    expect(patientTransferFailure(new ApiError(409, { detail: 'Can’t arrive a patient transfer that is arrived.' }))).toBe(
+      'Can’t arrive a patient transfer that is arrived.',
+    )
+    expect(patientTransferFailure(new ApiError(400, { destinationId: ['That hospital isn’t one of the hospitals.'] }))).toBe(
+      'That hospital isn’t one of the hospitals.',
+    )
+    expect(patientTransferFailure(new ApiError(400, {}))).toBe('Nothing changed. Check the details and try again.')
+    expect(patientTransferFailure(new ApiError(500))).toBe('The hospital’s system didn’t respond, so nothing changed. Try again.')
+    expect(patientTransferFailure(new TypeError('Failed to fetch'))).toBe(
+      'The hospital’s system didn’t respond, so nothing changed. Try again.',
+    )
   })
 })

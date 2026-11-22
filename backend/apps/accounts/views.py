@@ -27,6 +27,7 @@ from .services import (
     record_failed_login,
     register_patient,
 )
+from .throttles import LoginThrottle, SignupThrottle
 
 INVALID_CREDENTIALS = {"detail": "That email and password don't match an account."}
 LOCKED_OUT = {
@@ -49,6 +50,7 @@ class CsrfView(APIView):
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [LoginThrottle]  # B13, F4: per client address, before the password is checked
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -78,6 +80,7 @@ class LogoutView(APIView):
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class SignupView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [SignupThrottle]  # B13, F4: per client address
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)

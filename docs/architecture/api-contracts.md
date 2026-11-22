@@ -5,7 +5,8 @@ backend tests check them. The Sprint 1 endpoints are in [api.md](api.md). Same c
 cookie + `X-CSRFToken` on writes, camelCase field names.
 
 Common errors on every endpoint below: **403** when signed out or the role lacks access, **404** for an
-unknown id, **400** `{field: ["message"]}` for invalid input.
+unknown id or a record at another hospital (the same reply for both, B13), **400** `{field: ["message"]}` for
+invalid input.
 
 ## Access (stories 1.2)
 
@@ -44,7 +45,9 @@ through it. The endpoints stay on `IsStaff` (`apps/accounts/permissions.py`), so
 `donors` (B11) covers the donor endpoints: names, phones and emails, screening and donation appointments. Only admin and blood bank may use it, so doctors, nurses and pharmacists get **403** there (they can still read blood units). It has its own nav item, **Donors**.
 
 **Own hospital only:** a user who isn't an admin may change a resource only if it belongs to their own
-hospital (`resource.hospital == user.hospital`); otherwise **403**. Admins manage the whole network.
+hospital (`resource.hospital == user.hospital`). A resource at another hospital is **404**, as if it didn't exist,
+and that now holds on the blood screening, test, action and cancel endpoints and the bed action (B13, F3). A
+refusal the service makes for another reason is still **403**. Admins manage the whole network.
 The bed board (`GET /beds/`) and blood list (`GET /blood/units/`) only return the user's hospital when they
 have one. Pharmacy has no hospital yet.
 
@@ -138,10 +141,22 @@ worked out in the browser from the board. There's no new endpoint.
 
 There's no new endpoint. `POST /beds/<id>/actions/` now runs through the shared state machine
 (`apps/resources`). It records who, when, from, to and why in `StatusChange`, writes the audit entry
-`bed.status_changed`, and answers 403 for a bed in another hospital (non-admins).
+`bed.status_changed`, and answers 404 for a bed in another hospital (non-admins; B13, F3).
 
 ## Audit (story 8.1)
 
 Entries are append-only (the model refuses update and delete), so the API can neither edit nor delete them. Admins
 search and export them with `GET /api/audit/entries/` and `GET /api/audit/entries/export/` (issue #56, see
 [api.md](api.md#audit-trail-56)). Django admin stays read-only as well (`/admin/audit/auditlog/`).
+
+## Patient transfers (B17, #63 to #65)
+
+No new module and no change to `ACCESS`: the endpoints use `emergencies`. Who may do what is narrowed per move, as
+[api.md](api.md#patient-transfers-63-to-65) describes. Shapes are in `frontend/src/api/emergencies.ts`.
+
+| Action | Path | Module | Object rule | Refused |
+|---|---|---|---|---|
+| Read the list | `GET /patient-transfers/` | emergencies: view | Your hospital receives the patient (incoming) or sends it (outgoing). Admins: all | 403 for a patient |
+| Ask | `POST /emergencies/<reference>/patient-transfer/` | emergencies: edit | The case's hospital. Admins: any | 403 without edit on emergencies; 404 for a case you can't see |
+| Confirm arrival | `POST /patient-transfers/<id>/actions/` `arrive` | emergencies: edit | The receiving hospital. Admins: any | 403 at the sending hospital; 404 at neither |
+| Cancel | `POST /patient-transfers/<id>/actions/` `cancel` | emergencies: edit | The sending hospital. Admins: any | 403 at the receiving hospital; 404 at neither |

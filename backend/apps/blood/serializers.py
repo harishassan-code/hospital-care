@@ -1,8 +1,11 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.http import Http404
 from django.utils import timezone
 from rest_framework import serializers
+
+from apps.accounts.permissions import changeable_by
 
 from .models import (
     REQUIRED_TESTS,
@@ -22,6 +25,22 @@ SHELF_LIFE_DAYS = {
     Component.PLATELETS: 5,
     Component.CRYO: 365,
 }
+
+
+class DonorField(serializers.SlugRelatedField):
+    """A donor by code, looked up among the donors the user may change: their hospital's, or every donor for
+    an admin. Another hospital's donor and an unknown code both answer 404, so the reply shows neither the
+    donor nor their donation history (B13, F1 and F2). The view passes the user in the serializer context."""
+
+    def __init__(self, **kwargs):
+        super().__init__(slug_field="code", queryset=Donor.objects.all(), **kwargs)
+
+    def to_internal_value(self, data):
+        donors = changeable_by(Donor.objects.all(), self.context["user"])
+        try:
+            return donors.get(code=data)
+        except Donor.DoesNotExist:
+            raise Http404("No donor with that id.") from None
 
 
 class BloodUnitSerializer(serializers.ModelSerializer):
@@ -49,9 +68,7 @@ class BloodUnitCreateSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source="donation_number", max_length=30)
     collectedAt = serializers.DateTimeField(source="collected_at")
     expiresAt = serializers.DateTimeField(source="expires_at", required=False)
-    donorId = serializers.SlugRelatedField(
-        source="donor", slug_field="code", queryset=Donor.objects.all(), required=False, allow_null=True
-    )
+    donorId = DonorField(source="donor", required=False, allow_null=True)
 
     class Meta:
         model = BloodUnit
@@ -180,7 +197,7 @@ class ScreeningSerializer(serializers.Serializer):
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
-    donorId = serializers.SlugRelatedField(source="donor", slug_field="code", queryset=Donor.objects.all())
+    donorId = DonorField(source="donor")
     donorName = serializers.CharField(source="donor.full_name", read_only=True)
     startsAt = serializers.DateTimeField(source="starts_at")
     slotMinutes = serializers.SerializerMethodField()
