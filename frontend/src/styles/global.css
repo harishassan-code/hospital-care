@@ -18,6 +18,9 @@ body {
   font-size: var(--text-base);
   line-height: 1.55;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
@@ -25,8 +28,9 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--font-display);
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
 }
 
 p {
@@ -86,6 +90,39 @@ input {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Shared motion. Each is switched off below when the device asks for reduced motion. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes draw-route {
+  from {
+    stroke-dashoffset: var(--route-length, 600);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

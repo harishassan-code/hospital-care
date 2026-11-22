@@ -1,6 +1,5 @@
-import '@fontsource-variable/big-shoulders-display'
-import '@fontsource-variable/radio-canada'
-import '@fontsource-variable/martian-mono'
+import '@fontsource-variable/atkinson-hyperlegible-next'
+import '@fontsource-variable/atkinson-hyperlegible-mono'
 import './styles/tokens.css'
 import './styles/global.css'
 import { StrictMode } from 'react'
