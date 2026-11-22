@@ -9,7 +9,7 @@ from apps.accounts.models import Role
 from apps.audit.models import AuditLog
 from apps.matching.tests.reservation_support import blood_need
 
-from .support import fulfilled, opened
+from .support import blood_unit, fulfilled, opened
 
 pytestmark = pytest.mark.django_db
 
@@ -112,6 +112,15 @@ def test_csv_cells_that_look_like_formulas_are_escaped(admin, make_hospital):
     response = admin.get(EXPORT, {**NOVEMBER, "format": "csv", "hospital": hospital.pk})
     rows = list(csv.reader(io.StringIO(response.content.decode("utf-8"))))
     assert rows[2] == ["Hospital", "'=HYPERLINK(1)"]
+
+
+def test_csv_wastage_shows_component_labels_as_the_page_does(admin, make_hospital):
+    hospital = make_hospital("Seaview")
+    blood_unit(hospital, expires="2026-11-05T12:00:00+05:00")  # expired unused in the range
+    response = admin.get(EXPORT, {**NOVEMBER, "format": "csv"})
+    rows = list(csv.reader(io.StringIO(response.content.decode("utf-8"))))
+    wastage = [row for row in rows if row[:2] == ["Seaview", "O-"]]
+    assert wastage and wastage[0][2] == "Red cells"
 
 
 def test_pdf_export_is_a_pdf_attachment_and_is_audit_logged(admin, one_fulfilled_case):

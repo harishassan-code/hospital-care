@@ -9,6 +9,8 @@ import io
 from fpdf import FPDF
 from fpdf.fonts import FontFace
 
+from apps.blood.models import Component
+
 # What a spreadsheet would run as a formula (OWASP's list), plus tab and carriage return, as in B10.
 FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 
@@ -64,7 +66,13 @@ def sections(report: dict) -> list[tuple[str, list[str], list[list]]]:
             f"Blood wastage: {wastage['expired']} expired unused, {wastage['discarded']} discarded",
             ["Hospital", "Group", "Component", "Expired", "Discarded"],
             [
-                [row["hospital"], row["group"], row["component"], row["expired"], row["discarded"]]
+                [
+                    row["hospital"],
+                    row["group"],
+                    Component(row["component"]).label,
+                    row["expired"],
+                    row["discarded"],
+                ]
                 for row in wastage["rows"]
             ],
         ),
