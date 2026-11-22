@@ -1,10 +1,62 @@
 # Candidate search load test (B13)
 
 **Bolt:** [B13](../aidlc/bolts/B13-security-performance.md) · **Issue:** [#58](https://github.com/harishassan-code/hospital-care/issues/58)
-**Date:** 2026-11-18 · **Code:** commit `ce9ae8c` (the script; `seed_demo --hospitals` is in `b7d9e82`)
+**Date:** 2026-11-22 (PostgreSQL), 2026-11-18 (SQLite) · **Code:** `main` at `a81656e` (PostgreSQL run); the
+script is from `ce9ae8c`, `seed_demo --hospitals` from `b7d9e82`
 **Script:** [`scripts/load_test_search.py`](../../scripts/load_test_search.py) · **Spec:** [Q1 to Q4](../aidlc/inception/2026-11-18-security-performance.md)
 
-## Result
+## Result (PostgreSQL): the figure for the final report
+
+Candidate search, `GET /api/emergencies/<reference>/candidates/`, against a 50-hospital network, one synchronous
+gunicorn worker (as `render.yaml` runs it), **PostgreSQL 16**. Three runs, a few minutes apart, on an otherwise idle
+machine. Every one of the 1,200 timed requests succeeded.
+
+| Run | Concurrency | p50 ms | **p95 ms** | p99 ms | max ms | Requests | Errors | Load average before / after (4 cores) |
+|---|---|---|---|---|---|---|---|---|
+| A | 1 | 16.1 | **26.0** | 29.2 | 97.6 | 200 | 0 | 0.02 / 0.10 |
+| A | 5 | 83.4 | **107.6** | 166.8 | 171.1 | 200 | 0 | (same run) |
+| B | 1 | 15.9 | **25.4** | 31.1 | 81.9 | 200 | 0 | 0.15 / 0.28 |
+| B | 5 | 85.5 | **139.1** | 165.5 | 175.8 | 200 | 0 | (same run) |
+| C | 1 | 16.0 | **25.9** | 28.0 | 101.6 | 200 | 0 | 0.20 / 0.32 |
+| C | 5 | 83.6 | **108.0** | 157.8 | 160.4 | 200 | 0 | (same run) |
+
+**Recorded p95: about 26 ms at concurrency 1 (25.4 to 26.0 over three runs), and 108 to 139 ms at concurrency 5.**
+Each run's case returned **2 short needs and 98 candidate hospital entries**, as in the SQLite run.
+
+**Same machine, SQLite, for comparison** (same command, `DATABASE_URL` pointing at a SQLite file, two runs):
+p95 17.4 and 17.9 ms at concurrency 1, 68.0 and 79.7 ms at concurrency 5. So on the same hardware PostgreSQL is
+about 1.45 times SQLite. A search makes **10 queries** (the same at any network size, see *Why the numbers look like
+this*), each a round trip to a separate database server; SQLite answers in-process. In-process (no HTTP), the search
+takes a p50 of 10.8 ms on PostgreSQL and 8.4 ms on SQLite. The extra time is those round trips, not slow queries:
+each query finishes in under a millisecond.
+
+### Dataset (PostgreSQL)
+
+After `seed_demo --hospitals 50`, before the runs: 50 hospitals (3 named, 47 synthetic), 153 wards, 1,668 beds (238
+free), 1,104 blood units (1,046 available), 60 donors, 6 donation appointments, 113 pieces of equipment, 150
+operating rooms, 300 bookings, 23 medicines, 7 ambulances, 14 specialists with 98 on-call windows, 6 users. Emergency
+cases: 0 before, 3 after (one per run). Seeding took 3.3 seconds. Since the SQLite run, #107 marks 3 surplus O− units
+issued (1,046 available instead of 1,049), and #104 and #109 add the ambulances and specialists; the search reads
+none of those.
+
+### Method and versions (PostgreSQL)
+
+As in *Method* below, with these differences: the database is a scratch PostgreSQL 16.15 cluster on the same
+machine (TCP on `127.0.0.1`), and the machine is a 4-core Intel Xeon cloud VM with 15 GB RAM (Linux 6.18). Python
+3.13.18, Django 6.0.10, DRF 3.18.1, psycopg 3.3.6, gunicorn 26.2.0. `DEBUG` on, the local default, as before.
+
+```bash
+export DATABASE_URL=postgres://hospitalcare@127.0.0.1:5433/hospitalcare
+python backend/manage.py migrate
+python backend/manage.py seed_demo --hospitals 50
+(cd backend && gunicorn config.wsgi:application --bind 127.0.0.1:8765)
+python3 scripts/load_test_search.py --base-url http://127.0.0.1:8765 --requests 200 --warmup 20 --concurrency 1 5
+```
+
+**PostgreSQL 16, not 17.** The spec asks for 17 (Q2), the version CI runs. 16 is what this machine has; the search
+uses nothing that differs between the two. CI runs the whole test suite on 17.
+
+## Earlier run: SQLite on a laptop (18 Nov)
 
 Candidate search, `GET /api/emergencies/<reference>/candidates/`, against a 50-hospital network, one synchronous
 gunicorn worker (as `render.yaml` runs it), SQLite on a laptop. Every timed request succeeded.
@@ -28,9 +80,10 @@ Repeat runs, same command, same server, a few minutes apart:
 Run A is kept in the table, not removed, and its cause is not established. Its load was not recorded, and another
 test run on the same machine was observed afterwards, so the cause is not confirmed. Runs B and C ran at the same
 load, and agree at concurrency 1 (12.5 ms p95 both times) and within 2.5 ms at concurrency 5.
-**Recorded p95, the figure for the final report: 12.5 ms at concurrency 1, and 49 to 51 ms at concurrency 5.**
+Recorded p95 for this SQLite run: 12.5 ms at concurrency 1, and 49 to 51 ms at concurrency 5. It is superseded by
+the PostgreSQL result above for the final report.
 
-## Dataset
+## Dataset (SQLite run)
 
 Row counts for the scratch database after `seed_demo --hospitals 50`, before any run (all synthetic). The case count is
 taken after the runs, since the runs create the cases:
@@ -55,6 +108,8 @@ quantity the API allows per line (blood 20, bed 5, equipment 5, operating room 3
 the four needs short, so the search returned **2 short needs and 98 candidate hospital entries** each time.
 
 ## Method
+
+(Written for the SQLite run; the PostgreSQL run differs only as noted above.)
 
 - **Database:** a scratch SQLite file outside the repository, migrated and seeded with `seed_demo --hospitals 50`
   (default seed 7). Seeding took about 2 seconds.
@@ -85,8 +140,9 @@ python3 scripts/load_test_search.py --base-url http://127.0.0.1:8765 --requests 
 
 ## Why the numbers look like this
 
-- **Query count.** The search makes 9 queries per request, the same at 3 hospitals as at 10
-  (`apps/matching/tests/test_candidates_scale.py`). No query runs per hospital.
+- **Query count.** The search makes 10 queries per request (9 when it was first measured, before later PRs added
+  case fields), the same at 3 hospitals as at 10 (`apps/matching/tests/test_candidates_scale.py`). No query runs per
+  hospital.
 - **Server work.** In-process on this data (no HTTP), the search has a p50 of 5.8 ms and a p95 of 7.6 ms over 60
   runs. Over HTTP, run sequentially, the candidates endpoint has a p50 of 8.7 ms and a p95 of 12.1 ms. A DB-free
   endpoint (`/api/health/`) takes 1.6 ms at p50, and a session endpoint (`/api/auth/me/`) takes 2.1 ms. So the search
@@ -100,10 +156,9 @@ python3 scripts/load_test_search.py --base-url http://127.0.0.1:8765 --requests 
 
 ## Caveats
 
-- **SQLite, not Postgres.** No Postgres or Docker runs on the build machine. The spec asks for Postgres 17 (Q2),
-  and the user allowed SQLite when Postgres is unavailable. Absolute numbers on Postgres will differ: SQLite here is in a
-  single file on a laptop disk, and Postgres has its own locking and I/O. **Open item:** run the exact command above
-  against a Postgres 17 `DATABASE_URL` (from `docker-compose.yml`) before the B15 report.
+- **SQLite run, then PostgreSQL.** The first run used SQLite because no Postgres ran on that machine. The open item
+  it left (run the same command on Postgres before the B15 report) is done: see the PostgreSQL result at the top,
+  with a same-machine SQLite comparison.
 - **Laptop, not a server, and no network.** The client and server share a machine, so network time is zero. Render's
   free tier adds network latency and runs on different hardware.
 - **DEBUG was on.** Production runs with `DJANGO_DEBUG=false`. That changes only logging and query capture.
