@@ -34,6 +34,7 @@ import type {
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { Notification } from '../api/notifications'
 import type { PublicStatus } from '../api/publicStatus'
+import type { Report } from '../api/reports'
 import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferMove, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
 import { TRIP_STATUS_LABEL, type Trip, type TripAction, type TripStatus } from '../api/trips'
 import type { UserSummary } from '../api/users'
@@ -53,6 +54,7 @@ import { sampleCandidates, sampleCases, sampleLocalAvailable, sampleNetworkReque
 import { sampleCapabilities, sampleHospitals, sampleUsers } from './fixtures/hospitals'
 import { sampleMedicines } from './fixtures/pharmacy'
 import { samplePublicStatus } from './fixtures/publicStatus'
+import { sampleReport } from './fixtures/reports'
 
 /** A reply is JSON (`body`), or a file (`file`): its text, sent with the type and the name the server gives it. */
 export type Reply = { status?: number; body?: unknown; file?: { name: string; type: string; text: string } }
@@ -219,6 +221,8 @@ type StaffApiOptions = {
   appointments?: Appointment[]
   /** Use these ambulances (story #50) instead of the sample ones. */
   ambulances?: Ambulance[]
+  /** Answer every report request (B18, #66) with this status instead of the sample figures, e.g. 500. */
+  reportsStatus?: number
 }
 
 /** A few pieces of equipment across types and statuses (story #26). */
@@ -324,6 +328,7 @@ export function mockStaffApi({
   donors: customDonors,
   appointments: customAppointments,
   ambulances: customAmbulances,
+  reportsStatus,
 }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
@@ -642,6 +647,20 @@ export function mockStaffApi({
   const view = allowed(canSee)
   const edit = allowed(canEdit)
   const findHospital = (id: string) => hospitals.find((h) => h.id === Number(id))
+  /** The report for `from`/`to`/`hospital` with the server's rules: 30 days ending today by default, at most 366. */
+  const reportFor = (query: URLSearchParams): Report | { detail: string } => {
+    if (reportsStatus) return { detail: 'Request failed' }
+    const day = (iso: string) => new Date(`${iso}T00:00:00Z`)
+    const shift = (iso: string, days: number) => new Date(day(iso).getTime() + days * 86_400_000).toISOString().slice(0, 10)
+    const to = query.get('to') || karachiDay(now.toISOString())
+    const from = query.get('from') || shift(to, -29)
+    if (to < from) return { detail: 'to must be the same day as from, or later.' }
+    const days = Math.round((day(to).getTime() - day(from).getTime()) / 86_400_000) + 1
+    if (days > 366) return { detail: 'A report covers at most 366 days. Choose a shorter range.' }
+    const picked = query.get('hospital') ? findHospital(query.get('hospital')!) : undefined
+    if (query.get('hospital') && !picked) return { detail: 'No hospital with that id.' }
+    return sampleReport({ from, to, days }, picked ? { id: picked.id, name: picked.name } : null)
+  }
   const unitTests = new Map<string, TestResult[]>()
   const unitDetailBody = (unit: BloodUnit) => {
     const tests = unitTests.get(unit.id) ?? []
@@ -1107,6 +1126,20 @@ export function mockStaffApi({
       }
       const name = `audit-${karachiDay(now.toISOString())}.csv`
       return { file: { name, type: 'text/csv; charset=utf-8', text: auditCsv(found.entries) } }
+    }),
+    // Operational reports (B18, #66, #67): admins only. Same range rules as the server; the export is a file.
+    'GET /reports/': view('reports', ({ query }) => {
+      const found = reportFor(query)
+      return 'detail' in found ? fail(reportsStatus ?? 400, found) : ok(found)
+    }),
+    'GET /reports/export/': view('reports', ({ query }) => {
+      const format = query.get('format')
+      if (format !== 'csv' && format !== 'pdf') return fail(400, { detail: 'format must be csv or pdf.' })
+      const found = reportFor(query)
+      if ('detail' in found) return fail(reportsStatus ?? 400, found)
+      const name = `reports-${found.range.from}-to-${found.range.to}.${format}`
+      const type = format === 'csv' ? 'text/csv; charset=utf-8' : 'application/pdf'
+      return { file: { name, type, text: format === 'csv' ? `CityCare operational reports\r\nPeriod,${found.range.from} to ${found.range.to}\r\n` : '%PDF-1.3 sample' } }
     }),
     'POST /equipment/': edit('equipment', ({ body }) => {
       const input = body as EquipmentInput

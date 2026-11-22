@@ -24,6 +24,7 @@ import OperatingRoomSchedulePage from './pages/staff/OperatingRoomSchedulePage'
 import OperatingRoomsPage from './pages/staff/OperatingRoomsPage'
 import PharmacyPage from './pages/staff/PharmacyPage'
 import PlannedPage from './pages/staff/PlannedPage'
+import ReportsPage from './pages/staff/ReportsPage'
 import TransfersPage from './pages/staff/TransfersPage'
 import UsersPage from './pages/staff/UsersPage'
 
@@ -55,6 +56,7 @@ export function AppRoutes() {
         <Route path="hospitals/:id/edit" element={<HospitalFormPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="audit" element={<AuditPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         {PLANNED.map((p) => (
           <Route key={p.path} path={p.path.replace('/staff/', '')} element={<PlannedPage />} />
         ))}
