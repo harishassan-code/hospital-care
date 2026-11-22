@@ -17,6 +17,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
+from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
@@ -522,6 +523,7 @@ class Command(BaseCommand):
         now = timezone.now()
         if reset:
             models = (
+                Ambulance,
                 Equipment,
                 OrBooking,  # before the rooms: a booking holds its room (PROTECT)
                 OperatingRoom,
@@ -553,6 +555,7 @@ class Command(BaseCommand):
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
         if not Equipment.objects.exists():
             self.seed_equipment(main)
+        self.seed_ambulances(hospitals)
         for index, partner in enumerate(hospitals[1:], start=1):
             if not BloodUnit.objects.filter(hospital=partner).exists():
                 self.seed_partner_stock(partner, index, now)
@@ -794,6 +797,24 @@ class Command(BaseCommand):
             Equipment(hospital=hospital, identifier=i, equipment_type=t, name=n, location=loc, status=st)
             for i, t, n, loc, st in items
         )
+
+    def seed_ambulances(self, hospitals: list[Hospital]):
+        """Story #50: two ambulances per hospital (advanced and basic), and a patient transport at the main
+        hospital. Looked up by tag at each hospital, so a re-run adds only the ones that are missing."""
+        T, St = AmbulanceType, AmbulanceStatus
+        fleet = [
+            ("AMB-01", T.ADVANCED, St.AVAILABLE, 0),
+            ("AMB-02", T.BASIC, St.MAINTENANCE, 0),
+            ("AMB-03", T.PATIENT_TRANSPORT, St.AVAILABLE, 0),
+            ("AMB-04", T.ADVANCED, St.AVAILABLE, 1),
+            ("AMB-05", T.BASIC, St.AVAILABLE, 1),
+            ("AMB-06", T.ADVANCED, St.AVAILABLE, 2),
+            ("AMB-07", T.BASIC, St.AVAILABLE, 2),
+        ]
+        for tag, kind, status, index in fleet:
+            Ambulance.objects.get_or_create(
+                hospital=hospitals[index], identifier=tag, defaults={"type": kind, "status": status}
+            )
 
     def seed_partner_stock(self, hospital: Hospital, index: int, now):
         """Sprint 7 (#47): a little stock at the other hospitals, so a short case at CityCare General has

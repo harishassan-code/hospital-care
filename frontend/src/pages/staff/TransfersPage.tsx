@@ -10,6 +10,7 @@ import {
   type TransferDirection,
   type TransferStatus,
 } from '../../api/transfers'
+import { dispatchAmbulance, postTripAction, TRIP_STATUS_LABEL, type Trip, type TripAction } from '../../api/trips'
 import { FormAlert } from '../../components/form/FormAlert'
 import { Panel } from '../../components/ui/Panel'
 import { TransferCard } from '../../features/transfers/TransferCard'
@@ -92,27 +93,55 @@ function TransferList({ direction, status }: { direction: TransferDirection; sta
 
   if (result.state !== 'ready') return <StaffDataState failed={result.state === 'failed'} />
 
-  /** Make one move, then show the card as the server now has it and announce the new status (story #48). */
-  async function act(transfer: Transfer, action: TransferAction, extra: { reason?: string } = {}) {
+  /** Read the list again, so the transfers, their histories and their trips are all as the server now has them. */
+  const reload = () =>
+    load()
+      .then((fresh) => setData(() => fresh))
+      .catch(() => undefined)
+
+  /** Run one save: busy while it runs, the failure in the alert, and a fresh list when the server says it moved on (409). */
+  async function save(transferId: number, run: () => Promise<string>): Promise<boolean> {
     setError(undefined)
     setAnnouncement('')
-    setWorking(transfer.id)
+    setWorking(transferId)
     try {
-      const updated = await postTransferAction(transfer.id, action, extra)
-      setData((current) => current.map((t) => (t.id === updated.id ? updated : t)))
-      setFocusId(updated.id)
-      setAnnouncement(`Transfer #${updated.id} is now ${TRANSFER_STATUS_LABEL[updated.status].toLowerCase()}.`)
+      setAnnouncement(await run())
+      setFocusId(transferId)
+      return true
     } catch (failure) {
       setError(transferFailure(failure))
-      // A 409 means the transfer moved on since this page loaded, so the list is read again.
-      if (failure instanceof ApiError && failure.status === 409) {
-        load()
-          .then((fresh) => setData(() => fresh))
-          .catch(() => undefined)
-      }
+      if (failure instanceof ApiError && failure.status === 409) await reload()
+      return false
     } finally {
       setWorking(undefined)
     }
+  }
+
+  /** Make one move, then show the card as the server now has it and announce the new status (story #48). */
+  async function act(transfer: Transfer, action: TransferAction, extra: { reason?: string } = {}) {
+    await save(transfer.id, async () => {
+      const updated = await postTransferAction(transfer.id, action, extra)
+      setData((current) => current.map((t) => (t.id === updated.id ? updated : t)))
+      return `Transfer #${updated.id} is now ${TRANSFER_STATUS_LABEL[updated.status].toLowerCase()}.`
+    })
+  }
+
+  /** Send an ambulance for an approved transfer (story #51). The list is read again, so the trip shows on the card. */
+  async function dispatch(transfer: Transfer, ambulanceId: number): Promise<boolean> {
+    return save(transfer.id, async () => {
+      const trip = await dispatchAmbulance(transfer.id, ambulanceId)
+      await reload()
+      return `Ambulance ${trip.ambulance.identifier} is on its way for transfer #${transfer.id}, about ${trip.etaMinutes} min.`
+    })
+  }
+
+  /** One step of a trip (story #51). The transfer changes with departure, so the list is read again. */
+  async function step(transfer: Transfer, trip: Trip, action: TripAction) {
+    await save(transfer.id, async () => {
+      const updated = await postTripAction(trip.id, action)
+      await reload()
+      return `Trip for transfer #${transfer.id} is now ${TRIP_STATUS_LABEL[updated.status].toLowerCase()}.`
+    })
   }
 
   const transfers = result.data
@@ -133,6 +162,8 @@ function TransferList({ direction, status }: { direction: TransferDirection; sta
                 direction={direction}
                 busy={working !== undefined}
                 onAction={act}
+                onDispatch={dispatch}
+                onTripStep={step}
                 focus={focusId === transfer.id}
               />
             </li>

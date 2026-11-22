@@ -1,5 +1,6 @@
 import { AttentionList } from '../../features/overview/AttentionList'
 import { DischargesToday } from '../../features/overview/DischargesToday'
+import { LastUpdated } from '../../features/overview/LastUpdated'
 import { OccupancyChart } from '../../features/overview/OccupancyChart'
 import { RedCellChart } from '../../features/overview/RedCellChart'
 import { StatusTiles } from '../../features/overview/StatusTiles'
@@ -16,6 +17,7 @@ export default function OverviewPage() {
 
   return (
     <div className={styles.stack}>
+      <LastUpdated />
       <StatusTiles data={data} />
       <div className={styles.split}>
         <AttentionList />
