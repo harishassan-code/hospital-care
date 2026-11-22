@@ -1,0 +1,23 @@
+# Sprint 3 Retrospective
+
+**Date:** Fri 23 Oct · **Format:** Start / Stop / Continue · **Attendees:** _to confirm_
+
+> **Reconstructed record.** Written on 22 Nov 2026 (bolt B00, #2) from the GitHub history: the sprint milestone, issue close dates, story points from `scripts/backlog.py` and merged pull requests. Facts GitHub doesn't hold (attendance, Product Owner comments, team mood) are left as _to confirm_ for the team to fill in at the next review.
+
+## What went well (Continue)
+- 6 of 6 committed items reached `main` within the sprint.
+- 6 PR(s) merged, by @Hassan27521, @harishassan-code.
+
+## What didn't go well (Stop)
+- Nothing recorded in the history.
+
+## What to try (Start)
+- Merge each story to `main` in its own PR within the sprint, so the review demos `main` and velocity is real.
+
+## Action items for next sprint
+| Action | Owner | How we'll know it worked |
+|---|---|---|
+| Smaller PRs merged within the sprint | each developer | sprint review lists PRs merged in the window |
+
+## Team mood (1–5, anonymous)
+_to confirm_
