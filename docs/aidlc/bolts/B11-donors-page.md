@@ -7,7 +7,7 @@ priority: medium
 sprint: 8
 depends_on: -
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B11 · Donors page for the existing donor API
@@ -42,8 +42,8 @@ Stories #20 Donor registration, #21 Donor eligibility screening, #22 Donation ap
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-donors-page.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-donors-page.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [ ] Inception spec [`docs/aidlc/inception/2026-11-18-donors-page.md`](../inception/2026-11-18-donors-page.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-donors-page.md`](../construction/2026-11-18-donors-page.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-donors-page.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed

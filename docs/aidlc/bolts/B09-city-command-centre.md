@@ -7,7 +7,7 @@ priority: high
 sprint: 8
 depends_on: -
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B09 · City command centre dashboard
@@ -40,8 +40,8 @@ monitor conditions.
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-city-command-centre.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-city-command-centre.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [ ] Inception spec [`docs/aidlc/inception/2026-11-18-city-command-centre.md`](../inception/2026-11-18-city-command-centre.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-city-command-centre.md`](../construction/2026-11-18-city-command-centre.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-city-command-centre.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed

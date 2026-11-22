@@ -7,7 +7,7 @@ priority: low
 sprint: stretch
 depends_on: -
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B16 · Specialist profiles and on-call availability
@@ -37,8 +37,8 @@ status: In Review
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-specialists.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-specialists.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [x] Inception spec [`docs/aidlc/inception/2026-11-18-specialists.md`](../inception/2026-11-18-specialists.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-specialists.md`](../construction/2026-11-18-specialists.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-specialists.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
