@@ -103,9 +103,13 @@ unit 3 for the job to have something to run. Unit 6 documents what units 3 and 5
   5.7 s, 6.0 s and 6.5 s. A negative check with four usable O− units (the seed change undone) failed at S4 with the
   precondition message: "Precondition: CityCare has 1 or 2 usable O− red cells (seed_demo sets exactly 1)".
 - **Repo**: `check_deploy_config.py` and `aidlc_board.py --check` pass after each commit.
-- **Not verified here:** the `e2e` job on GitHub, and the scenario on PostgreSQL 17. The sandbox refused to run a
-  downloaded PostgreSQL binary, so the database is SQLite. The bolt's "three consecutive CI runs" criterion needs a push
-  and a human to check the runs.
+- **Not verified here (18 Nov):** the `e2e` job on GitHub, and the scenario on PostgreSQL 17. The sandbox refused to
+  run a downloaded PostgreSQL binary, so the database is SQLite. The bolt's "three consecutive CI runs" criterion needs a
+  push and a human to check the runs.
+- **Verified in CI (22 Nov, after unit 7):** the `e2e` job, on PostgreSQL 17, passed three consecutive runs of the same
+  commit (`d9688b4`, pull request #124): runs [1](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/1), [2](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/2), [3](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/3). Every other job passed in each run too. Locally, the scenario
+  also passed on PostgreSQL 16 against staging's production settings
+  ([rehearsal](../../testing/mvp-scenario.md#against-production-settings-staging-rehearsal-22-nov)).
 
 ## Review
 
