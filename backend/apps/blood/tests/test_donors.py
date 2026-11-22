@@ -192,3 +192,73 @@ def test_donor_cannot_hold_two_upcoming_appointments(staff):
 def test_unit_collected_in_the_future_is_refused(staff):
     res = register_unit(staff, "U1", None, days_ago=-2)
     assert res.status_code == 400 and "collectedAt" in res.json()
+
+
+# ── Access (B11): donors are personal data, so only admin and blood bank may use them ───────────
+
+
+@pytest.mark.parametrize("role", [Role.DOCTOR, Role.NURSE, Role.PHARMACIST])
+def test_donor_endpoints_are_closed_to_roles_without_the_donors_module(client_as, role):
+    donor()
+    appointment = DonationAppointment.objects.create(
+        donor=Donor.objects.get(), starts_at=next_slot(), hospital=None
+    )
+    client = client_as(role)
+    assert client.get(reverse("blood-donors")).status_code == 403
+    assert client.post(reverse("blood-donors"), NEW_DONOR, format="json").status_code == 403
+    assert client.get(reverse("blood-donor", args=["DNR-00001"])).status_code == 403
+    screening = reverse("blood-donor-screening", args=["DNR-00001"])
+    assert client.post(screening, {"eligible": True}, format="json").status_code == 403
+    assert client.get(reverse("blood-appointments")).status_code == 403
+    assert book(client, "DNR-00001", next_slot(days=5)).status_code == 403
+    assert client.post(reverse("blood-appointment-cancel", args=[appointment.pk])).status_code == 403
+    appointment.refresh_from_db()
+    assert appointment.status == "booked"
+
+
+def test_blood_bank_can_use_every_donor_endpoint(staff):
+    donor()
+    assert staff.get(reverse("blood-donors")).status_code == 200
+    assert staff.get(reverse("blood-donor", args=["DNR-00001"])).status_code == 200
+    screening = reverse("blood-donor-screening", args=["DNR-00001"])
+    assert staff.post(screening, {"eligible": True}, format="json").status_code == 200
+    assert staff.get(reverse("blood-appointments")).status_code == 200
+    appointment_id = book(staff, "DNR-00001", next_slot()).json()["id"]
+    assert staff.post(reverse("blood-appointment-cancel", args=[appointment_id])).status_code == 200
+
+
+# ── Booking across hospitals (B11) ──────────────────────────────────────────────────────────────
+
+
+def test_staff_cannot_book_a_donor_from_another_hospital(client_as, make_hospital):
+    mine, theirs = make_hospital("Mine"), make_hospital("Theirs")
+    donor(hospital=theirs)
+    res = book(client_as(Role.BLOOD_BANK, hospital=mine), "DNR-00001", next_slot())
+    assert res.status_code == 403
+    assert DonationAppointment.objects.count() == 0
+
+
+def test_staff_cannot_screen_or_cancel_at_another_hospital(client_as, make_hospital):
+    mine, theirs = make_hospital("Mine"), make_hospital("Theirs")
+    d = donor(hospital=theirs)
+    appointment = DonationAppointment.objects.create(donor=d, hospital=theirs, starts_at=next_slot())
+    other = client_as(Role.BLOOD_BANK, hospital=mine)
+    screening = reverse("blood-donor-screening", args=["DNR-00001"])
+    assert other.post(screening, {"eligible": True}, format="json").status_code == 403
+    assert other.post(reverse("blood-appointment-cancel", args=[appointment.pk])).status_code == 403
+    appointment.refresh_from_db()
+    assert appointment.status == "booked"
+
+
+def test_admin_can_book_a_donor_at_any_hospital(client_as, make_hospital):
+    mine, theirs = make_hospital("Mine"), make_hospital("Theirs")
+    donor(hospital=theirs)
+    assert book(client_as(Role.ADMIN, hospital=mine), "DNR-00001", next_slot()).status_code == 201
+
+
+def test_donor_and_booking_say_which_hospital_they_belong_to(client_as, make_hospital):
+    here = make_hospital("Here")
+    staff = client_as(Role.BLOOD_BANK, hospital=here)
+    created = staff.post(reverse("blood-donors"), NEW_DONOR, format="json").json()
+    assert created["hospitalId"] == here.pk
+    assert book(staff, created["id"], next_slot()).json()["hospitalId"] == here.pk

@@ -1,10 +1,14 @@
 import { apiGet, apiPost } from './client'
+import type { Trip } from './trips'
 
 /** Where a transfer stands (stories #47 to #49). The names match TRANSFER_LIFECYCLE in backend/apps/transfers/models.py. */
 export type TransferStatus = 'requested' | 'approved' | 'dispatched' | 'inTransit' | 'delivered' | 'rejected' | 'cancelled'
 
 /** A move along the transfer lifecycle. `startTransit` is "Mark in transit"; `deliver` is "Confirm receipt". */
 export type TransferAction = 'approve' | 'reject' | 'dispatch' | 'startTransit' | 'deliver' | 'cancel'
+
+/** A move the page offers: a lifecycle move, or `dispatchAmbulance`, which sends an ambulance (story #51). */
+export type TransferMove = TransferAction | 'dispatchAmbulance'
 
 export type TransferResourceType = 'blood' | 'equipment'
 
@@ -47,12 +51,16 @@ export interface Transfer {
   status: TransferStatus
   /** Why it was rejected or cancelled. Empty otherwise. */
   reason: string
+  /** The latest trip carrying this transfer, or null (story #51). */
+  trip: Trip | null
+  /** Estimated minutes from the supplier to the receiver. The trip's ETA is fixed when it is dispatched. */
+  etaMinutes: number
   /** The person who asked, or their email if they have no name. */
   requestedBy: string
   createdAt: string
   history: TransferHistoryEntry[]
   /** The moves the signed-in user may make now. The page shows only these, as buttons. */
-  actions: TransferAction[]
+  actions: TransferMove[]
 }
 
 export const TRANSFER_STATUS_LABEL: Record<TransferStatus, string> = {
@@ -65,13 +73,14 @@ export const TRANSFER_STATUS_LABEL: Record<TransferStatus, string> = {
   cancelled: 'Cancelled',
 }
 
-export const TRANSFER_ACTION_LABEL: Record<TransferAction, string> = {
+export const TRANSFER_ACTION_LABEL: Record<TransferMove, string> = {
   approve: 'Approve',
   reject: 'Reject',
   dispatch: 'Mark dispatched',
   startTransit: 'Mark in transit',
   deliver: 'Confirm receipt',
   cancel: 'Cancel transfer',
+  dispatchAmbulance: 'Dispatch ambulance',
 }
 
 /** Transfers the user's hospital is part of (admins: the whole network), newest first. GET /api/transfers/. */

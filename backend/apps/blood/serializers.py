@@ -136,12 +136,13 @@ class DonorSerializer(serializers.ModelSerializer):
     eligible = serializers.SerializerMethodField()
     ineligibleReason = serializers.SerializerMethodField()
     eligibleFrom = serializers.SerializerMethodField()
+    hospitalId = serializers.IntegerField(source="hospital_id", read_only=True, allow_null=True)
 
     class Meta:
         model = Donor
         fields = [
             "id", "fullName", "bloodGroup", "phone", "email",
-            "lastDonationAt", "eligible", "ineligibleReason", "eligibleFrom",
+            "lastDonationAt", "eligible", "ineligibleReason", "eligibleFrom", "hospitalId",
         ]  # fmt: skip
 
     def _eligibility(self, donor):
@@ -183,10 +184,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
     donorName = serializers.CharField(source="donor.full_name", read_only=True)
     startsAt = serializers.DateTimeField(source="starts_at")
     slotMinutes = serializers.SerializerMethodField()
+    # Read-only: which hospital's slot a booking holds (admins see every hospital's bookings).
+    hospitalId = serializers.IntegerField(source="hospital_id", read_only=True, allow_null=True)
 
     class Meta:
         model = DonationAppointment
-        fields = ["id", "donorId", "donorName", "startsAt", "slotMinutes", "status"]
+        fields = ["id", "donorId", "donorName", "startsAt", "slotMinutes", "status", "hospitalId"]
         read_only_fields = ["id", "status"]
 
     def get_slotMinutes(self, appointment):

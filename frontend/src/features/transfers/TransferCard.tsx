@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { TRANSFER_ACTION_LABEL, TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferDirection } from '../../api/transfers'
+import { TRANSFER_ACTION_LABEL, TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferDirection, type TransferMove } from '../../api/transfers'
+import type { Trip, TripAction } from '../../api/trips'
 import { TextField } from '../../components/form/TextField'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { withMinus } from '../emergencies/emergencies'
 import { formatClock, formatShortDate } from '../../lib/time'
+import { DispatchAmbulanceForm } from './DispatchAmbulanceForm'
 import { describeTransferMove, TRANSFER_TONE } from './transfers'
+import { TripPanel } from './TripPanel'
 import styles from './Transfers.module.css'
 
 /** The two moves that ask for a reason first: a rejection needs one, a cancellation may have one. */
 type ReasonAction = Extract<TransferAction, 'reject' | 'cancel'>
 
-const isReasonAction = (action: TransferAction): action is ReasonAction => action === 'reject' || action === 'cancel'
+const isReasonAction = (action: TransferMove): action is ReasonAction => action === 'reject' || action === 'cancel'
 
 const REJECT_REASON_REQUIRED = 'Say why this request is rejected.'
 
@@ -22,6 +25,10 @@ type CardProps = {
   busy: boolean
   /** Move the transfer; the page saves it and shows the server's copy. */
   onAction: (transfer: Transfer, action: TransferAction, extra?: { reason?: string }) => void
+  /** Send an available ambulance to carry the transfer. Resolves true when it was sent. */
+  onDispatch: (transfer: Transfer, ambulanceId: number) => Promise<boolean>
+  /** Make one step of the transfer's trip. */
+  onTripStep: (transfer: Transfer, trip: Trip, action: TripAction) => void
   /** Put focus on the heading, so keyboard users land on the card after a move that replaced its buttons. */
   focus: boolean
 }
@@ -31,13 +38,15 @@ type CardProps = {
  * and the moves the server allows the user now, as buttons. Reject and cancel ask for a reason first; confirming receipt
  * asks first too.
  */
-export function TransferCard({ transfer, direction, busy, onAction, focus }: CardProps) {
+export function TransferCard({ transfer, direction, busy, onAction, onDispatch, onTripStep, focus }: CardProps) {
   const [reasonFor, setReasonFor] = useState<ReasonAction>()
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string>()
+  const [dispatching, setDispatching] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const headingId = `transfer-${transfer.id}-title`
   const incoming = direction === 'incoming'
+  const trip = transfer.trip
   const asked = new Date(transfer.createdAt)
   // Confirming receipt belongs to the outgoing transfer the user's hospital asked for. An admin is offered it on any card.
   const moves = transfer.actions.filter((action) => action !== 'deliver' || !incoming)
@@ -57,6 +66,17 @@ export function TransferCard({ transfer, direction, busy, onAction, focus }: Car
       return
     }
     onAction(transfer, action)
+  }
+
+  /** One of the card's buttons: dispatching opens the ambulance choice, a reason is asked first, the rest act now. */
+  function choose(action: TransferMove) {
+    if (action === 'dispatchAmbulance') {
+      setDispatching(true)
+    } else if (isReasonAction(action)) {
+      openReason(action)
+    } else {
+      perform(action)
+    }
   }
 
   function submitReason(event: FormEvent, action: ReasonAction) {
@@ -130,6 +150,8 @@ export function TransferCard({ transfer, direction, busy, onAction, focus }: Car
         </dd>
       </dl>
 
+      {trip && <TripPanel trip={trip} busy={busy} onStep={(action) => onTripStep(transfer, trip, action)} />}
+
       <details className={styles.history}>
         <summary>History</summary>
         <ol className={styles.timeline}>
@@ -176,6 +198,12 @@ export function TransferCard({ transfer, direction, busy, onAction, focus }: Car
             </button>
           </div>
         </form>
+      ) : dispatching ? (
+        <DispatchAmbulanceForm
+          transfer={transfer}
+          onDispatch={(ambulanceId) => onDispatch(transfer, ambulanceId)}
+          onClose={() => setDispatching(false)}
+        />
       ) : moves.length > 0 ? (
         <div className={styles.actions}>
           {moves.map((action) => (
@@ -185,7 +213,7 @@ export function TransferCard({ transfer, direction, busy, onAction, focus }: Car
               className={styles.button}
               disabled={busy}
               aria-label={`${TRANSFER_ACTION_LABEL[action]} (transfer #${transfer.id})`}
-              onClick={() => (isReasonAction(action) ? openReason(action) : perform(action))}
+              onClick={() => choose(action)}
             >
               {TRANSFER_ACTION_LABEL[action]}
             </button>

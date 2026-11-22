@@ -23,6 +23,8 @@ from .serializers import (
 )
 
 BloodAccess = module_permission("blood")
+# Donors are personal data, so they have their own module: admin and blood bank only (B11).
+DonorAccess = module_permission("donors")
 
 
 def conflict(exc):
@@ -135,7 +137,7 @@ class BloodStockView(APIView):
 class DonorListView(APIView):
     """GET /api/blood/donors/?q=… (name, code or phone) · POST registers a donor (story #20)."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def get(self, request):
         donors = own_hospital(Donor.objects.all(), request.user)
@@ -155,7 +157,7 @@ class DonorListView(APIView):
 class DonorDetailView(APIView):
     """GET /api/blood/donors/<id>/ → the donor, their eligibility and their units."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def get(self, request, donor_id):
         donor = get_object_or_404(own_hospital(Donor.objects.all(), request.user), code=donor_id)
@@ -169,7 +171,7 @@ class DonorDetailView(APIView):
 class DonorScreeningView(APIView):
     """POST /api/blood/donors/<id>/screening/ {eligible, reason?, deferredUntil?} (story #21)."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def post(self, request, donor_id):
         donor = get_object_or_404(Donor, code=donor_id)
@@ -184,9 +186,9 @@ class DonorScreeningView(APIView):
 
 
 class AppointmentListView(APIView):
-    """GET /api/blood/appointments/?from=YYYY-MM-DD (upcoming by default) · POST books one (story #22)."""
+    """GET /api/blood/appointments/ (upcoming; ?all=true for all) · POST books one (story #22)."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def get(self, request):
         appointments = own_hospital(DonationAppointment.objects.select_related("donor"), request.user)
@@ -205,7 +207,7 @@ class AppointmentListView(APIView):
 class AppointmentCancelView(APIView):
     """POST /api/blood/appointments/<id>/cancel/"""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def post(self, request, appointment_id):
         appointment = get_object_or_404(DonationAppointment, pk=appointment_id)
