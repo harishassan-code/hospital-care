@@ -14,7 +14,7 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 | Bolt | Title | Issues | Pts | Priority | Depends on | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| [B00](B00-scrum-records-catch-up.md) | Scrum records catch-up before the preliminary review | [#2](https://github.com/harishassan-code/hospital-care/issues/2) | 2 | highest | – | _unassigned_ | 🟢 Ready |
+| [B00](B00-scrum-records-catch-up.md) | Scrum records catch-up before the preliminary review | [#2](https://github.com/harishassan-code/hospital-care/issues/2) | 2 | highest | – | Kabir-Raj-01 | 🔵 In Review |
 | [B01](B01-transfer-request.md) | Inter-hospital transfer request | [#47](https://github.com/harishassan-code/hospital-care/issues/47) | 5 | highest | – | codewithalphadotcom | ✅ Done |
 | [B02](B02-transfer-tracking.md) | Transfer tracking | [#48](https://github.com/harishassan-code/hospital-care/issues/48) | 5 | high | B01 | codewithalphadotcom | ✅ Done |
 | [B03](B03-delivery-confirmation.md) | Delivery confirmation | [#49](https://github.com/harishassan-code/hospital-care/issues/49) | 3 | high | B02 | codewithalphadotcom | ✅ Done |
@@ -51,4 +51,4 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 ## Progress
 
-⚪ Backlog: 1 · 🟢 Ready: 1 · 🟡 In Progress: 1 · 🔵 In Review: 13 · ✅ Done: 3
+⚪ Backlog: 1 · 🟢 Ready: 0 · 🟡 In Progress: 1 · 🔵 In Review: 14 · ✅ Done: 3
