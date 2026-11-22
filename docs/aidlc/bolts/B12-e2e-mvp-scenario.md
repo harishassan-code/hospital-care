@@ -6,8 +6,8 @@ points: 5
 priority: highest
 sprint: 9
 depends_on: B03
-owner: unassigned
-status: Backlog
+owner: Krrishna
+status: In Review
 ---
 
 # B12 · End-to-end MVP scenario test
