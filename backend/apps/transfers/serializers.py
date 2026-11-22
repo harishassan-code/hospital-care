@@ -3,12 +3,18 @@ The case detail (apps.emergencies) lists the same shape, so it imports this modu
 
 from rest_framework import serializers
 
+from apps.ambulances.serializers import TripSerializer
+from apps.ambulances.services import may_dispatch_trip, trip_eta_minutes
 from apps.emergencies.serializers import need_label
 from apps.hospitals.models import Hospital
 from apps.matching.reservations import resource_label
 
 from .models import Transfer, TransferStatus
 from .services import actions_for
+
+# Story #51: the move that sends an ambulance. It is offered here, not in actions_for, which lists the
+# transfer's moves.
+DISPATCH_AMBULANCE = "dispatchAmbulance"
 
 MAX_NOTE = 500
 ACTIONS = ("approve", "reject", "dispatch", "startTransit", "deliver", "cancel")
@@ -55,6 +61,7 @@ class TransferSerializer(serializers.Serializer):
         holds = list(transfer.reservations.all())
         requester = transfer.requested_by
         user = self.context.get("user")
+        trips = list(transfer.trips.all())  # newest first, as the prefetch orders them
         return {
             "id": transfer.pk,
             "case": {"reference": case.reference, "severity": case.severity},
@@ -68,6 +75,8 @@ class TransferSerializer(serializers.Serializer):
             "resources": [resource_label(hold.resource) for hold in holds],
             "status": transfer.status,
             "reason": transfer.reason,
+            "trip": TripSerializer(trips[0], context=self.context).data if trips else None,
+            "etaMinutes": trip_eta_minutes(transfer.supplier, transfer.receiver),
             "requestedBy": requester.get_full_name() or requester.email,
             "createdAt": serializers.DateTimeField().to_representation(transfer.created_at),
             "history": [
@@ -81,5 +90,16 @@ class TransferSerializer(serializers.Serializer):
                 }
                 for change in transfer.history.all()
             ],
-            "actions": actions_for(user, transfer) if user is not None else [],
+            "actions": self._actions(user, transfer),
         }
+
+    @staticmethod
+    def _actions(user, transfer: Transfer) -> list[str]:
+        """The moves the user may make now. An approved transfer also offers dispatching an ambulance, to the
+        supplier's staff who may edit ambulances there."""
+        if user is None:
+            return []
+        actions = actions_for(user, transfer)
+        if transfer.status == TransferStatus.APPROVED and may_dispatch_trip(user, transfer):
+            actions.append(DISPATCH_AMBULANCE)
+        return actions

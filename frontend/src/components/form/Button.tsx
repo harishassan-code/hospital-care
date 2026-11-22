@@ -10,12 +10,13 @@ type ButtonProps = {
   pending?: boolean
   /** Shown instead of children while pending, e.g. "Logging in…" */
   pendingLabel?: string
+  disabled?: boolean
   onClick?: () => void
 }
 
-export function Button({ children, type = 'submit', pending = false, pendingLabel, onClick }: ButtonProps) {
+export function Button({ children, type = 'submit', pending = false, pendingLabel, disabled = false, onClick }: ButtonProps) {
   return (
-    <button type={type} className={styles.button} disabled={pending} aria-busy={pending} onClick={onClick}>
+    <button type={type} className={styles.button} disabled={pending || disabled} aria-busy={pending} onClick={onClick}>
       {pending && pendingLabel ? pendingLabel : children}
     </button>
   )

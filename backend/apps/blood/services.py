@@ -181,6 +181,21 @@ def stock_summary(units, *, near_expiry_days: int, low_stock_units: int, now=Non
     }
 
 
+# Red-cell minimum per group (story #55). A copy of MINIMUM_STOCK.redCells in frontend/src/api/blood.ts:
+# change both together. Ceiling: two copies; move them into one JSON file if they drift.
+RED_CELL_MINIMUM = {"O-": 6, "O+": 30, "A-": 4, "A+": 20, "B-": 4, "B+": 30, "AB-": 2, "AB+": 8}
+
+
+def stock_level(count: int, minimum: int) -> str:
+    """'critical' below half the minimum, 'low' below the minimum, otherwise 'ok'. The same rule as stockLevel
+    in frontend/src/features/blood/blood.ts."""
+    if count < minimum / 2:
+        return "critical"
+    if count < minimum:
+        return "low"
+    return "ok"
+
+
 # ── Donors (stories #20, #21) ─────────────────────────────────────────────────────────────────────
 
 

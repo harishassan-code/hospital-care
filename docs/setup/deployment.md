@@ -117,3 +117,7 @@ The Render build runs `seed_demo` (it only adds data to empty tables), so stagin
 beds, blood units and one login per role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`,
 `patient@demo.citycare.pk`, password `CityCare-demo-1`). These accounts are public test logins: never put
 real patient data on staging.
+
+### Before a demo
+Run `python3 scripts/smoke_staging.py <vercel-url>` about 2 minutes before. It wakes the API and checks the health
+endpoint through the Vercel proxy and the home page. The demo itself follows [demo-script.md](demo-script.md).

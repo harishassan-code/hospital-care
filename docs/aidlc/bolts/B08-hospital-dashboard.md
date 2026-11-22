@@ -6,8 +6,8 @@ points: 3
 priority: high
 sprint: 8
 depends_on: B01
-owner: unassigned
-status: Backlog
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B08 · Hospital dashboard: requests, transfers and live refresh
