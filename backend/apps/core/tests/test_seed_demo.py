@@ -169,10 +169,3 @@ def test_scenario_stock_refuses_to_guess_when_no_o_neg_red_cell_can_be_used():
     o_neg_red_cells(main).delete()
     with pytest.raises(CommandError, match="--seed"):
         SeedCommand().seed_scenario_stock(main, timezone.now())
-
-
-def test_hospitals_option_scales_the_city():
-    call_command("seed_demo", hospitals=6, stdout=None)
-    assert Hospital.objects.count() == 6
-    assert Hospital.objects.filter(name__startswith="Synthetic City Hospital").count() == 3
-    assert BloodUnit.objects.filter(hospital__name="Synthetic City Hospital 006").exists()

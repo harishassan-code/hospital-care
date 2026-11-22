@@ -140,12 +140,6 @@ if not DEBUG:
     CSRF_COOKIE_SAMESITE = "None"
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    # Story #58: `check --deploy` clean. Render terminates TLS and forwards the scheme in the header above.
-    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "true").lower() == "true"
-    SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]  # Render's health check calls over plain http
-    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", str(60 * 60 * 24 * 30)))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
 
 # Blood bank rules (Sprint 3). Each can be overridden with an environment variable.
 BLOOD_NEAR_EXPIRY_DAYS = int(os.environ.get("BLOOD_NEAR_EXPIRY_DAYS", "3"))  # story #19

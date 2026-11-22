@@ -61,8 +61,8 @@ Mark each row **Pass** or **Fail** and add notes for anything that fails. A fail
 
 | # | Story | Steps | Expected | Pass/Fail | Notes |
 |---|---|---|---|---|---|
-| 28 | #58 Security | `python manage.py check --deploy` on staging | No warnings | | |
-| 29 | #58 Performance | `python scripts/load_test_search.py --base <staging>/api --requests 200` after `seed_demo --hospitals 50` | p95 recorded in `docs/testing/performance-report.md` | | |
+| 28 | #58 Security | `python manage.py check --deploy` on staging (B13, #108) | No warnings | | |
+| 29 | #58 Performance | The search load test from B13 (#108) on staging | p95 recorded for the final report | | |
 
 ## Sign-off
 
