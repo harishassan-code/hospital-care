@@ -43,12 +43,14 @@ the sprint review), and for the people the scenario plays:
 
 The bolt's two criteria, kept and made testable:
 
-- [ ] **The scenario runs in CI.** A job `e2e` in `.github/workflows/ci.yml` starts PostgreSQL 17, runs `migrate` and
+- [x] **The scenario runs in CI.** A job `e2e` in `.github/workflows/ci.yml` starts PostgreSQL 17, runs `migrate` and
       `seed_demo`, starts `runserver` and `vite preview`, and runs the Playwright scenario. Any failing step fails the job.
-      On failure the job uploads the Playwright report and traces.
+      On failure the job uploads the Playwright report and traces. *(22 Nov: green on pull request #124, runs [1](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/1), [2](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/2), [3](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/3),
+      and on `main` after the merge.)*
 - [x] **The scenario covers every MVP acceptance criterion in the proposal (§23).** The eleven numbered criteria in
       `docs/product/source/CityCare_Project_Proposal.docx`, section 23, each map to a step of the scenario (see the mapping
       table). Three are partial, with the reason stated there. None is left out. Each step title starts with its §23 number.
+      *(22 Nov: two are partial now. §23.10 is Covered since construction unit 7 moved S12 to the in-app audit log.)*
 
 Added so the two criteria can be checked:
 
@@ -56,7 +58,8 @@ Added so the two criteria can be checked:
 - [x] Every number the scenario checks is read from the app during the run. The scenario asserts its seed preconditions
       (Design, Preconditions) and fails with a message that names the precondition. It never skips.
 - [x] The scenario uses only the browser and the seeded logins from README "Signing in". It adds no test-only endpoints.
-- [ ] The scenario is green on three consecutive CI runs of the same commit before the bolt is set to Done.
+- [x] The scenario is green on three consecutive CI runs of the same commit before the bolt is set to Done.
+      *(Commit `d9688b4`, pull request #124: runs [1](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/1), [2](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/2), [3](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/3).)*
 - [x] No real patient data, names or secrets are added. The demo password is the one already published in the README.
 
 ## Non-goals

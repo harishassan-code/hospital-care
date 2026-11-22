@@ -7,7 +7,7 @@ priority: highest
 sprint: 9
 depends_on: B03
 owner: harishassan-code
-status: In Review
+status: Done
 ---
 
 # B12 · End-to-end MVP scenario test
@@ -18,8 +18,9 @@ status: In Review
 
 [#57](https://github.com/harishassan-code/hospital-care/issues/57): Automate the MVP acceptance scenario.
 
-- [ ] Scenario runs in CI
-- [ ] Covers every MVP acceptance criterion in the proposal (§23)
+- [x] Scenario runs in CI: the `e2e` job, green on three consecutive runs of one commit ([1](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/1), [2](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/2), [3](https://github.com/harishassan-code/hospital-care/actions/runs/45059846515/attempts/3))
+- [x] Covers every MVP acceptance criterion in the proposal (§23): mapped step by step in
+      [mvp-scenario.md](../../testing/mvp-scenario.md#what-23-each-step-covers); 2 and 4 partly, with the rest in unit tests
 
 ## Build on
 
@@ -40,8 +41,8 @@ status: In Review
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-e2e-mvp-scenario.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-e2e-mvp-scenario.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [x] Inception spec [`docs/aidlc/inception/2026-11-18-e2e-mvp-scenario.md`](../inception/2026-11-18-e2e-mvp-scenario.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-e2e-mvp-scenario.md`](../construction/2026-11-18-e2e-mvp-scenario.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met (last change: #124)
 - [ ] Operations notes `docs/aidlc/operations/<date>-e2e-mvp-scenario.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed (#57)
