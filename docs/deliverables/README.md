@@ -12,8 +12,8 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 | Product backlog (initial) | [product/backlog.md](../product/backlog.md) + GitHub Project | ✅ Done |
 | Release plan / timeline | [scrum/timeline.md](../scrum/timeline.md) | ✅ Done |
 | Working agreement, DoR, DoD | [scrum/working-agreement.md](../scrum/working-agreement.md) | ✅ Done |
-| Architecture & ERD | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
-| UI wireframes | [architecture/](../architecture/README.md) | 🟡 Sprint 1 |
+| Architecture & ERD | [architecture/](../architecture/README.md) | ✅ Done (#3, closed 19 Oct) |
+| UI wireframes | [architecture/](../architecture/README.md) | ✅ Done (#4, closed 19 Oct) |
 | Test report: Authentication & Role-Based Access module (class assignment) | [testing/authentication-test-report.md](../testing/authentication-test-report.md) | ✅ Done |
 | AIDLC process (Inception/Construction/Operations + templates) | [aidlc/](../aidlc/README.md) | ✅ Done |
 | AIDLC bolt board (remaining work, Sprints 7–9) | [aidlc/bolts/](../aidlc/bolts/README.md) | ⏳ Ongoing |

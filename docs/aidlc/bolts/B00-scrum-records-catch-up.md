@@ -22,7 +22,7 @@ From [#2](https://github.com/harishassan-code/hospital-care/issues/2) and the [F
 - [x] `docs/deliverables/sprint-02/` … `sprint-07/` exist with planning, review and retrospective, from the
       [templates](../../deliverables/templates/). Use the merged PRs, closed issues and the board history as evidence;
       write what actually happened, including what slipped.
-- [x] Sprint 1 review and retrospective filled in (both are still ⏳ in the index)
+- [x] Sprint 1 review and retrospective filled in
 - [x] Velocity table in [docs/scrum/timeline.md](../../scrum/timeline.md#velocity-check) filled in for sprints 1–7
 - [x] Delivered issues closed after a check against their acceptance criteria: #26, #30, #32 and #37–#46
       shipped in #100 and were closed on 17 Nov with a comment linking the evidence
