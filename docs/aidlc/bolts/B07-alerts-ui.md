@@ -6,8 +6,8 @@ points: 3
 priority: medium
 sprint: 8
 depends_on: B06
-owner: unassigned
-status: Backlog
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B07 · In-app alerts UI

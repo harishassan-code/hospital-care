@@ -212,3 +212,17 @@
 .caseTransferTop strong {
   margin-right: auto;
 }
+
+/* ── Trip (story #51): the ambulance on a transfer ─────────────────────────────────────────── */
+
+.trip {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--ink);
+}
+
+.tripTitle {
+  margin: 0;
+  font-size: var(--text-base);
+}

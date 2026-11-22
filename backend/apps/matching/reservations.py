@@ -18,9 +18,10 @@ from django.utils import timezone
 from apps.audit.services import record
 from apps.blood.models import BloodUnit, Component
 from apps.emergencies.models import EmergencyRequest, RequestItem, RequestStatus, ResourceType
-from apps.emergencies.services import move_case
+from apps.emergencies.services import case_path, move_case
 from apps.equipment.models import Equipment
 from apps.hospitals.models import Bed
+from apps.notifications.services import notify
 from apps.operating_rooms.models import OperatingRoom
 from apps.resources.services import change_status
 from apps.resources.state_machine import TransitionNotAllowed
@@ -145,6 +146,15 @@ def reserve(item: RequestItem, *, hospital, quantity: int, actor) -> list[Reserv
         )
         reservations.append(reservation)
 
+    if hospital.pk == case.hospital_id:
+        notify(
+            "reservation.created",
+            hospital=hospital,
+            module="emergencies",
+            message=f"{len(reservations)} reserved for {case.reference} at {hospital.name}.",
+            link=case_path(case),
+            actor=actor,
+        )
     if case.status == RequestStatus.OPEN:
         move_case(case, "startMatching", note=f"Stock reserved at {hospital.name}", actor=None, at=now)
     return reservations
@@ -174,6 +184,16 @@ def _end(hold: Reservation, *, status: str, actor, reason: str, now) -> Reservat
         after={"status": status},
         reason=reason,
     )
+    case = hold.request_item.request
+    if hold.hospital_id == case.hospital_id:  # a hold at another hospital (a transfer's) notifies nobody
+        notify(
+            f"reservation.{status}",
+            hospital=case.hospital,
+            module="emergencies",
+            message=f"A hold for {case.reference} was {status}.",
+            link=case_path(case),
+            actor=actor,
+        )
     return hold
 
 
