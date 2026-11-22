@@ -6,8 +6,8 @@ points: 5
 priority: low
 sprint: stretch
 depends_on: B01
-owner: unassigned
-status: Backlog
+owner: Krrishna
+status: In Review
 ---
 
 # B17 · Patient transfer: need check, destination and arrival

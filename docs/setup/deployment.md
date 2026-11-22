@@ -74,8 +74,50 @@ The free Render plan has no scheduled jobs, so the API releases expired holds it
 candidates or a reservation endpoint. A scheduler can run the same release with
 `python manage.py release_expired_reservations`, which prints how many holds it released.
 
+### HTTPS and deploy checks (B13)
+With `DJANGO_DEBUG=false` (staging), the app:
+
+- **refuses to start without `DJANGO_SECRET_KEY`**. Render generates the key (`generateValue` in `render.yaml`).
+  Set a long random value (50 characters or more) by hand if you run the app anywhere else.
+- **redirects plain HTTP to HTTPS** and sends `Strict-Transport-Security`. `/api/health/` is exempt, so Render's health
+  check still passes. `DJANGO_HSTS_SECONDS` sets the HSTS length (default `3600`). Raise it to `31536000` after a week of
+  HTTPS-only staging, since browsers cache it. Preload is off.
+- sends the same HSTS header from the Vercel domain (`frontend/vercel.json`, `max-age=3600; includeSubDomains`). Change
+  both when you change the length.
+- does **not** route the Django admin at `/admin/` (it answers 404). The demo `admin@` login is a superuser, and its
+  password is public in this document, so the admin is left off on staging. Set `DJANGO_ADMIN_ENABLED=true` on Render
+  to route it, and back to `false` afterwards. Under `DJANGO_DEBUG=true` (local development) it is on.
+
+Check the settings with the same command CI runs (a dummy key, so nothing secret is needed):
+
+```bash
+cd backend
+DJANGO_DEBUG=false DJANGO_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(50))") \
+  python manage.py check --deploy --fail-level WARNING
+```
+
+It should print `System check identified no issues`. CI runs the same command on every push, and
+`apps/core/tests/test_deploy_settings.py` checks the settings too.
+
+### Sign-in and sign-up limits (B13)
+Sign-in and sign-up each allow a number of requests per client address per period. The defaults are 30 per minute for
+sign-in (`DJANGO_LOGIN_THROTTLE`) and 30 per hour for sign-up (`DJANGO_SIGNUP_THROTTLE`). Write a rate as `<count>/<period>`
+with the period `second`, `minute`, `hour` or `day`, or leave it empty to turn that limit off. A bad rate stops the server.
+The limits are generous because a hospital's computers often share one address. The per-account lockout after five
+failed sign-ins is separate, and unchanged.
+
+The address comes from `X-Forwarded-For` only through the proxies the deployment runs. `DJANGO_TRUSTED_PROXY_COUNT` is
+the number of them: Render's proxy is `1` in `render.yaml`. Local development uses `0`, which means `REMOTE_ADDR`. The
+value matters: too high lets a client choose its own address, and too low puts every user behind a proxy in one bucket.
+Staging traffic also passes through Vercel's `/api` proxy, which may add a hop. That is not verified. Check it before
+relying on the limit: from two different networks, a burst of sign-in attempts from one should not block the other.
+
 ### Demo data
 The Render build runs `seed_demo` (it only adds data to empty tables), so staging has the demo hospitals,
 beds, blood units and one login per role (`admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`,
 `patient@demo.citycare.pk`, password `CityCare-demo-1`). These accounts are public test logins: never put
 real patient data on staging.
+
+### Before a demo
+Run `python3 scripts/smoke_staging.py <vercel-url>` about 2 minutes before. It wakes the API and checks the health
+endpoint through the Vercel proxy and the home page. The demo itself follows [demo-script.md](demo-script.md).

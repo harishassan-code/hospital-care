@@ -1,6 +1,6 @@
 import type { BedType } from '../../api/beds'
 import { BLOOD_GROUPS, COMPONENTS, type BloodGroup, type Component } from '../../api/blood'
-import { ApiError } from '../../api/client'
+import { ApiError, fieldErrors } from '../../api/client'
 import type { EquipmentType } from '../../api/equipment'
 import { OR_CAPABILITIES, type OrCapability } from '../../api/operatingRooms'
 import {
@@ -10,9 +10,11 @@ import {
   type CaseAction,
   type CaseAllocation,
   type CaseInput,
+  type EmergencyCaseDetail,
   type HeldReservation,
   type CaseStatus,
   type Need,
+  type PatientTransfer,
   type Severity,
   type StatusChange,
 } from '../../api/emergencies'
@@ -134,20 +136,67 @@ export function groupHeld(holds: HeldReservation[]): HeldCaseGroup[] {
   return [...cases.values()]
 }
 
-/** One row of a case's timeline: a status move, or a resource handed over to the case (story #45). */
-export type TimelineEntry = { kind: 'move'; at: string; change: StatusChange } | { kind: 'allocation'; at: string; allocation: CaseAllocation }
+/**
+ * One row of a case's timeline: a status move, a resource handed over to the case (story #45), or a step of a patient
+ * transfer (B17): the request, or the arrival.
+ */
+export type TimelineEntry =
+  | { kind: 'move'; at: string; change: StatusChange }
+  | { kind: 'allocation'; at: string; allocation: CaseAllocation }
+  | { kind: 'transfer'; at: string; transfer: PatientTransfer; step: 'requested' | 'arrived' }
 
 /**
- * The status moves and the allocations of a case as one timeline, oldest first. The sort is stable and the allocations
- * come first, so an allocation shows before the status move it caused at the same moment. Compares real times, since
- * the server's timestamps vary in offset.
+ * The status moves, the allocations and the patient transfers of a case as one timeline, oldest first. The sort is
+ * stable and the allocations come first, so an allocation shows before the status move it caused at the same moment.
+ * Compares real times, since the server's timestamps vary in offset. A patient transfer adds its request, and its
+ * arrival when it has one. A cancelled transfer has only its request row: the server keeps no cancellation time, and
+ * the audit log has it.
  */
-export function timelineOf(history: StatusChange[], allocations: CaseAllocation[]): TimelineEntry[] {
+export function timelineOf(history: StatusChange[], allocations: CaseAllocation[], transfers: PatientTransfer[] = []): TimelineEntry[] {
   const entries: TimelineEntry[] = [
     ...allocations.map((allocation): TimelineEntry => ({ kind: 'allocation', at: allocation.at, allocation })),
     ...history.map((change): TimelineEntry => ({ kind: 'move', at: change.at, change })),
+    ...transfers.flatMap((transfer): TimelineEntry[] => {
+      const requested: TimelineEntry = { kind: 'transfer', at: transfer.requestedAt, transfer, step: 'requested' }
+      if (transfer.arrivedAt === null) return [requested]
+      return [requested, { kind: 'transfer', at: transfer.arrivedAt, transfer, step: 'arrived' }]
+    }),
   ]
   return entries.sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+}
+
+/** A patient transfer's line in the timeline: where the patient went, or that it arrived there from where it was. */
+export function describePatientTransfer(transfer: PatientTransfer, step: 'requested' | 'arrived'): string {
+  if (step === 'arrived') return `Arrived at ${transfer.to.name} from ${transfer.from.name}`
+  return transfer.status === 'cancelled' ? `Transfer to ${transfer.to.name} cancelled` : `Transfer to ${transfer.to.name} requested`
+}
+
+/**
+ * Why a patient transfer request or move didn't happen: the server's words for a 4xx (its `detail`, or its field
+ * messages), and a plain line for anything else, including a server that didn't answer.
+ */
+export function patientTransferFailure(error: unknown): string {
+  if (error instanceof ApiError && error.status !== 0 && error.status < 500) {
+    const messages = Object.values(fieldErrors(error))
+    return messages.length > 0 ? messages.join(' ') : 'Nothing changed. Check the details and try again.'
+  }
+  return 'The hospital’s system didn’t respond, so nothing changed. Try again.'
+}
+
+/** The statuses that still take stock, and so a patient can be moved from (the server's RESERVABLE, story #43). */
+export const MOVABLE_STATUSES: readonly CaseStatus[] = ['open', 'matching', 'partiallyFulfilled', 'escalated']
+
+/** The transfer on its way, if the case has one (B17): at most one at a time. */
+export function openTransferOf(kase: Pick<EmergencyCaseDetail, 'patientTransfers'>): PatientTransfer | undefined {
+  return kase.patientTransfers.find((transfer) => transfer.status === 'requested')
+}
+
+/**
+ * Whether "Transfer patient" can be offered on this case: it has a hospital, something is short, its status takes stock,
+ * and no transfer is on its way. The server decides the same and gives the reason when it refuses.
+ */
+export function canMovePatient(kase: Pick<EmergencyCaseDetail, 'hospital' | 'shortfallTotal' | 'status' | 'patientTransfers'>): boolean {
+  return kase.hospital !== null && kase.shortfallTotal > 0 && MOVABLE_STATUSES.includes(kase.status) && !openTransferOf(kase)
 }
 
 /** One row of the "What's needed" step. `quantity` is the raw input text; `key` stays stable as rows come and go. */

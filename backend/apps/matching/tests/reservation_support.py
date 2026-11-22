@@ -2,8 +2,11 @@
 holds."""
 
 import itertools
+import threading
+from collections.abc import Callable
 from datetime import timedelta
 
+from django.db import connection
 from django.utils import timezone
 
 from apps.accounts.models import Role
@@ -122,3 +125,27 @@ def hold(item, resource, *, hospital, actor, status=ReservationStatus.HELD, expi
 def status_of(obj) -> str:
     obj.refresh_from_db()
     return obj.status
+
+
+def fire_together(attempts: list[Callable[[], object]]) -> list[object]:
+    """Run each attempt in its own thread, all released at once. Returns what each one got: its holds, or the
+    exception it raised. Each thread closes its own connection when it is done."""
+    barrier = threading.Barrier(len(attempts))
+    results: list[object] = [None] * len(attempts)
+
+    def run(index: int, attempt: Callable[[], object]) -> None:
+        try:
+            barrier.wait(timeout=30)
+            results[index] = attempt()
+        except Exception as exc:  # the test reads what each thread got, so it must not escape the thread
+            results[index] = exc
+        finally:
+            connection.close()
+
+    threads = [threading.Thread(target=run, args=(i, attempt)) for i, attempt in enumerate(attempts)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=120)
+    assert not any(thread.is_alive() for thread in threads), "a reservation hung"
+    return results

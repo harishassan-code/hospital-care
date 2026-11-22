@@ -14,9 +14,9 @@ already does); the cookie is set by `login`, `signup`, `me` and `csrf`.
 | Method | Path | Who | Body | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/auth/csrf/` | anyone | – | 200, sets `csrftoken` cookie | – |
-| POST | `/auth/login/` | anyone | `{email, password}` | 200 `User` | 400 bad input (email > 254 or password > 512 characters), 401 wrong email/password (same message for both), 429 after 5 failed attempts on the account (locked 15 min) |
+| POST | `/auth/login/` | anyone | `{email, password}` | 200 `User` | 400 bad input (email > 254 or password > 512 characters), 401 wrong email/password (same message for both), 429 after 5 failed attempts on the account (locked 15 min), 429 when one client address exceeds `DJANGO_LOGIN_THROTTLE` (default 30/min; B13, F4) |
 | POST | `/auth/logout/` | anyone | – | 204 | 403 if CSRF header missing |
-| POST | `/auth/signup/` | anyone | `{full_name, email, phone?, password}` | 201 `User` (always a patient) | 400 `{email: [...]}` taken, 400 `{password: [...]}` weak |
+| POST | `/auth/signup/` | anyone | `{full_name, email, phone?, password}` | 201 `User` (always a patient) | 400 `{email: [...]}` taken, 400 `{password: [...]}` weak, 429 when one client address exceeds `DJANGO_SIGNUP_THROTTLE` (default 30/hour; B13, F4) |
 | GET | `/auth/me/` | signed in | – | 200 `User` | 403 when signed out |
 
 `User` = `{id, email, fullName, phone, role, isStaff}`; `role` is one of `admin`, `doctor`, `nurse`,
@@ -47,7 +47,8 @@ updated its stored status yet.
 
 Units need **blood: view** to read and **blood: edit** to change (admin, bloodBank). Donors and appointments need
 **donors: view** / **donors: edit** (admin, bloodBank; see [api-contracts](api-contracts.md#access-stories-12)). Staff only see
-and change their own hospital's units, donors and appointments (**403** otherwise). Every change is audit-logged.
+and change their own hospital's units, donors and appointments (**404** for another hospital's, B13; a donor is looked up the
+same way for an appointment or a unit's `donorId`). Every change is audit-logged.
 
 | Method | Path | Body | Success | Story |
 |---|---|---|---|---|
@@ -98,7 +99,10 @@ Appointment = { id: number, donorId: string, donorName: string, startsAt: string
   `python manage.py expire_blood_units` (schedule it hourly) and every time the stock view loads.
 - **Stock (#19):** only `available` units count. `low` is true below `BLOOD_LOW_STOCK_UNITS` (default 5).
   `nearExpiryDays` defaults to `BLOOD_NEAR_EXPIRY_DAYS` (3); 0–60, otherwise 400.
-- **Donors (#20):** synthetic identities only. A unit's group must match its donor's group (400 on `donorId`).
+- **Donors (#20):** synthetic identities only. A unit's group must match its donor's group (400 on `donorId`). A donor
+  registered at another hospital is **404** for both an appointment and a unit's `donorId`, the same reply as an
+  unknown code, so the response reveals neither the donor nor their donation history (B13, F1 and F2). Admins can use
+  any donor.
 - **Eligibility (#21):** a donor can't give again within `BLOOD_MIN_DONATION_INTERVAL_DAYS` (56). Units collected
   the same day count as one donation (components). Screening `{eligible: false}` needs a reason; no
   `deferredUntil` means a permanent deferral. `{eligible: true}` clears it.
@@ -924,6 +928,72 @@ Trip = {
   `transfer.inTransit`.
 - **Lists.** `GET /ambulances/` shows each ambulance's `trip`. Dispatch offers only available ambulances at the supplier
   (`?status=available&hospital=<supplier id>`).
+
+## Patient transfers (#63 to #65)
+
+A patient transfer moves a case's patient to another hospital. It's B17's, and it is also the case's ownership history: a
+case changes hospital only through an arrived row. Module `emergencies`: every role that sees emergencies may read; asking
+and confirming need edit (doctor, nurse, admin), and each move checks the hospital (see the table in
+[api-contracts.md](api-contracts.md#patient-transfers-b17-63-to-65)). Patients get 403. Shapes are in
+`frontend/src/api/emergencies.ts`.
+
+| Method | Path | Body | Success |
+|---|---|---|---|
+| POST | `/emergencies/<reference>/patient-transfer/` | `{destinationId, note?}` | 201 `PatientTransfer` |
+| GET | `/patient-transfers/?direction=incoming\|outgoing&status=` | – | 200 `PatientTransfer[]`, newest first |
+| POST | `/patient-transfers/<id>/actions/` | `{action: "arrive" \| "cancel", reason?}` | 200 `PatientTransfer`, after the move |
+
+The list is at the API root, `/api/patient-transfers/`. The case route `emergencies/<reference>/` would otherwise match it.
+
+```ts
+PatientTransfer = {
+  id: number,
+  reference: string,
+  severity: string,
+  status: 'requested' | 'arrived' | 'cancelled',
+  from: { id: number, name: string },     // the sending hospital
+  to: { id: number, name: string },       // the receiving hospital
+  needs: string[],                        // the case's needs as labels: "A+ red cells", "ICU bed"
+  match: HospitalMatch,                   // the destination's #42 entry as it stood when it was requested
+  requestedBy: string,
+  requestedAt: string,
+  arrivedBy: string | null,
+  arrivedAt: string | null,
+  note: string,                           // why the move was requested
+  reason: string,                         // why it was cancelled
+  actions: ('arrive' | 'cancel')[]        // what this user may do now
+}
+```
+
+It never carries the patient reference, stock or holds.
+
+- **Need check (#63).** The case detail gains `transferFlag`: true when the case is critical and at least one need is
+  short after local availability, with holds counted as local. It is worked out on read, never stored. Other severities
+  are false. The detail also gains `patientTransfers`: every transfer of the case, newest first.
+- **Asking (#64).** `destinationId` must be one of the hospitals in the case's `hospitals` list (#42). The row stores that
+  hospital's entry as it stands now. Nothing is reserved at the destination. Refused with **400**, and nothing saved:
+  - `{"destinationId": [...]}` for an unknown hospital, the case's own hospital, an inactive one, or one that isn't in the list.
+  - `{"detail": "..."}` when the case has no hospital, nothing is short, or the case can't take stock (closed, cancelled
+    or fulfilled).
+
+  A second open transfer for the case is **409**. The case must be visible to you (404 otherwise).
+- **Arrival (#65).** `arrive` in one transaction: the case's `hospital` becomes the receiving hospital; the unallocated
+  holds at the sending hospital are released (allocated ones stay); the case's requested stock transfers are cancelled;
+  the transfer is `arrived`, with who and when. The sending hospital gets **403**, and a hospital in neither role gets
+  **404**. A transfer that is no longer requested is **409** and nothing changes. So is a case with stock that is
+  approved, dispatched or in transit: `{"detail": "Stock for this case is still on its way: transfer #7 (approved). ..."}`.
+  The destination's stock is not checked again: the patient is already on the way.
+- **Cancel.** `cancel` is the sending hospital's and needs a `reason`. A blank one is **400** `{"reason": [...]}`. The
+  receiving hospital gets **403**; a transfer that is no longer requested is **409**. The case keeps its holds and its
+  stock transfers.
+- **Closing or cancelling the case** cancels its requested transfer in the same transaction, with the reason
+  `Case EC-… closed` (or `cancelled`).
+- **Visibility.** Incoming is where your hospital receives the patient; outgoing is where it sends it. Admins see all.
+  After arrival the case is in the receiving hospital's list and gone from the sending one, which still lists the transfer
+  as outgoing.
+- **Audit:** `patienttransfer.requested`, `patienttransfer.arrived` and `patienttransfer.cancelled`, each with the status
+  before and after, and `emergencyrequest.hospital_changed` with the hospital before and after. Arrival also writes
+  `reservation.released` for each hold it releases and `transfer.cancelled` for each stock transfer.
 
 ## Demo data
 
