@@ -102,7 +102,7 @@ def test_doctor_can_read_units_but_not_record_tests(client_as):
 def test_staff_cannot_test_another_hospitals_unit(client_as, make_hospital):
     mine, theirs = make_hospital("Mine"), make_hospital("Theirs")
     make_unit(hospital=theirs)
-    assert post_test(client_as(Role.BLOOD_BANK, hospital=mine), "U1", "hiv").status_code == 403
+    assert post_test(client_as(Role.BLOOD_BANK, hospital=mine), "U1", "hiv").status_code == 404  # B13, F3
 
 
 # ── #19 Expiry and stock ────────────────────────────────────────────────────────────────────────

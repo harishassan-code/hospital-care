@@ -19,6 +19,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "donors": EDIT,
         "pharmacy": EDIT,
         "hospitals": EDIT,
+        "specialists": EDIT,
         "users": EDIT,
         "equipment": EDIT,
         "operatingRooms": EDIT,
@@ -37,6 +38,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "blood": VIEW,
         "pharmacy": VIEW,
         "hospitals": VIEW,
+        "specialists": VIEW,
         "equipment": VIEW,
         "operatingRooms": VIEW,
         "orBookings": EDIT,  # surgeons book their own slots; the room registry stays admin/nurse
@@ -50,6 +52,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "beds": EDIT,
         "pharmacy": VIEW,
         "hospitals": VIEW,
+        "specialists": EDIT,
         "equipment": EDIT,
         "operatingRooms": EDIT,
         "orBookings": EDIT,
@@ -63,6 +66,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "blood": EDIT,
         "donors": EDIT,  # personal data (names, phones, emails): doctors and nurses don't see donors
         "hospitals": VIEW,
+        "specialists": VIEW,
         "transfers": EDIT,
     },
     Role.PHARMACIST: {
@@ -71,6 +75,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "emergencies": VIEW,
         "pharmacy": EDIT,
         "hospitals": VIEW,
+        "specialists": VIEW,
     },
     Role.PATIENT: {},
 }
@@ -107,6 +112,14 @@ def own_hospital(queryset, user):
     """Users who work at a hospital see only its rows; staff without one (admins) see the whole network.
     Always a fresh queryset: handing back a shared one (e.g. a module-level constant) would cache its rows."""
     return queryset.filter(hospital_id=user.hospital_id) if user.hospital_id else queryset.all()
+
+
+def changeable_by(queryset, user):
+    """The rows the user may change, filtered the way may_change() checks them: admins see every row, everyone
+    else only their own hospital's. A row outside this is a 404, as if it didn't exist (B13, F1 to F3)."""
+    if user.effective_role == Role.ADMIN:
+        return queryset.all()
+    return queryset.filter(hospital_id=user.hospital_id)
 
 
 def may_change(user, resource) -> bool:

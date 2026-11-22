@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # Routed only when DJANGO_ADMIN_ENABLED allows it (B13, F6): the public staging superuser can't sign in.
+    *([path("admin/", admin.site.urls)] if settings.ADMIN_ENABLED else []),
     path("api/", include("apps.core.urls")),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/users/", include("apps.accounts.user_urls")),
@@ -22,4 +24,6 @@ urlpatterns = [
     path("api/reports/", include("apps.reports.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/trips/", include("apps.ambulances.trip_urls")),
+    path("api/patient-transfers/", include("apps.emergencies.patient_transfer_urls")),
+    path("api/specialists/", include("apps.specialists.urls")),
 ]

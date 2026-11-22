@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import module_permission, own_hospital
+from apps.accounts.permissions import changeable_by, module_permission, own_hospital
 from apps.resources.state_machine import TransitionNotAllowed
 
 from . import services
@@ -53,7 +53,7 @@ class BloodUnitListView(APIView):
         return Response(BloodUnitSerializer(units, many=True, context={"now": now}).data)
 
     def post(self, request):
-        serializer = BloodUnitCreateSerializer(data=request.data)
+        serializer = BloodUnitCreateSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         unit = services.register_unit(serializer, request.user)
         return Response(
@@ -86,7 +86,7 @@ class BloodUnitTestView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, unit_id):
-        get_object_or_404(BloodUnit, donation_number=unit_id)
+        get_object_or_404(changeable_by(BloodUnit.objects.all(), request.user), donation_number=unit_id)
         serializer = RecordTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -103,7 +103,7 @@ class BloodUnitActionView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, unit_id):
-        get_object_or_404(BloodUnit, donation_number=unit_id)
+        get_object_or_404(changeable_by(BloodUnit.objects.all(), request.user), donation_number=unit_id)
         serializer = UnitActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -174,7 +174,7 @@ class DonorScreeningView(APIView):
     permission_classes = [DonorAccess]
 
     def post(self, request, donor_id):
-        donor = get_object_or_404(Donor, code=donor_id)
+        donor = get_object_or_404(changeable_by(Donor.objects.all(), request.user), code=donor_id)
         serializer = ScreeningSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -197,7 +197,7 @@ class AppointmentListView(APIView):
         return Response(AppointmentSerializer(appointments, many=True).data)
 
     def post(self, request):
-        serializer = AppointmentSerializer(data=request.data)
+        serializer = AppointmentSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         appointment = services.book_appointment(data["donor"], data["starts_at"], actor=request.user)
@@ -210,7 +210,9 @@ class AppointmentCancelView(APIView):
     permission_classes = [DonorAccess]
 
     def post(self, request, appointment_id):
-        appointment = get_object_or_404(DonationAppointment, pk=appointment_id)
+        appointment = get_object_or_404(
+            changeable_by(DonationAppointment.objects.all(), request.user), pk=appointment_id
+        )
         try:
             appointment = services.cancel_appointment(appointment, actor=request.user)
         except TransitionNotAllowed as exc:

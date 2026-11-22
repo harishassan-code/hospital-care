@@ -6,8 +6,8 @@ points: 5
 priority: low
 sprint: stretch
 depends_on: -
-owner: unassigned
-status: Ready
+owner: Krrishna
+status: In Review
 ---
 
 # B16 · Specialist profiles and on-call availability

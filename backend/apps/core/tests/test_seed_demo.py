@@ -1,13 +1,23 @@
+from datetime import timedelta
+
 import pytest
 from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.ambulances.models import Ambulance, AmbulanceType
-from apps.blood.models import BloodUnit
+from apps.blood.models import BloodGroup, BloodUnit, Component, UnitStatus
+from apps.blood.services import usable_units
+from apps.core.management.commands.seed_demo import DOCTORS, SPECIALIST_DAYS
+from apps.core.management.commands.seed_demo import Command as SeedCommand
 from apps.hospitals.models import Bed, BedType, Department, Hospital, StorageLocation, Ward
 from apps.pharmacy.models import Medicine
+from apps.specialists.models import OnCallWindow, Specialist
 
 pytestmark = pytest.mark.django_db
+
+SEAVIEW, NORTHSIDE, MAIN = "Seaview Hospital", "Northside Children's Hospital", "CityCare General Hospital"
 
 
 def counts():
@@ -94,3 +104,138 @@ def test_reset_starts_over():
     Department.objects.create(hospital=Hospital.objects.first(), name="Extra")
     call_command("seed_demo", "--reset", stdout=None)
     assert counts()["Department"] == 10
+
+
+def o_neg_red_cells(hospital):
+    return BloodUnit.objects.filter(hospital=hospital, group=BloodGroup.O_NEG, component=Component.RED_CELLS)
+
+
+def unit_states():
+    """Every blood unit as (hospital name, group, component, status), keyed by donation number. The hospital
+    is named, not numbered: `--reset` recreates the hospitals, so their ids change."""
+    rows = BloodUnit.objects.values_list("donation_number", "hospital__name", "group", "component", "status")
+    return {
+        number: (hospital, group, component, status) for number, hospital, group, component, status in rows
+    }
+
+
+def test_citycare_has_one_usable_o_neg_red_cell_for_the_mvp_scenario():
+    """MVP scenario (B12): CityCare reserves its one local unit, and each partner has two to transfer."""
+    call_command("seed_demo", stdout=None)
+    main = Hospital.objects.get(name=MAIN)
+    assert usable_units(o_neg_red_cells(main)).count() == 1
+    partners = Hospital.objects.exclude(pk=main.pk)
+    assert partners.count() == 2
+    for partner in partners:
+        assert usable_units(o_neg_red_cells(partner)).count() == 2
+
+
+def test_scenario_stock_is_the_same_on_every_fresh_seed():
+    call_command("seed_demo", stdout=None)
+    first = unit_states()
+    call_command("seed_demo", "--reset", stdout=None)
+    assert unit_states() == first
+
+
+def test_scenario_change_touches_only_citycare_o_neg_red_cells(monkeypatch):
+    """Without the scenario change, every unit keeps the status the random draws gave it. With it, the only
+    units that differ are CityCare's O- red cells, and no unit is added or removed."""
+    with monkeypatch.context() as patch:
+        patch.setattr(SeedCommand, "seed_scenario_stock", lambda self, hospital, now: None)
+        call_command("seed_demo", stdout=None)
+    drawn = unit_states()
+    call_command("seed_demo", "--reset", stdout=None)
+    scenario = unit_states()
+    assert scenario.keys() == drawn.keys()
+    changed = [number for number in drawn if drawn[number] != scenario[number]]
+    assert changed, "the scenario change should alter the O- red cells, or this test proves nothing"
+    for number in changed:
+        hospital, group, component, _ = scenario[number]
+        assert (hospital, group, component) == (MAIN, BloodGroup.O_NEG, Component.RED_CELLS)
+
+
+def test_scenario_stock_makes_a_reserved_unit_usable_when_none_is_usable():
+    call_command("seed_demo", stdout=None)
+    main = Hospital.objects.get(name=MAIN)
+    units = o_neg_red_cells(main)
+    units.update(status=UnitStatus.EXPIRED)
+    spare = units.filter(expires_at__gt=timezone.now()).order_by("expires_at").first()
+    units.filter(pk=spare.pk).update(status=UnitStatus.RESERVED)
+    SeedCommand().seed_scenario_stock(main, timezone.now())
+    spare.refresh_from_db()
+    assert spare.status == UnitStatus.AVAILABLE
+    assert usable_units(units).count() == 1
+
+
+def test_scenario_stock_refuses_to_guess_when_no_o_neg_red_cell_can_be_used():
+    call_command("seed_demo", stdout=None)
+    main = Hospital.objects.get(name=MAIN)
+    o_neg_red_cells(main).delete()
+    with pytest.raises(CommandError, match="--seed"):
+        SeedCommand().seed_scenario_stock(main, timezone.now())
+
+
+def test_specialists_are_the_demo_doctors_at_their_hospitals():
+    call_command("seed_demo", stdout=None)
+    hospital_of = {s.name: s.hospital.name for s in Specialist.objects.select_related("hospital")}
+    assert set(hospital_of) == {name for name, *_ in DOCTORS}
+    assert set(hospital_of.values()) == {SEAVIEW, NORTHSIDE, MAIN}
+    assert hospital_of["Dr. Ayesha Khan"] == SEAVIEW  # Cardiology
+    assert hospital_of["Dr. Sana Malik"] == NORTHSIDE  # Paediatrics
+    assert hospital_of["Dr. Kamran Shah"] == MAIN  # Emergency medicine
+    assert {s.specialty for s in Specialist.objects.all()} == {department for _, department, *_ in DOCTORS}
+
+
+def test_every_specialist_has_a_window_for_each_of_the_next_days_in_karachi():
+    call_command("seed_demo", stdout=None)
+    today = timezone.localdate()
+    for specialist in Specialist.objects.all():
+        days = [
+            timezone.localtime(w.starts_at).date() for w in specialist.on_call_windows.order_by("starts_at")
+        ]
+        assert days == [today + timedelta(days=offset) for offset in range(SPECIALIST_DAYS)], specialist.name
+
+
+def test_windows_never_overlap_and_an_overnight_shift_ends_the_next_morning():
+    call_command("seed_demo", stdout=None)
+    for specialist in Specialist.objects.all():
+        windows = list(specialist.on_call_windows.order_by("starts_at"))
+        for earlier, later in zip(windows, windows[1:], strict=False):
+            assert earlier.ends_at <= later.starts_at, specialist.name
+    usman = Specialist.objects.get(name="Dr. Usman Farooq").on_call_windows.order_by("starts_at").first()
+    starts, ends = timezone.localtime(usman.starts_at), timezone.localtime(usman.ends_at)
+    assert (starts.hour, starts.minute) == (20, 0)
+    assert (ends.hour, ends.minute) == (8, 0)
+    assert ends.date() == starts.date() + timedelta(days=1)
+
+
+def test_a_rerun_adds_no_specialist_and_no_window_it_already_has():
+    call_command("seed_demo", stdout=None)
+    first = (Specialist.objects.count(), OnCallWindow.objects.count())
+    call_command("seed_demo", stdout=None)
+    assert first == (len(DOCTORS), len(DOCTORS) * SPECIALIST_DAYS)
+    assert (Specialist.objects.count(), OnCallWindow.objects.count()) == first
+
+
+def test_a_rerun_fills_in_a_missing_window_and_duplicates_nothing():
+    call_command("seed_demo", stdout=None)
+    OnCallWindow.objects.filter(specialist__name="Dr. Kamran Shah").order_by("starts_at").first().delete()
+    call_command("seed_demo", stdout=None)
+    assert OnCallWindow.objects.filter(specialist__name="Dr. Kamran Shah").count() == SPECIALIST_DAYS
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+
+
+def test_a_rerun_leaves_a_specialist_added_by_staff_alone():
+    call_command("seed_demo", stdout=None)
+    Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Added Later", specialty="Oncology")
+    call_command("seed_demo", stdout=None)
+    assert Specialist.objects.get(name="Dr. Added Later").on_call_windows.count() == 0
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+
+
+def test_reset_starts_the_specialists_over():
+    call_command("seed_demo", stdout=None)
+    Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Extra", specialty="ENT")
+    call_command("seed_demo", "--reset", stdout=None)
+    assert Specialist.objects.count() == len(DOCTORS)
+    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS

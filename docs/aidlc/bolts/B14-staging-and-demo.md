@@ -6,8 +6,8 @@ points: 3
 priority: highest
 sprint: 9
 depends_on: -
-owner: unassigned
-status: Ready
+owner: Hassan27521
+status: In Progress
 ---
 
 # B14 · Staging deployment, demo data and demo script

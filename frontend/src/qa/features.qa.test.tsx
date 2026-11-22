@@ -12,6 +12,7 @@ import LoginPage from '../pages/LoginPage'
 import SignupPage from '../pages/SignupPage'
 import { at } from '../test/clock'
 import { samplePublicStatus } from '../test/fixtures/publicStatus'
+import { sampleIncomingPatient } from '../test/fixtures/patientTransfers'
 import { mockApi, mockStaffApi, ok, fail, userFor } from '../test/mockApi'
 import { renderStaff } from '../test/renderStaff'
 
@@ -394,6 +395,63 @@ describe('QA · alerts (B07, #53)', () => {
     renderStaff('/staff/alerts')
     expect(await screen.findByRole('region', { name: 'Your alerts' })).toBeInTheDocument()
     expect(await screen.findByText('No notifications yet.')).toBeInTheDocument()
+  })
+})
+
+describe('QA · patient transfers (B17)', () => {
+  it('a doctor at the receiving hospital sees the patient on her way, and can confirm her arrival', async () => {
+    mockStaffApi({ role: 'doctor', patientTransfers: [sampleIncomingPatient(new Date())] })
+    renderStaff('/staff/emergencies')
+
+    const panel = await screen.findByRole('region', { name: 'Incoming patients' })
+    expect(await within(panel).findByRole('button', { name: 'Confirm arrival of EC-2026-0009' })).toBeInTheDocument()
+  })
+
+  it('a pharmacist sees the outgoing list but not the incoming patients', async () => {
+    mockStaffApi({ role: 'pharmacist', patientTransfers: [sampleIncomingPatient(new Date())] })
+    renderStaff('/staff/emergencies')
+
+    await screen.findByRole('region', { name: 'Outgoing patients' })
+    expect(screen.queryByRole('region', { name: 'Incoming patients' })).toBeNull()
+  })
+})
+
+describe('QA · specialists (B16)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(at('15:00'))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it.each(['admin', 'doctor', 'nurse', 'bloodBank', 'pharmacist'] as const)('%s nav links to specialists', async (role) => {
+    mockStaffApi({ role })
+    renderStaff('/staff')
+    await screen.findByRole('navigation', { name: 'Staff' })
+    const labels = within(screen.getByRole('navigation', { name: 'Staff' }))
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+    expect(labels).toEqual(expect.arrayContaining(['Specialists']))
+    expect(screen.getByRole('link', { name: 'Specialists' })).toHaveAttribute('href', '/staff/specialists')
+  })
+
+  it('a patient cannot open the specialists list', async () => {
+    mockStaffApi({ role: 'patient' })
+    renderStaff('/staff/specialists')
+    expect(await screen.findByRole('heading', { name: 'This area is for hospital staff' })).toBeInTheDocument()
+  })
+
+  it('a doctor opens the list and sees no way to add a specialist', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff('/staff/specialists')
+    expect(await screen.findByRole('table', { name: 'Specialists' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Add specialist' })).not.toBeInTheDocument()
+  })
+
+  it('a nurse opens the form to add a specialist from the list', async () => {
+    mockStaffApi({ role: 'nurse' })
+    renderStaff('/staff/specialists')
+    await userEvent.click(await screen.findByRole('link', { name: 'Add specialist' }))
+    expect(await screen.findByRole('form', { name: 'Add specialist' })).toBeInTheDocument()
   })
 })
 

@@ -189,3 +189,80 @@ class RequestItem(models.Model):
             ResourceType.OPERATING_ROOM: self.capability,
         }[self.resource_type]
         return f"{self.request_id}: {self.quantity} × {what}"
+
+
+# ── Patient transfers (B17, stories #63 to #65) ───────────────────────────────────────────────────
+
+
+class PatientTransferStatus(models.TextChoices):
+    REQUESTED = "requested", "Requested"
+    ARRIVED = "arrived", "Arrived"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+PT = PatientTransferStatus
+
+# Arrived and cancelled are final. The rules are in patient_transfers.py.
+PATIENT_TRANSFER_LIFECYCLE = StateMachine(
+    "patient transfer",
+    PatientTransferStatus,
+    {
+        (PT.REQUESTED, "arrive"): PT.ARRIVED,
+        (PT.REQUESTED, "cancel"): PT.CANCELLED,
+    },
+)
+
+
+class PatientTransferQuerySet(models.QuerySet):
+    def with_details(self):
+        """What the API shows for a patient transfer, loaded up front: the case and its needs, both hospitals
+        and the people who acted. A list of them costs a fixed number of queries."""
+        return self.select_related(
+            "request", "from_hospital", "to_hospital", "requested_by", "arrived_by"
+        ).prefetch_related("request__items")
+
+
+class PatientTransfer(models.Model):
+    """A request to move a case's patient to another hospital (B17), and the case's ownership history: a case
+    changes hospital only through an arrived row, so a second table would repeat it. `match` is the
+    destination's #42 entry as it stood when the transfer was requested (see labels.hospital_match_data)."""
+
+    request = models.ForeignKey(EmergencyRequest, on_delete=models.PROTECT, related_name="patient_transfers")
+    from_hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.PROTECT, related_name="+")
+    to_hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.PROTECT, related_name="+")
+    status = models.CharField(
+        max_length=10, choices=PatientTransferStatus.choices, default=PatientTransferStatus.REQUESTED
+    )
+    match = models.JSONField(default=dict, blank=True, help_text="The destination's match when requested.")
+    note = models.TextField(blank=True, help_text="Why the patient is being moved.")
+    reason = models.TextField(blank=True, help_text="Why the transfer was cancelled.")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    requested_at = models.DateTimeField(default=timezone.now)
+    arrived_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    arrived_at = models.DateTimeField(null=True, blank=True)
+
+    objects = PatientTransferQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["-requested_at", "-id"]
+        indexes = [
+            models.Index(fields=["from_hospital", "status"], name="emergencies_pt_from_status"),
+            models.Index(fields=["to_hospital", "status"], name="emergencies_pt_to_status"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(from_hospital=models.F("to_hospital")),
+                name="emergencies_pt_distinct_hospitals",
+            ),
+            # One open request per case: a second one while the first is requested is refused by the database.
+            models.UniqueConstraint(
+                fields=["request"],
+                condition=models.Q(status=PatientTransferStatus.REQUESTED),
+                name="emergencies_one_open_patient_transfer",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Patient transfer #{self.pk}"

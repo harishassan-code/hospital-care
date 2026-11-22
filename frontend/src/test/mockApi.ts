@@ -14,6 +14,8 @@ import type {
   EmergencyCaseDetail,
   FeedEntry,
   HeldReservation,
+  PatientTransfer,
+  PatientTransferAction,
   ResourceType,
   Severity,
   StatusChange,
@@ -33,6 +35,7 @@ import type {
 } from '../api/operatingRooms'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { Notification } from '../api/notifications'
+import type { OnCallWindow, SpecialistChanges, SpecialistDetail, SpecialistInput, SpecialistSummary } from '../api/specialists'
 import type { PublicStatus } from '../api/publicStatus'
 import type { Report } from '../api/reports'
 import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferMove, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
@@ -43,6 +46,7 @@ import { actionsFor, nextStatus, STATUS_LABEL } from '../features/emergencies/em
 import { applyEquipmentAction } from '../features/equipment/equipment'
 import { applyAmbulanceAction } from '../features/ambulances/ambulances'
 import { applyOperatingRoomAction } from '../features/operatingRooms/operatingRooms'
+import { clashing, clashMessage, coversNow, hasStarted } from '../features/specialists/rules'
 import { canEdit, canSee, type Module, type Role } from '../features/staff/roles'
 import { dateKey } from '../lib/time'
 import { sampleBedBoard } from './fixtures/beds'
@@ -55,6 +59,7 @@ import { sampleCapabilities, sampleHospitals, sampleUsers } from './fixtures/hos
 import { sampleMedicines } from './fixtures/pharmacy'
 import { samplePublicStatus } from './fixtures/publicStatus'
 import { sampleReport } from './fixtures/reports'
+import { sampleSpecialists, type SpecialistRecord } from './fixtures/specialists'
 
 /** A reply is JSON (`body`), or a file (`file`): its text, sent with the type and the name the server gives it. */
 export type Reply = { status?: number; body?: unknown; file?: { name: string; type: string; text: string } }
@@ -223,6 +228,10 @@ type StaffApiOptions = {
   ambulances?: Ambulance[]
   /** Answer every report request (B18, #66) with this status instead of the sample figures, e.g. 500. */
   reportsStatus?: number
+  /** Start with these patient transfers (B17): the moves of a case's patient between hospitals. */
+  patientTransfers?: PatientTransfer[]
+  /** Use these specialists (B16) instead of the sample ones. */
+  specialists?: SpecialistRecord[]
 }
 
 /** A few pieces of equipment across types and statuses (story #26). */
@@ -329,6 +338,8 @@ export function mockStaffApi({
   appointments: customAppointments,
   ambulances: customAmbulances,
   reportsStatus,
+  patientTransfers: seedPatientTransfers = [],
+  specialists: seedSpecialists = sampleSpecialists(),
 }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
@@ -401,6 +412,8 @@ export function mockStaffApi({
         .map((hold) => ({ ...hold, transfer: transferRefOf(hold.id), canAllocate: canAllocateHold(c, hold) })),
       allocations: allocationsByCase.get(c.id) ?? [],
       transfers: transfersOfCase(c.id),
+      transferFlag: c.severity === 'critical' && items.some((need) => need.shortfall > 0),
+      patientTransfers: patientTransfersOfCase(c.id),
     }
   }
   /** Hold up to `quantity` free units for a need (story #43). Each hold is one unit; a case that is open starts matching. */
@@ -618,6 +631,125 @@ export function mockStaffApi({
     if (['approved', 'dispatched', 'inTransit'].includes(seeded.status)) pinUnits(seeded, seeded.resources.length, seeded.resources)
   }
 
+  // ── Patient transfers between hospitals (B17, stories #63 to #65) ──────────────────────────────────
+  // In memory, following the server's rules: a request from the case's hospital, one open at a time; arrival at the
+  // receiving hospital, which moves the case and releases the sending hospital's unallocated holds; cancellation at the
+  // sending hospital, with a reason. The mock's case list is the signed-in hospital's, so the case stays listed here.
+  const patientTransfers: PatientTransfer[] = seedPatientTransfers.map((p) => ({ ...p }))
+  let nextPatientTransferId = Math.max(0, ...patientTransfers.map((p) => p.id)) + 1
+  /** The signed-in user's hospital, or undefined for admins (who see the network) and anyone without one. */
+  const myHospital = role && role !== 'patient' && role !== 'admin' ? userFor(role).hospital?.id : undefined
+  /** Admins see every transfer. Anyone else sees the ones where their hospital sends or receives the patient. */
+  const patientVisible = (p: PatientTransfer) =>
+    role === 'admin' || (myHospital !== undefined && (p.from.id === myHospital || p.to.id === myHospital))
+  /** Who may make a move: arrival at the receiving hospital, cancellation at the sending one. Admins may make either. */
+  const patientMayMove = (p: PatientTransfer, action: PatientTransferAction) =>
+    !!role &&
+    role !== 'patient' &&
+    canEdit(role, 'emergencies') &&
+    (role === 'admin' || (action === 'arrive' ? myHospital === p.to.id : myHospital === p.from.id))
+  /** The transfer as this user gets it: the moves they may make now. */
+  const patientView = (p: PatientTransfer): PatientTransfer => ({
+    ...p,
+    actions: p.status === 'requested' ? (['arrive', 'cancel'] as const).filter((action) => patientMayMove(p, action)) : [],
+  })
+  const newestFirst = (a: PatientTransfer, b: PatientTransfer) => b.requestedAt.localeCompare(a.requestedAt) || b.id - a.id
+  const patientTransfersOfCase = (reference: string) =>
+    patientTransfers.filter((p) => p.reference === reference).sort(newestFirst).map(patientView)
+  /** The receiving hospital's #42 entry for the case, as the sources offer it (the sample's unless the test says). */
+  const destinationMatchFor = (reference: string, hospitalId: number) =>
+    (customCandidates ?? sampleCandidates(now)[reference])?.hospitals.find((m) => m.hospital.id === hospitalId)
+  /** Stock transfers still in motion: their units are set aside, so the patient can't arrive yet (story #65). */
+  const STOCK_IN_MOTION: readonly TransferStatus[] = ['approved', 'dispatched', 'inTransit']
+  /** Ask to move a case's patient to a hospital in its list (story #64): the server's checks, in the server's order. */
+  const askPatientTransfer = (reference: string, body: unknown): Reply => {
+    const found = findCase(reference)
+    if (!found || (role !== 'admin' && found.hospital?.id !== myHospital)) return fail(404)
+    if (patientTransfers.some((p) => p.reference === reference && p.status === 'requested')) {
+      return fail(409, { detail: 'This case already has a patient transfer on its way. Cancel it first.' })
+    }
+    if (!found.hospital) return fail(400, { detail: 'This case has no hospital, so a patient can’t be moved from it.' })
+    if (detailOf(found).shortfallTotal === 0) return fail(400, { detail: 'Nothing is short here, so the patient doesn’t need to move.' })
+    if (!RESERVABLE_STATUSES.includes(found.status)) {
+      return fail(400, { detail: `Can’t move a patient for a case that is ${STATUS_LABEL[found.status].toLowerCase()}.` })
+    }
+    const input = body as { destinationId?: number; note?: string }
+    if (input.destinationId === found.hospital.id) {
+      return fail(400, { destinationId: ['The case’s own hospital can’t be the destination.'] })
+    }
+    const match = destinationMatchFor(reference, Number(input.destinationId))
+    if (!match) {
+      return fail(400, { destinationId: ['That hospital isn’t one of the hospitals that can cover this case.'] })
+    }
+    const row: PatientTransfer = {
+      id: nextPatientTransferId++,
+      reference,
+      severity: found.severity,
+      status: 'requested',
+      from: found.hospital,
+      to: match.hospital,
+      needs: found.items.map(needLabel),
+      match,
+      requestedBy: role ? NAMES[role] : '',
+      requestedAt: new Date().toISOString(),
+      arrivedBy: null,
+      arrivedAt: null,
+      note: (input.note ?? '').trim(),
+      reason: '',
+      actions: [],
+    }
+    patientTransfers.push(row)
+    return { status: 201, body: patientView(row) }
+  }
+  /** Confirm arrival or cancel one patient transfer (story #65), with the server's checks in the server's order. */
+  const patientTransferMove = (found: PatientTransfer, body: unknown): Reply => {
+    const input = body as { action?: string; reason?: string }
+    if (input.action !== 'arrive' && input.action !== 'cancel') return fail(400, { action: ['Choose a valid action.'] })
+    const action = input.action
+    if (!patientMayMove(found, action)) {
+      return fail(403, {
+        detail:
+          action === 'arrive'
+            ? 'Only staff at the receiving hospital who may edit emergencies can confirm arrival.'
+            : 'Only staff at the sending hospital who may edit emergencies can cancel the transfer.',
+      })
+    }
+    if (found.status !== 'requested') return fail(409, { detail: `Can’t ${action} a patient transfer that is ${found.status}.` })
+    if (action === 'cancel') {
+      const reason = (input.reason ?? '').trim()
+      if (!reason) return fail(400, { reason: ['Say why the transfer is cancelled.'] })
+      found.status = 'cancelled'
+      found.reason = reason
+      return ok(patientView(found))
+    }
+    const inMotion = transfers.filter((t) => t.case.reference === found.reference && STOCK_IN_MOTION.includes(t.status))
+    if (inMotion.length > 0) {
+      const named = inMotion.map((t) => `#${t.id} (${TRANSFER_STATUS_LABEL[t.status].toLowerCase()})`).join(', ')
+      return fail(409, {
+        detail: `Stock for this case is still on its way: transfer ${named}. Finish or cancel it before the patient arrives.`,
+      })
+    }
+    const at = new Date().toISOString()
+    const reason = `Patient arrived at ${found.to.name}`
+    for (const t of transfers) {
+      if (t.case.reference !== found.reference || t.status !== 'requested') continue
+      t.status = 'cancelled'
+      t.reason = reason
+      t.history = [...t.history, { fromStatus: 'requested', toStatus: 'cancelled', action: 'cancel', note: reason, actor: null, at }]
+    }
+    const theCase = findCase(found.reference)
+    for (const hold of holdsOf(found.reference)) {
+      if (hold.status !== 'held' || transferOfHold.has(hold.id) || !theCase) continue
+      hold.status = 'released'
+      stockOf(theCase)[hold.itemId - 1] += 1
+    }
+    if (theCase) theCase.hospital = found.to
+    found.status = 'arrived'
+    found.arrivedBy = role ? NAMES[role] : ''
+    found.arrivedAt = at
+    return ok(patientView(found))
+  }
+
   const equipment = sampleEquipment(now)
   const ambulances = customAmbulances ?? sampleAmbulances(now)
   const auditEntries = customAudit ?? sampleAuditEntries(now)
@@ -634,6 +766,30 @@ export function mockStaffApi({
   const inMyHospital = (row: { hospitalId: number | null }) => role === 'admin' || row.hospitalId === HOSPITAL_ID
   const findDonor = (code: string) => donors.find((d) => d.id === code)
   const bookings = sampleOrBookings(now)
+  /** The specialists the fake server keeps (B16). Summaries are worked out per request, from the clock. */
+  const specialistStore: SpecialistRecord[] = seedSpecialists.map((s) => ({ ...s, windows: [...s.windows] }))
+  const findSpecialist = (id: string) => specialistStore.find((s) => s.id === Number(id))
+  const specialistSummaryOf = (record: SpecialistRecord, at: Date): SpecialistSummary => {
+    const covering = record.isActive ? record.windows.find((w) => coversNow(w, at)) : undefined
+    return {
+      id: record.id,
+      name: record.name,
+      specialty: record.specialty,
+      isActive: record.isActive,
+      hospital: record.hospital,
+      onCallNow: covering !== undefined,
+      onCallUntil: covering?.endsAt ?? null,
+    }
+  }
+  const specialistDetailOf = (record: SpecialistRecord, at: Date): SpecialistDetail => ({
+    ...specialistSummaryOf(record, at),
+    onCall: record.windows.filter((w) => Date.parse(w.endsAt) > at.getTime()),
+  })
+  /** The hospital a staff member works at, as userFor gives it. Admins may change any hospital's specialists. */
+  const ownHospitalId = role && role !== 'patient' ? userFor(role).hospital?.id : undefined
+  const mayChangeAt = (hospitalId: number) => role === 'admin' || (ownHospitalId !== undefined && hospitalId === ownHospitalId)
+  const OWN_HOSPITAL_ONLY = 'You can only change specialists at your own hospital.'
+  const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
   const gate = (module: Module, reply: () => Reply): Route => () =>
     role && role !== 'patient' && canSee(role, module) ? reply() : fail(403)
   /** Like gate, but the reply sees the request, and `networkDown` fails it. Reads need view, writes need edit. */
@@ -1096,6 +1252,26 @@ export function mockStaffApi({
       t.status = move.to
       return ok(transferView(t))
     }),
+    // Patient transfers (B17): asked from the case's hospital, listed to the two hospitals, moved by each.
+    'POST /emergencies/:reference/patient-transfer/': edit('emergencies', ({ params, body }) => askPatientTransfer(params.reference, body)),
+    'GET /patient-transfers/': view('emergencies', ({ query }) => {
+      const direction = query.get('direction')
+      const status = query.get('status')
+      if (direction !== null && direction !== 'incoming' && direction !== 'outgoing') {
+        return fail(400, { direction: ['Choose incoming or outgoing.'] })
+      }
+      const rows = patientTransfers
+        .filter(patientVisible)
+        .filter((p) => role === 'admin' || direction === null || (direction === 'incoming' ? p.to.id === myHospital : p.from.id === myHospital))
+        .filter((p) => status === null || p.status === status)
+        .sort(newestFirst)
+      return ok(rows.map(patientView))
+    }),
+    'POST /patient-transfers/:id/actions/': edit('emergencies', ({ params, body }) => {
+      const found = patientTransfers.find((p) => p.id === Number(params.id))
+      if (!found || !patientVisible(found)) return fail(404)
+      return patientTransferMove(found, body)
+    }),
     'GET /users/': view('users', () => ok(users)),
     'GET /command-centre/': view('commandCentre', () => ok(customCommandCentre ?? sampleCommandCentre(now))),
     'PATCH /users/:id/': edit('users', ({ params, body }) => {
@@ -1104,6 +1280,90 @@ export function mockStaffApi({
       if (user.roleLocked) return fail(400, { role: ['You can’t change your own role.'] })
       user.role = (body as { role: UserSummary['role'] }).role
       return ok(user)
+    }),
+
+    'GET /specialists/': view('specialists', ({ query }) => {
+      const hospital = query.get('hospital')
+      const specialty = query.get('specialty')?.toLowerCase()
+      const availableNow = query.get('availableNow') === 'true'
+      const at = new Date()
+      return ok(
+        specialistStore
+          .filter((s) => !hospital || s.hospital.id === Number(hospital))
+          .filter((s) => !specialty || s.specialty.toLowerCase() === specialty)
+          .map((s) => specialistSummaryOf(s, at))
+          .filter((s) => !availableNow || s.onCallNow)
+          .sort(
+            (a, b) =>
+              a.hospital.name.localeCompare(b.hospital.name) || a.specialty.localeCompare(b.specialty) || a.name.localeCompare(b.name),
+          ),
+      )
+    }),
+    'POST /specialists/': edit('specialists', ({ body }) => {
+      const input = body as SpecialistInput
+      const hospital = hospitals.find((h) => h.id === input.hospitalId && h.isActive)
+      if (!hospital) return fail(400, { hospitalId: ['No active hospital with that id.'] })
+      if (!input.name.trim()) return fail(400, { name: ['This field may not be blank.'] })
+      if (!input.specialty.trim()) return fail(400, { specialty: ['This field may not be blank.'] })
+      if (!mayChangeAt(hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      if (specialistStore.some((s) => s.hospital.id === hospital.id && sameName(s.name, input.name))) {
+        return fail(400, { name: ['A specialist with this name is already listed at this hospital.'] })
+      }
+      const created: SpecialistRecord = {
+        id: nextId++,
+        name: input.name.trim(),
+        specialty: input.specialty.trim(),
+        isActive: true,
+        hospital: { id: hospital.id, name: hospital.name },
+        windows: [],
+      }
+      specialistStore.push(created)
+      return { status: 201, body: specialistDetailOf(created, new Date()) }
+    }),
+    'GET /specialists/:id/': view('specialists', ({ params }) => {
+      const record = findSpecialist(params.id)
+      return record ? ok(specialistDetailOf(record, new Date())) : fail(404)
+    }),
+    'PATCH /specialists/:id/': edit('specialists', ({ params, body }) => {
+      const record = findSpecialist(params.id)
+      if (!record) return fail(404)
+      if (!mayChangeAt(record.hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      const changes = body as SpecialistChanges
+      if (
+        changes.name !== undefined &&
+        specialistStore.some((s) => s !== record && s.hospital.id === record.hospital.id && sameName(s.name, changes.name!))
+      ) {
+        return fail(400, { name: ['A specialist with this name is already listed at this hospital.'] })
+      }
+      if (changes.name !== undefined) record.name = changes.name.trim()
+      if (changes.specialty !== undefined) record.specialty = changes.specialty.trim()
+      if (changes.isActive !== undefined) record.isActive = changes.isActive
+      return ok(specialistDetailOf(record, new Date()))
+    }),
+    'POST /specialists/:id/on-call/': edit('specialists', ({ params, body }) => {
+      const record = findSpecialist(params.id)
+      if (!record) return fail(404)
+      if (!mayChangeAt(record.hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      const { startsAt, endsAt } = body as Pick<OnCallWindow, 'startsAt' | 'endsAt'>
+      if (Date.parse(endsAt) <= Date.parse(startsAt)) return fail(400, { endsAt: ['The window must end after it starts.'] })
+      if (Date.parse(endsAt) <= Date.now()) {
+        return fail(400, { endsAt: ['This window has already ended. Add a window that is still to come, or one that is on now.'] })
+      }
+      const clash = clashing(record.windows, startsAt, endsAt)
+      if (clash) return fail(400, { startsAt: [clashMessage(clash)] })
+      const created: OnCallWindow = { id: nextId++, startsAt, endsAt }
+      record.windows = [...record.windows, created].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+      return { status: 201, body: created }
+    }),
+    'DELETE /specialists/:id/on-call/:window/': edit('specialists', ({ params }) => {
+      const record = findSpecialist(params.id)
+      if (!record) return fail(404)
+      if (!mayChangeAt(record.hospital.id)) return fail(403, { detail: OWN_HOSPITAL_ONLY })
+      const target = record.windows.find((w) => w.id === Number(params.window))
+      if (!target) return fail(404)
+      if (hasStarted(target, new Date())) return fail(409, { detail: 'This window has started, so it stays as history.' })
+      record.windows = record.windows.filter((w) => w !== target)
+      return { status: 204 }
     }),
 
     // Before /hospitals/:id/, which would otherwise match it.

@@ -25,6 +25,9 @@ import OperatingRoomsPage from './pages/staff/OperatingRoomsPage'
 import PharmacyPage from './pages/staff/PharmacyPage'
 import PlannedPage from './pages/staff/PlannedPage'
 import ReportsPage from './pages/staff/ReportsPage'
+import SpecialistDetailPage from './pages/staff/SpecialistDetailPage'
+import SpecialistFormPage from './pages/staff/SpecialistFormPage'
+import SpecialistsPage from './pages/staff/SpecialistsPage'
 import TransfersPage from './pages/staff/TransfersPage'
 import UsersPage from './pages/staff/UsersPage'
 
@@ -54,6 +57,10 @@ export function AppRoutes() {
         <Route path="hospitals/new" element={<HospitalFormPage />} />
         <Route path="hospitals/:id" element={<HospitalDetailPage />} />
         <Route path="hospitals/:id/edit" element={<HospitalFormPage />} />
+        <Route path="specialists" element={<SpecialistsPage />} />
+        <Route path="specialists/new" element={<SpecialistFormPage />} />
+        <Route path="specialists/:id" element={<SpecialistDetailPage />} />
+        <Route path="specialists/:id/edit" element={<SpecialistFormPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="reports" element={<ReportsPage />} />
