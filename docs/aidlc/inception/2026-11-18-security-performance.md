@@ -41,7 +41,7 @@ The bolt's two criteria are kept and refined below.
 
 ### Permission review (bolt: permission review notes)
 
-- [ ] Every view in `apps/*/views.py` and every URL module appears in the review table in the Design section, with its guard and hospital scope. Each finding is fixed in this bolt or linked to a follow-up issue.
+- [x] Every view in `apps/*/views.py` and every URL module appears in the review table in the Design section, with its guard and hospital scope. Each finding is fixed in this bolt or linked to a follow-up issue.
 - [x] A donor registered at another hospital is refused for an appointment (F1) and for a blood unit link (F2), with a 404 and a test for each. Admins, who see the whole network, can still do both.
 - [x] Views that look up a record before the service check return 404 for another hospital's record, not 403 (F3). Each affected view has a test.
 - [x] A test walks every `/api/` URL pattern and fails if a view declares no permission class, or is `AllowAny` but not on the allowlist: the auth csrf, login, logout and signup endpoints, the public status endpoint and health (F10).
@@ -50,8 +50,8 @@ The bolt's two criteria are kept and refined below.
 ### Search performance (bolt: search p95 recorded)
 
 - [x] `seed_demo --hospitals N` seeds N hospitals, where N is 3 or more. With no flag, the data and output are unchanged, and the existing tests pass without edits.
-- [ ] `scripts/load_test_search.py` times `GET /api/emergencies/<reference>/candidates/` over HTTP, on Postgres, against a seeded network of 50 hospitals (proposed, Q3), after a warm-up. It reports p50, p95, p99, max and the error count, at concurrency 1 and 5 (proposed).
-- [ ] The p95 is recorded in `docs/testing/search-load-test.md` with the dataset's row counts, the commit, the database version and the exact command. The final report (B15) links to it.
+- [x] `scripts/load_test_search.py` times `GET /api/emergencies/<reference>/candidates/` over HTTP, on Postgres, against a seeded network of 50 hospitals (proposed, Q3), after a warm-up. It reports p50, p95, p99, max and the error count, at concurrency 1 and 5 (proposed).
+- [x] The p95 is recorded in `docs/testing/search-load-test.md` with the dataset's row counts, the commit, the database version and the exact command. The final report (B15) links to it.
 - [x] A test shows the candidate query count does not grow with the number of hospitals: the same `QUERY_BUDGET` holds at 10 hospitals as at 3.
 - [x] `apps/matching/tests/test_candidates_performance.py` passes unchanged.
 
