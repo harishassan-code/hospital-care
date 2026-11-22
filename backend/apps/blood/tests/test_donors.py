@@ -234,7 +234,7 @@ def test_staff_cannot_book_a_donor_from_another_hospital(client_as, make_hospita
     mine, theirs = make_hospital("Mine"), make_hospital("Theirs")
     donor(hospital=theirs)
     res = book(client_as(Role.BLOOD_BANK, hospital=mine), "DNR-00001", next_slot())
-    assert res.status_code == 403
+    assert res.status_code == 404  # B13 (F1): another hospital's donor is as good as an unknown one
     assert DonationAppointment.objects.count() == 0
 
 
@@ -244,8 +244,9 @@ def test_staff_cannot_screen_or_cancel_at_another_hospital(client_as, make_hospi
     appointment = DonationAppointment.objects.create(donor=d, hospital=theirs, starts_at=next_slot())
     other = client_as(Role.BLOOD_BANK, hospital=mine)
     screening = reverse("blood-donor-screening", args=["DNR-00001"])
-    assert other.post(screening, {"eligible": True}, format="json").status_code == 403
-    assert other.post(reverse("blood-appointment-cancel", args=[appointment.pk])).status_code == 403
+    # B13 (F3): records are looked up within the actor's hospital, so another hospital's are a 404, not a 403
+    assert other.post(screening, {"eligible": True}, format="json").status_code == 404
+    assert other.post(reverse("blood-appointment-cancel", args=[appointment.pk])).status_code == 404
     appointment.refresh_from_db()
     assert appointment.status == "booked"
 
