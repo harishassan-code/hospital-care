@@ -82,6 +82,7 @@ describe('StaffLayout', () => {
       'Specialists',
       'Users and roles',
       'Audit log',
+      'Reports',
     ])
     expect(screen.getByRole('link', { name: 'Beds' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Sadia Admin')).toBeInTheDocument()
