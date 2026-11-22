@@ -117,6 +117,8 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   const [load, setLoad] = useState<Load>({ data: null, failed: false, updatedAt: null, refreshFailed: false })
   const { data, failed, updatedAt, refreshFailed } = load
   const reloading = useRef(false)
+  // Cleared on unmount, so a reload that finishes afterwards (sign-out, a test ending) doesn't update the session.
+  const mounted = useRef(true)
   const notifications = useNotificationFeed()
 
   const reload = useCallback(async () => {
@@ -124,6 +126,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     reloading.current = true
     try {
       const result = await loadStaffData(role)
+      if (!mounted.current) return
       const at = new Date()
       setLoad((current) => {
         if (!result) return current.data ? { ...current, refreshFailed: true } : { ...current, failed: true }
@@ -136,6 +139,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   }, [role])
 
   useEffect(() => {
+    mounted.current = true
     void reload()
     const tick = setInterval(() => {
       if (document.visibilityState !== 'hidden') void reload()
@@ -145,6 +149,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
+      mounted.current = false
       clearInterval(tick)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
