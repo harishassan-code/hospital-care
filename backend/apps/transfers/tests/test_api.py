@@ -30,6 +30,8 @@ TRANSFER_KEYS = {
     "resources",
     "status",
     "reason",
+    "trip",  # story #51: the latest trip, or null
+    "etaMinutes",  # story #51: the route estimate
     "requestedBy",
     "createdAt",
     "history",

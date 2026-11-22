@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from apps.accounts.permissions import may_change
 from apps.audit.services import record
+from apps.notifications.services import notify
 
 from .models import (
     REQUEST_LIFECYCLE,
@@ -31,6 +32,11 @@ class OutcomeNoteRequired(Exception):
 
     def __init__(self):
         super().__init__("Add an outcome note to close the case.")
+
+
+def case_path(case: EmergencyRequest) -> str:
+    """The staff page of one case, for a notification's link."""
+    return f"/staff/emergencies/{case.reference}"
 
 
 def next_reference(year: int) -> str:
@@ -90,6 +96,16 @@ def create_case(*, severity: str, patient_ref: str, items: list[dict], actor) ->
         case,
         after={"severity": severity, "status": case.status, "items": len(items)},
     )
+    if severity == Severity.CRITICAL:
+        notify(
+            "case.created",
+            hospital=case.hospital,
+            module="emergencies",
+            severity=Severity.CRITICAL,
+            message=f"Critical case {case.reference} is open.",
+            link=case_path(case),
+            actor=actor,
+        )
     return case
 
 
@@ -114,6 +130,16 @@ def move_case(case: EmergencyRequest, action: str, *, note: str, actor, at=None)
         after={"status": case.status},
         reason=note or action,
     )
+    if action == "escalate":
+        notify(
+            "case.escalated",
+            hospital=case.hospital,
+            module="emergencies",
+            severity=Severity.CRITICAL,
+            message=f"Case {case.reference} is escalated and needs attention now.",
+            link=case_path(case),
+            actor=actor,
+        )
     return case
 
 

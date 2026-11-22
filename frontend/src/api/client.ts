@@ -36,6 +36,19 @@ export function apiGet<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'GET' })
 }
 
+/** A file from the API. A failure reads its JSON body like any other call, so a 400's `detail` can be shown. */
+export async function apiDownload(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}${path}`, { credentials: 'include' })
+  } catch {
+    throw new ApiError(0)
+  }
+  if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null))
+  const filename = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? null
+  return { blob: await res.blob(), filename }
+}
+
 /** A write: sends the CSRF token Django checks on every signed-in POST, PATCH and DELETE. */
 function send<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: unknown): Promise<T> {
   const headers = new Headers({ 'Content-Type': 'application/json' })

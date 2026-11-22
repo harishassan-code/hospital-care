@@ -7,8 +7,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission, own_hospital
+from apps.ambulances.serializers import TripDispatchSerializer, TripSerializer
+from apps.ambulances.services import dispatch_trip, trips_with_details
 from apps.emergencies.models import EmergencyRequest, RequestItem
 from apps.matching.reservations import release_expired
+from apps.resources.state_machine import TransitionNotAllowed
 
 from .models import Transfer
 from .serializers import (
@@ -134,3 +137,29 @@ class TransferActionView(APIView):
             return conflict(exc)
         moved = Transfer.objects.with_details().get(pk=pk)
         return Response(TransferSerializer(moved, context={"user": request.user}).data)
+
+
+class TransferTripView(APIView):
+    """POST /api/transfers/<id>/trips/ {"ambulance": <id>} → 201 with the trip (story #51). Sends an
+    available ambulance from the supplying hospital to carry an approved transfer. Needs edit on
+    ambulances at the supplier (403 otherwise, the receiving hospital included). 404 for a transfer or an
+    ambulance the user can't see. 409 when the transfer isn't approved, the ambulance isn't available, or
+    a trip is already on the road. 400 when the ambulance isn't based at the supplier. Nothing changes on
+    any refusal."""
+
+    permission_classes = [module_permission("ambulances")]
+
+    def post(self, request, pk):
+        transfer = get_object_or_404(visible_to(Transfer.objects.all(), request.user), pk=pk)
+        serializer = TripDispatchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            trip = dispatch_trip(
+                transfer, ambulance_id=serializer.validated_data["ambulance"], actor=request.user
+            )
+        except (TransferConflict, TransitionNotAllowed) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        created = trips_with_details().get(pk=trip.pk)
+        return Response(
+            TripSerializer(created, context={"user": request.user}).data, status=status.HTTP_201_CREATED
+        )

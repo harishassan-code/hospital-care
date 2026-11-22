@@ -5,16 +5,18 @@ what this enforces. The table is in docs/architecture/api-contracts.md.
 
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .models import Role
+from .models import STAFF_ROLES, Role
 
 VIEW, EDIT = "view", "edit"
 
 ACCESS: dict[str, dict[str, str]] = {
     Role.ADMIN: {
         "overview": VIEW,
+        "alerts": VIEW,  # the user's own notifications (B07); a personal list, so view only
         "emergencies": EDIT,
         "beds": EDIT,
         "blood": EDIT,
+        "donors": EDIT,
         "pharmacy": EDIT,
         "hospitals": EDIT,
         "users": EDIT,
@@ -22,9 +24,13 @@ ACCESS: dict[str, dict[str, str]] = {
         "operatingRooms": EDIT,
         "orBookings": EDIT,
         "transfers": EDIT,
+        "ambulances": EDIT,
+        "commandCentre": VIEW,  # the whole network's figures, read-only (story #55)
+        "audit": VIEW,
     },
     Role.DOCTOR: {
         "overview": VIEW,
+        "alerts": VIEW,
         "emergencies": EDIT,
         "beds": VIEW,
         "blood": VIEW,
@@ -34,9 +40,11 @@ ACCESS: dict[str, dict[str, str]] = {
         "operatingRooms": VIEW,
         "orBookings": EDIT,  # surgeons book their own slots; the room registry stays admin/nurse
         "transfers": EDIT,  # who may approve or receive is narrowed per move in apps.transfers.services
+        "ambulances": VIEW,
     },
     Role.NURSE: {
         "overview": VIEW,
+        "alerts": VIEW,
         "emergencies": EDIT,
         "beds": EDIT,
         "pharmacy": VIEW,
@@ -45,16 +53,20 @@ ACCESS: dict[str, dict[str, str]] = {
         "operatingRooms": EDIT,
         "orBookings": EDIT,
         "transfers": EDIT,
+        "ambulances": EDIT,
     },
     Role.BLOOD_BANK: {
         "overview": VIEW,
+        "alerts": VIEW,
         "emergencies": VIEW,
         "blood": EDIT,
+        "donors": EDIT,  # personal data (names, phones, emails): doctors and nurses don't see donors
         "hospitals": VIEW,
         "transfers": EDIT,
     },
     Role.PHARMACIST: {
         "overview": VIEW,
+        "alerts": VIEW,
         "emergencies": VIEW,
         "pharmacy": EDIT,
         "hospitals": VIEW,
@@ -96,9 +108,28 @@ def own_hospital(queryset, user):
     return queryset.filter(hospital_id=user.hospital_id) if user.hospital_id else queryset.all()
 
 
+def changeable_by(queryset, user):
+    """The rows the user may change, filtered the way may_change() checks them: admins see every row, everyone
+    else only their own hospital's. A row outside this is a 404, as if it didn't exist (B13, F1 to F3)."""
+    if user.effective_role == Role.ADMIN:
+        return queryset.all()
+    return queryset.filter(hospital_id=user.hospital_id)
+
+
 def may_change(user, resource) -> bool:
     """
     Own-hospital rule: admins manage the whole network; everyone else only their own hospital's resources.
     Rows from before Sprint 2 have no hospital and match users without one, so old data keeps working.
     """
     return user.effective_role == Role.ADMIN or resource.hospital_id == user.hospital_id
+
+
+class IsStaff(BasePermission):
+    """Signed in with a staff role, admins included (with or without a hospital). Patients and
+    signed-out users get 403. Personal data such as notifications has no module, so no ACCESS row."""
+
+    message = "Only staff can do this."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.effective_role in STAFF_ROLES)

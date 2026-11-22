@@ -6,8 +6,8 @@ points: 3
 priority: medium
 sprint: 8
 depends_on: -
-owner: unassigned
-status: Ready
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B10 · Audit search and export

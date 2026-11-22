@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sampleTransfers } from '../../test/fixtures/transfers'
-import { fail, mockApi, mockStaffApi } from '../../test/mockApi'
+import { fail, mockApi, mockStaffApi, sampleAmbulances } from '../../test/mockApi'
 import { renderStaff } from '../../test/renderStaff'
 
 afterEach(() => vi.restoreAllMocks())
@@ -263,5 +263,153 @@ describe('TransfersPage: access', () => {
     renderStaff('/staff/transfers')
     await card(1)
     expect(headings()).toEqual(['Transfer #4', 'Transfer #1', 'Transfer #2', 'Transfer #3'])
+  })
+})
+
+/** The trip panel on a transfer's card (story #51). */
+const tripOf = async (id: number) => within(await card(id)).getByRole('region', { name: `Trip for transfer #${id}` })
+
+/** Ask the page to dispatch an ambulance for an approved transfer, choosing the one named. */
+async function dispatchFor(id: number, ambulance: string) {
+  await userEvent.click(within(await card(id)).getByRole('button', { name: `Dispatch ambulance (transfer #${id})` }))
+  await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Ambulance' }), ambulance)
+  await userEvent.click(screen.getByRole('button', { name: `Dispatch ambulance (transfer #${id})` }))
+}
+
+describe('TransfersPage: dispatching an ambulance (story #51)', () => {
+  it('offers dispatch on an approved transfer, lists the available ambulances at the supplier, and sends the one chosen', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'nurse', transfers: sampleTransfers(new Date()) })
+    renderStaff('/staff/transfers')
+
+    await userEvent.click(within(await card(2)).getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+    const choice = await screen.findByRole('combobox', { name: 'Ambulance' })
+    // Only the supplier's available ambulances: not AMB-02 (in maintenance), AMB-04 (out of service) or the Seaview one.
+    expect(within(choice).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Choose an ambulance',
+      'AMB-01 · Advanced life support',
+      'AMB-03 · Patient transport',
+    ])
+    expect(screen.getByText(/about 25 min/)).toBeInTheDocument()
+
+    await userEvent.selectOptions(choice, 'AMB-03 · Patient transport')
+    await userEvent.click(screen.getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+
+    expect(await screen.findByText('Ambulance AMB-03 is on its way for transfer #2, about 25 min.')).toBeInTheDocument()
+    const dispatch = posts(fetchMock)[0]!
+    expect(String(dispatch[0])).toMatch(/\/transfers\/2\/trips\/$/)
+    expect(bodyOf(dispatch)).toEqual({ ambulance: 3 })
+
+    const panel = await tripOf(2)
+    expect(within(panel).getByRole('heading', { name: 'Ambulance AMB-03' })).toBeInTheDocument()
+    expect(within(panel).getByText('about 25 min')).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Mark departed (transfer #2)' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: /Mark arrived/ })).toBeNull()
+  })
+
+  it('offers no manual move on a transfer while its trip is on the road', async () => {
+    mockStaffApi({ role: 'nurse', transfers: sampleTransfers(new Date()) })
+    renderStaff('/staff/transfers')
+    await dispatchFor(2, 'AMB-01 · Advanced life support')
+    await tripOf(2)
+
+    const transferCard = await card(2)
+    expect(within(transferCard).queryByRole('button', { name: /Mark in transit|Cancel transfer|Confirm receipt/ })).toBeNull()
+  })
+
+  it('walks the trip: departure puts the transfer in transit, then arrival, then completion frees the ambulance', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'nurse', transfers: sampleTransfers(new Date()) })
+    renderStaff('/staff/transfers')
+    await dispatchFor(2, 'AMB-01 · Advanced life support')
+    await userEvent.click(within(await tripOf(2)).getByRole('button', { name: 'Mark departed (transfer #2)' }))
+
+    expect(await screen.findByText('Trip for transfer #2 is now en route.')).toBeInTheDocument()
+    expect(within(await card(2)).getByText('In transit')).toBeInTheDocument()
+    let panel = await tripOf(2)
+    expect(within(panel).getByText('En route')).toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: 'Mark departed (transfer #2)' })).toBeNull()
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Mark arrived (transfer #2)' }))
+    expect(await screen.findByText('Trip for transfer #2 is now arrived.')).toBeInTheDocument()
+    panel = await tripOf(2)
+    await userEvent.click(within(panel).getByRole('button', { name: 'Mark completed (transfer #2)' }))
+    expect(await screen.findByText('Trip for transfer #2 is now completed.')).toBeInTheDocument()
+
+    // Completing frees the ambulance but does not deliver the transfer: the receiver confirms it (story #49).
+    panel = await tripOf(2)
+    expect(within(panel).getByText('Completed', { selector: 'strong' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('button')).toBeNull()
+    expect(within(await card(2)).getByText('In transit')).toBeInTheDocument()
+    expect(posts(fetchMock).map(([url]) => String(url))).toEqual(
+      expect.arrayContaining([expect.stringMatching(/\/trips\/\d+\/actions\/$/)]),
+    )
+  })
+
+  it('says so, with no choice to make, when no ambulance is available at the supplier', async () => {
+    const none = sampleAmbulances(new Date()).map((a) => ({ ...a, status: 'maintenance' as const }))
+    mockStaffApi({ role: 'nurse', transfers: sampleTransfers(new Date()), ambulances: none })
+    renderStaff('/staff/transfers')
+    await userEvent.click(within(await card(2)).getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+    expect(await screen.findByText('No ambulance is available at CityCare General Hospital right now.')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Ambulance' })).toBeNull()
+  })
+
+  it('asks for an ambulance before sending', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'nurse', transfers: sampleTransfers(new Date()) })
+    renderStaff('/staff/transfers')
+    await userEvent.click(within(await card(2)).getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+    await screen.findByRole('combobox', { name: 'Ambulance' })
+    await userEvent.click(screen.getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+    expect(await screen.findByText('Choose an ambulance.')).toBeInTheDocument()
+    expect(posts(fetchMock)).toHaveLength(0)
+  })
+
+  it('shows the server’s reason when the dispatch is refused, and keeps the choice open', async () => {
+    mockStaffApi({ role: 'nurse', transfers: sampleTransfers(new Date()) })
+    renderStaff('/staff/transfers')
+    await userEvent.click(within(await card(2)).getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Ambulance' }), 'AMB-01 · Advanced life support')
+
+    // The ambulance was taken since this page loaded, so the server refuses the dispatch.
+    vi.restoreAllMocks()
+    mockApi({
+      'GET /transfers/': { body: sampleTransfers(new Date()) },
+      'GET /ambulances/': { body: sampleAmbulances(new Date()) },
+      'POST /transfers/:id/trips/': fail(409, { detail: "Can't dispatch a vehicle that is on trip." }),
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Dispatch ambulance (transfer #2)' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Can't dispatch a vehicle that is on trip.")
+    expect(screen.getByRole('combobox', { name: 'Ambulance' })).toBeInTheDocument()
+  })
+})
+
+describe('TransfersPage: the receiving hospital follows the trip', () => {
+  it('shows the receiving hospital the trip, read only', async () => {
+    // The trip is CityCare's: the receiver is Riverside, so this user sees the trip without any step to take.
+    const sent = { ...sampleTransfers(new Date()).find((t) => t.id === 3)!, status: 'inTransit' as const }
+    const withTrip = {
+      ...sent,
+      trip: {
+        id: 9,
+        transferId: 3,
+        status: 'enRoute' as const,
+        ambulance: { id: 1, identifier: 'AMB-01', type: 'advanced' },
+        etaMinutes: 25,
+        dispatchedBy: 'Sadia Admin',
+        dispatchedAt: new Date().toISOString(),
+        departedAt: new Date().toISOString(),
+        arrivedAt: null,
+        completedAt: null,
+        actions: [],
+      },
+    }
+    mockStaffApi({ role: 'bloodBank', transfers: [withTrip] })
+    renderStaff('/staff/transfers')
+    await userEvent.click(await outgoingTab())
+
+    const panel = await tripOf(3)
+    expect(within(panel).getByRole('heading', { name: 'Ambulance AMB-01' })).toBeInTheDocument()
+    expect(within(panel).getByText('En route')).toBeInTheDocument()
+    expect(within(panel).queryByRole('button')).toBeNull()
   })
 })

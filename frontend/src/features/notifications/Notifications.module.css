@@ -1,0 +1,193 @@
+/* The alerts UI (B07, #53): the bell and its panel, the critical banners, and the alerts page rows.
+   Colours, focus and tap sizes come from the global tokens, as elsewhere. */
+
+/* ── Bell (in the top bar) ─────────────────────────────────────────────────────────────────── */
+
+.bellWrap {
+  position: relative;
+}
+
+.bell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.bell:hover {
+  border-color: var(--ink-muted);
+}
+
+.bellCount {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 1.4rem;
+  padding: 0 4px;
+  background: var(--status-critical);
+  color: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.4rem;
+  text-align: center;
+  border-radius: 999px;
+}
+
+/* ── Bell panel ────────────────────────────────────────────────────────────────────────────── */
+
+.panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: var(--space-3);
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+/* A plain `hidden` attribute would lose to `display: grid` above. */
+.panel[hidden] {
+  display: none;
+}
+
+.heading {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.footer {
+  font-size: var(--text-sm);
+}
+
+.footer a {
+  font-weight: 700;
+}
+
+/* ── Rows (panel, banners and the alerts page) ─────────────────────────────────────────────── */
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list > li {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.list > li:last-child {
+  border-bottom: 0;
+}
+
+.row {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.unread {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.message {
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 2px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.action:hover {
+  border-color: var(--ink-muted);
+}
+
+.action:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.error {
+  color: var(--status-critical);
+  font-weight: 700;
+}
+
+.notice {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ── Critical banners (between the top bar and the page) ───────────────────────────────────── */
+
+.banners {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) 0;
+}
+
+.banner {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: var(--stripe) solid var(--status-critical);
+  border-radius: var(--radius);
+}
+
+.banner .message {
+  margin: 0;
+}
+
+.overflow {
+  font-weight: 700;
+}
+
+@media (max-width: 59.99rem) {
+  .banners {
+    padding-inline: var(--space-4);
+  }
+}
