@@ -73,8 +73,9 @@ From the Render dashboard, open the API service's **Shell** and run:
 python manage.py seed_demo --reset
 ```
 
-This clears and re-creates hospitals, stock and equipment. Emergency cases and transfers from rehearsals stay in the
-list; that's fine, and new ones sort by severity and age.
+This clears the rehearsal's emergency cases, holds, transfers, ambulance trips, patient transfers and alerts, then
+re-creates hospitals, stock and equipment, so the demo starts from the same data as a fresh seed. Case references
+start again at `EC-<year>-0001`. Demo logins and the audit log are kept.
 
 ## Rehearsals
 
