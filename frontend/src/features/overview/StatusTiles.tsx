@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { BLOOD_GROUPS, MINIMUM_STOCK } from '../../api/blood'
 import { ER_STATUS_LABEL } from '../../api/publicStatus'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { useCountUp } from '../../lib/useCountUp'
 import { summarize } from '../beds/beds'
 import { availableCounts, stockLevel } from '../blood/blood'
 import { EXPIRING_WITHIN_DAYS, expiresSoon, needsReorder } from '../pharmacy/pharmacy'
@@ -14,12 +15,13 @@ import { summarizeRequests } from './requests'
 type TileProps = { to: string; label: string; value: number; unit: string; detail?: string; note: ReactNode }
 
 function Tile({ to, label, value, unit, detail, note }: TileProps) {
+  const shown = useCountUp(value)
   return (
     <li>
       <Link to={to} className={styles.tile}>
         <span className={styles.tileLabel}>{label}</span>
         <span className={styles.tileValue}>
-          {value} <span className={styles.tileUnit}>{unit}</span>
+          {shown} <span className={styles.tileUnit}>{unit}</span>
         </span>
         {detail && <span className={styles.tileDetail}>{detail}</span>}
         {note}

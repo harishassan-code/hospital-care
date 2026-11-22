@@ -118,7 +118,7 @@
   min-height: 48px;
   padding: 0 var(--space-3);
   background: var(--surface);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
   font-family: var(--font-mono);
   font-size: var(--text-lg);
@@ -141,7 +141,7 @@
   display: grid;
   gap: 2px;
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
   font-size: var(--text-sm);
 }
@@ -194,10 +194,13 @@
   min-height: var(--tap);
   padding: 0 var(--space-4);
   background: var(--surface);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 /* ── Register-unit form ────────────────────────────────── */
@@ -214,7 +217,7 @@
   min-height: var(--tap);
   padding: 0 var(--space-3);
   background: var(--surface);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
   font-size: var(--text-base);
 }
@@ -268,7 +271,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
 }
 
