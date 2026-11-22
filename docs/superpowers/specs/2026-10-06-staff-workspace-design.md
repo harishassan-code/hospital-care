@@ -1,5 +1,7 @@
 # Staff workspace: Design
 
+> **Superseded on 22 Nov 2026** for colours, type and styling by [Clinical Calm](../../architecture/design-system.md). The page structure described here still holds.
+
 **Status:** Approved by Haris, 6 Oct 2026
 **Scope:** frontend only. Shell, Overview dashboard, Beds, Blood bank, Pharmacy. Sample data, in-memory changes.
 
