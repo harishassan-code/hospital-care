@@ -4,8 +4,11 @@ import { getMe, logout, type User } from '../../api/auth'
 import { getBedBoard, postBedAction, type BedAction, type BedBoard } from '../../api/beds'
 import { getBloodUnits, type BloodUnit } from '../../api/blood'
 import { ApiError } from '../../api/client'
+import { getCases } from '../../api/emergencies'
 import { getMedicines } from '../../api/pharmacy'
 import { getPublicStatus } from '../../api/publicStatus'
+import { listTransfers } from '../../api/transfers'
+import { useNotificationFeed } from '../notifications/useNotificationFeed'
 import { useNow } from '../../lib/useNow'
 import { buildAttention } from './attention'
 import { canSee, type Role } from './roles'
@@ -15,6 +18,9 @@ import { StaffContext, type BedActionResult, type StaffData, type StaffState } f
 type Session = { state: 'checking' } | { state: 'unavailable' } | { state: 'patient' } | { state: 'staff'; user: User }
 
 const NO_BEDS: BedBoard = { wards: [], beds: [] }
+
+/** How often the staff workspace reloads what it shows (B08). */
+const REFRESH_MS = 30_000
 
 /**
  * Gate for the staff workspace: asks the server who is signed in, sends signed-out visitors to the
@@ -60,45 +66,105 @@ export function StaffProvider({ children }: { children: ReactNode }) {
   }
 }
 
-/** Loads what this role may see once, and keeps it here so every page and the bell share it. */
+/**
+ * Every call the role's workspace makes, answered together. A call that fails leaves its part undefined. Null when a call
+ * the pages can't do without (beds, blood, pharmacy) failed. `complete` is false when an optional call (the public ER
+ * status, cases, transfers) failed.
+ */
+async function loadStaffData(role: Role): Promise<{ data: StaffData; complete: boolean } | null> {
+  const attempt = <T,>(request: Promise<T>) => request.catch(() => undefined)
+  const [board, units, medicines, emergency, cases, transfers] = await Promise.all([
+    canSee(role, 'beds') ? attempt(getBedBoard()) : NO_BEDS,
+    canSee(role, 'blood') ? attempt(getBloodUnits()) : [],
+    canSee(role, 'pharmacy') ? attempt(getMedicines()) : [],
+    attempt(getPublicStatus().then((status) => status.emergency)),
+    canSee(role, 'emergencies') ? attempt(getCases()) : null,
+    canSee(role, 'transfers')
+      ? attempt(
+          Promise.all([listTransfers({ direction: 'incoming' }), listTransfers({ direction: 'outgoing' })]).then(
+            ([incoming, outgoing]) => ({ incoming, outgoing }),
+          ),
+        )
+      : null,
+  ])
+  if (board === undefined || units === undefined || medicines === undefined) return null
+  return {
+    complete: emergency !== undefined && cases !== undefined && transfers !== undefined,
+    data: {
+      wards: board.wards,
+      beds: board.beds,
+      units,
+      medicines,
+      emergency: emergency ?? null,
+      cases: cases ?? null,
+      transfers: transfers ?? null,
+    },
+  }
+}
+
+type Load = { data: StaffData | null; failed: boolean; updatedAt: Date | null; refreshFailed: boolean }
+
+/**
+ * Loads what this role may see, keeps it here so every page and the bell share it, and reloads it every 30 seconds.
+ * A reload is skipped while the tab is hidden or another reload is running. A reload that fails keeps the data on
+ * screen; the next one tries again.
+ */
 function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   const role = user.role as Role
   const now = useNow()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const [data, setData] = useState<StaffData | null>(null)
-  const [failed, setFailed] = useState(false)
+  const [load, setLoad] = useState<Load>({ data: null, failed: false, updatedAt: null, refreshFailed: false })
+  const { data, failed, updatedAt, refreshFailed } = load
+  const reloading = useRef(false)
+  const notifications = useNotificationFeed()
 
-  useEffect(() => {
-    let active = true
-    Promise.all([
-      canSee(role, 'beds') ? getBedBoard() : NO_BEDS,
-      canSee(role, 'blood') ? getBloodUnits() : [],
-      canSee(role, 'pharmacy') ? getMedicines() : [],
-      getPublicStatus()
-        .then((status) => status.emergency)
-        .catch(() => null),
-    ])
-      .then(([board, units, medicines, emergency]) => {
-        if (active) setData({ ...board, units, medicines, emergency })
+  const reload = useCallback(async () => {
+    if (reloading.current) return
+    reloading.current = true
+    try {
+      const result = await loadStaffData(role)
+      const at = new Date()
+      setLoad((current) => {
+        if (!result) return current.data ? { ...current, refreshFailed: true } : { ...current, failed: true }
+        if (!result.complete && current.data) return { ...current, refreshFailed: true }
+        return { data: result.data, failed: false, updatedAt: at, refreshFailed: false }
       })
-      .catch(() => active && setFailed(true))
-    return () => {
-      active = false
+    } finally {
+      reloading.current = false
     }
   }, [role])
+
+  useEffect(() => {
+    void reload()
+    const tick = setInterval(() => {
+      if (document.visibilityState !== 'hidden') void reload()
+    }, REFRESH_MS)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void reload()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      clearInterval(tick)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [reload])
+
+  const setData = useCallback((update: (current: StaffData) => StaffData) => {
+    setLoad((current) => (current.data ? { ...current, data: update(current.data) } : current))
+  }, [])
 
   const updateBed = useCallback(
     async (bedId: string, action: BedAction): Promise<BedActionResult> => {
       try {
         const saved = await postBedAction(bedId, action)
-        setData((current) => current && { ...current, beds: current.beds.map((b) => (b.id === saved.id ? saved : b)) })
+        setData((current) => ({ ...current, beds: current.beds.map((b) => (b.id === saved.id ? saved : b)) }))
         return { ok: true }
       } catch (error) {
         const status = error instanceof ApiError ? error.status : 0
         if (status === 409) {
           const board = await getBedBoard().catch(() => null)
-          if (board) setData((current) => current && { ...current, ...board })
+          if (board) setData((current) => ({ ...current, ...board }))
           return { ok: false, message: 'Someone else changed this bed first. The board now shows its latest state.' }
         }
         if (status === 403) {
@@ -112,7 +178,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
         return { ok: false, message: 'The hospital’s system didn’t respond, so the bed wasn’t changed. Try again.' }
       }
     },
-    [navigate, pathname, user],
+    [navigate, pathname, setData, user],
   )
 
   const signOut = useCallback(async () => {
@@ -120,22 +186,22 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     navigate('/login')
   }, [navigate])
 
-  const upsertUnit = useCallback((unit: BloodUnit) => {
-    setData(
-      (current) =>
-        current && {
-          ...current,
-          units: current.units.some((u) => u.id === unit.id)
-            ? current.units.map((u) => (u.id === unit.id ? unit : u))
-            : [...current.units, unit],
-        },
-    )
-  }, [])
+  const upsertUnit = useCallback(
+    (unit: BloodUnit) => {
+      setData((current) => ({
+        ...current,
+        units: current.units.some((u) => u.id === unit.id)
+          ? current.units.map((u) => (u.id === unit.id ? unit : u))
+          : [...current.units, unit],
+      }))
+    },
+    [setData],
+  )
 
   const refreshUnits = useCallback(async () => {
     const units = await getBloodUnits().catch(() => null)
-    if (units) setData((current) => current && { ...current, units })
-  }, [])
+    if (units) setData((current) => ({ ...current, units }))
+  }, [setData])
 
   const attention = useMemo(
     () => (data ? buildAttention(data, now).filter((item) => canSee(role, item.module)) : []),
@@ -143,8 +209,8 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   )
 
   const value = useMemo<StaffState>(
-    () => ({ user, role, now, data, failed, attention, updateBed, upsertUnit, refreshUnits, signOut }),
-    [user, role, now, data, failed, attention, updateBed, upsertUnit, refreshUnits, signOut],
+    () => ({ user, role, now, data, failed, updatedAt, refreshFailed, attention, notifications, updateBed, upsertUnit, refreshUnits, signOut }),
+    [user, role, now, data, failed, updatedAt, refreshFailed, attention, notifications, updateBed, upsertUnit, refreshUnits, signOut],
   )
 
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>
