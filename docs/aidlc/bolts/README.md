@@ -37,7 +37,7 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 | Bolt | Title | Issues | Pts | Priority | Depends on | Owner | Status |
 |---|---|---|---|---|---|---|---|
 | [B12](B12-e2e-mvp-scenario.md) | End-to-end MVP scenario test | [#57](https://github.com/harishassan-code/hospital-care/issues/57) | 5 | highest | B03 | Krrishna | 🔵 In Review |
-| [B13](B13-security-performance.md) | Security and performance hardening | [#58](https://github.com/harishassan-code/hospital-care/issues/58) | 3 | high | – | _unassigned_ | 🟢 Ready |
+| [B13](B13-security-performance.md) | Security and performance hardening | [#58](https://github.com/harishassan-code/hospital-care/issues/58) | 3 | high | – | Krrishna | 🔵 In Review |
 | [B14](B14-staging-and-demo.md) | Staging deployment, demo data and demo script | [#59](https://github.com/harishassan-code/hospital-care/issues/59), [#69](https://github.com/harishassan-code/hospital-care/issues/69) | 3 | highest | – | Hassan27521 | 🟡 In Progress |
 | [B15](B15-final-report.md) | Final report and demo presentation | [#60](https://github.com/harishassan-code/hospital-care/issues/60) | 3 | highest | B00 | Hassan27521 | ⚪ Backlog |
 
@@ -51,4 +51,4 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 ## Progress
 
-⚪ Backlog: 2 · 🟢 Ready: 3 · 🟡 In Progress: 2 · 🔵 In Review: 9 · ✅ Done: 3
+⚪ Backlog: 2 · 🟢 Ready: 2 · 🟡 In Progress: 2 · 🔵 In Review: 10 · ✅ Done: 3

@@ -14,6 +14,13 @@ def fresh_cache():
     cache.clear()
 
 
+@pytest.fixture(autouse=True)
+def sign_in_limits_off(settings):
+    """Sign-in and sign-up limits (B13, F4) are off unless a test turns them on, so tests that sign in often
+    aren't cut off. apps/accounts/tests/test_throttle.py sets its own rates."""
+    settings.AUTH_THROTTLE_RATES = {}
+
+
 @pytest.fixture
 def api():
     return APIClient(enforce_csrf_checks=True)

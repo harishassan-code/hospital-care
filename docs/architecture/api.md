@@ -14,9 +14,9 @@ already does); the cookie is set by `login`, `signup`, `me` and `csrf`.
 | Method | Path | Who | Body | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/auth/csrf/` | anyone | – | 200, sets `csrftoken` cookie | – |
-| POST | `/auth/login/` | anyone | `{email, password}` | 200 `User` | 400 bad input (email > 254 or password > 512 characters), 401 wrong email/password (same message for both), 429 after 5 failed attempts on the account (locked 15 min) |
+| POST | `/auth/login/` | anyone | `{email, password}` | 200 `User` | 400 bad input (email > 254 or password > 512 characters), 401 wrong email/password (same message for both), 429 after 5 failed attempts on the account (locked 15 min), 429 when one client address exceeds `DJANGO_LOGIN_THROTTLE` (default 30/min; B13, F4) |
 | POST | `/auth/logout/` | anyone | – | 204 | 403 if CSRF header missing |
-| POST | `/auth/signup/` | anyone | `{full_name, email, phone?, password}` | 201 `User` (always a patient) | 400 `{email: [...]}` taken, 400 `{password: [...]}` weak |
+| POST | `/auth/signup/` | anyone | `{full_name, email, phone?, password}` | 201 `User` (always a patient) | 400 `{email: [...]}` taken, 400 `{password: [...]}` weak, 429 when one client address exceeds `DJANGO_SIGNUP_THROTTLE` (default 30/hour; B13, F4) |
 | GET | `/auth/me/` | signed in | – | 200 `User` | 403 when signed out |
 
 `User` = `{id, email, fullName, phone, role, isStaff}`; `role` is one of `admin`, `doctor`, `nurse`,
@@ -47,7 +47,8 @@ updated its stored status yet.
 
 Units need **blood: view** to read and **blood: edit** to change (admin, bloodBank). Donors and appointments need
 **donors: view** / **donors: edit** (admin, bloodBank; see [api-contracts](api-contracts.md#access-stories-12)). Staff only see
-and change their own hospital's units, donors and appointments (**403** otherwise). Every change is audit-logged.
+and change their own hospital's units, donors and appointments (**404** for another hospital's, B13; a donor is looked up the
+same way for an appointment or a unit's `donorId`). Every change is audit-logged.
 
 | Method | Path | Body | Success | Story |
 |---|---|---|---|---|
@@ -98,7 +99,10 @@ Appointment = { id: number, donorId: string, donorName: string, startsAt: string
   `python manage.py expire_blood_units` (schedule it hourly) and every time the stock view loads.
 - **Stock (#19):** only `available` units count. `low` is true below `BLOOD_LOW_STOCK_UNITS` (default 5).
   `nearExpiryDays` defaults to `BLOOD_NEAR_EXPIRY_DAYS` (3); 0–60, otherwise 400.
-- **Donors (#20):** synthetic identities only. A unit's group must match its donor's group (400 on `donorId`).
+- **Donors (#20):** synthetic identities only. A unit's group must match its donor's group (400 on `donorId`). A donor
+  registered at another hospital is **404** for both an appointment and a unit's `donorId`, the same reply as an
+  unknown code, so the response reveals neither the donor nor their donation history (B13, F1 and F2). Admins can use
+  any donor.
 - **Eligibility (#21):** a donor can't give again within `BLOOD_MIN_DONATION_INTERVAL_DAYS` (56). Units collected
   the same day count as one donation (components). Screening `{eligible: false}` needs a reason; no
   `deferredUntil` means a permanent deferral. `{eligible: true}` clears it.
