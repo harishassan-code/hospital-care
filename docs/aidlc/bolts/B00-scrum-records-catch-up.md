@@ -7,7 +7,7 @@ priority: highest
 sprint: 7
 depends_on: -
 owner: Kabir-Raj-01
-status: In Progress
+status: In Review
 ---
 
 # B00 · Scrum records catch-up before the preliminary review
@@ -18,15 +18,15 @@ status: In Progress
 
 From [#2](https://github.com/harishassan-code/hospital-care/issues/2) and the [Friday checklist](../../deliverables/README.md#friday-checklist-scrum-master):
 
-- [ ] Every member has a row in [docs/scrum/team.md](../../scrum/team.md) (name, roll no., GitHub, focus area) via their own PR (#2)
-- [ ] `docs/deliverables/sprint-02/` … `sprint-07/` exist with planning, review and retrospective, from the
+- [ ] Every member has a row in [docs/scrum/team.md](../../scrum/team.md) (name, roll no., GitHub, focus area) via their own PR (#2). Kabir Raj added in B00; the other members still add theirs
+- [x] `docs/deliverables/sprint-02/` … `sprint-07/` exist with planning, review and retrospective, from the
       [templates](../../deliverables/templates/). Use the merged PRs, closed issues and the board history as evidence;
       write what actually happened, including what slipped.
-- [ ] Sprint 1 review and retrospective filled in (both are still ⏳ in the index)
-- [ ] Velocity table in [docs/scrum/timeline.md](../../scrum/timeline.md#velocity-check) filled in for sprints 1–7
+- [x] Sprint 1 review and retrospective filled in (both are still ⏳ in the index)
+- [x] Velocity table in [docs/scrum/timeline.md](../../scrum/timeline.md#velocity-check) filled in for sprints 1–7
 - [x] Delivered issues closed after a check against their acceptance criteria: #26, #30, #32 and #37–#46
       shipped in #100 and were closed on 17 Nov with a comment linking the evidence
-- [ ] [docs/deliverables/README.md](../../deliverables/README.md) index updated (sprint rows, Architecture/Wireframes status)
+- [x] [docs/deliverables/README.md](../../deliverables/README.md) index updated (sprint rows, Architecture/Wireframes status)
 
 ## Build on
 
