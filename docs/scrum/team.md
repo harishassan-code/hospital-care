@@ -6,7 +6,7 @@ Each member fills in their own row in their **first PR** (Sprint 1 onboarding ta
 |---|---|---|---|---|---|---|
 | 1 | Haris Hassan | | [@harishassan-code](https://github.com/harishassan-code) | | Scrum Master, Developer | Frontend |
 | 2 | Muzammil Siddiqui | K232001 | | | Developer | |
-| 3 | | | | | Developer | |
+| 3 | Kabir Raj | | [@Kabir-Raj-01](https://github.com/Kabir-Raj-01) | | Developer | |
 | 4 | | | | | Developer | |
 | 5 | | | | | Developer | |
 | 6 | | | | | Developer | |

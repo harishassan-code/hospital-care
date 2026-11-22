@@ -6,8 +6,8 @@ points: 2
 priority: highest
 sprint: 7
 depends_on: -
-owner: unassigned
-status: Ready
+owner: Kabir-Raj-01
+status: In Progress
 ---
 
 # B00 · Scrum records catch-up before the preliminary review
