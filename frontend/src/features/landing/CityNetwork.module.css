@@ -1,0 +1,80 @@
+.art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.ground {
+  fill: color-mix(in srgb, var(--sign) 10%, var(--surface));
+}
+
+.street {
+  stroke: var(--surface);
+  fill: none;
+}
+
+.river {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 18;
+  opacity: 0.7;
+}
+
+/* Routes draw themselves in, one after another. */
+.route,
+.liveRoute {
+  --route-length: 600;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 600;
+  animation: draw-route 900ms var(--ease-out) both;
+}
+
+.route {
+  opacity: 0.55;
+}
+
+.node {
+  fill: var(--surface);
+  stroke: color-mix(in srgb, var(--accent) 35%, transparent);
+  stroke-width: 1.5;
+}
+
+.cross {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}
+
+.mainNode {
+  fill: var(--sign);
+}
+
+.mainCross {
+  stroke: var(--sign-text);
+  stroke-linecap: round;
+}
+
+/* The hospital that has what the case needs. */
+.pulse {
+  fill: none;
+  stroke: var(--line-emergency);
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse-ring 2.4s var(--ease-out) 1.2s infinite;
+}
+
+.ambulance rect {
+  fill: var(--line-emergency);
+}
+
+.ambulance path {
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+}

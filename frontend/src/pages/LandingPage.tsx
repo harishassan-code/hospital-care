@@ -6,6 +6,7 @@ import { hospital } from '../config/hospital'
 import { formatClock } from '../lib/time'
 import { useNow } from '../lib/useNow'
 import { useScrollToHash } from '../lib/useScrollToHash'
+import { CityNetwork } from '../features/landing/CityNetwork'
 import { Destination } from '../features/landing/Destination'
 import { DoctorSchedule } from '../features/landing/DoctorSchedule'
 import { EmergencyStatus } from '../features/landing/EmergencyStatus'
@@ -41,7 +42,15 @@ export default function LandingPage() {
       <main id="main" className={styles.main}>
         <div className={styles.container}>
           <RailRow lines={{}} className={styles.heroHead}>
-            <h1 className={styles.title}>Where do you need to go?</h1>
+            <div className={styles.hero}>
+              <div className={styles.heroText}>
+                <h1 className={styles.title}>Where do you need to go?</h1>
+                <p className={styles.lede}>
+                  Live emergency waiting times, the doctors on duty today, and sign-in for patients and staff.
+                </p>
+              </div>
+              <CityNetwork className={styles.art} />
+            </div>
           </RailRow>
 
           <WayfindingSign status={status} failed={failed} now={now} />
