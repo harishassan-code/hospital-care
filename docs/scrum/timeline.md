@@ -75,7 +75,7 @@ of Done), and **Merged in window** is every point that reached `main` during the
 | 5 | 31 | 31 | 0 | 0 | Nothing merged; emergency cases landed in #100 (17 Nov) |
 | 6 | 32 | 32 | 0 | 0 | Only AIDLC docs merged (#91, #92); matching landed in #100 (17 Nov) |
 | 7 | 34 | 34 | 34 | 111 | #100 and #102 merged Sprints 4–7 together: 111 points reached `main` in this window |
-| 8 | 29 | | | | In progress |
+| 8 | 29 | 29 | 29 | 51 | As of 22 Nov (the sprint ends 27 Nov): #104 merged all seven Sprint 8 stories (#50–#56) on 22 Nov. The stretch stories #61–#67 (22 points: #106, #109, #112) also reached `main` that day. Sprint 9's #57–#59 code merged too (#107, #108, #111), but those issues stay open until staging, so they aren't counted |
 | 9 | 14 | | | |  |
 
 **Average merged per sprint, Sprints 1–7:** 201 points / 7 ≈ 29 (plus #1, 3 points, merged at kickoff on 2 Oct), close to the ≈ 27 the plan needs. The problem

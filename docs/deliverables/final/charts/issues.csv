@@ -1,0 +1,79 @@
+number,title,state,closed_at,milestone,points
+1,"Repository, CI pipeline and Docker dev environment",closed,2026-10-02T21:06:36Z,Sprint 1 (Oct 03 – Oct 09),3
+2,Team onboarding: everyone runs the project locally,open,,Sprint 1 (Oct 03 – Oct 09),1
+3,Domain model and ERD for the MVP,closed,2026-10-19T11:36:54Z,Sprint 1 (Oct 03 – Oct 09),5
+4,UI wireframes for core user journeys,closed,2026-10-19T11:36:56Z,Sprint 1 (Oct 03 – Oct 09),5
+5,"Frontend app shell: layout, routing, design tokens, API client",closed,2026-10-19T11:51:09Z,Sprint 1 (Oct 03 – Oct 09),3
+6,Document blood compatibility rules from an authoritative source,closed,2026-10-19T11:36:55Z,Sprint 1 (Oct 03 – Oct 09),2
+7,User accounts,closed,2026-10-19T11:51:11Z,Sprint 1 (Oct 03 – Oct 09),3
+8,"Login, logout and session security",closed,2026-10-19T11:51:13Z,Sprint 1 (Oct 03 – Oct 09),5
+9,Role management,closed,2026-10-19T11:51:15Z,Sprint 2 (Oct 10 – Oct 16),3
+10,Role-based access control on API and UI,closed,2026-10-19T11:51:17Z,Sprint 1 (Oct 03 – Oct 09),5
+11,Hospital registration,closed,2026-10-19T11:51:19Z,Sprint 2 (Oct 10 – Oct 16),5
+12,"Hospital structure: departments, wards and storage locations",closed,2026-10-19T11:51:21Z,Sprint 2 (Oct 10 – Oct 16),3
+13,Hospital capability profile,closed,2026-10-19T11:51:24Z,Sprint 2 (Oct 10 – Oct 16),3
+14,Shared resource model and status state machine,closed,2026-10-19T11:51:25Z,Sprint 2 (Oct 10 – Oct 16),5
+15,Audit logging of critical actions,closed,2026-10-19T11:51:27Z,Sprint 2 (Oct 10 – Oct 16),5
+16,Synthetic seed data command,closed,2026-10-19T11:36:57Z,Sprint 2 (Oct 10 – Oct 16),3
+17,Blood unit registration,closed,2026-10-19T11:44:19Z,Sprint 3 (Oct 17 – Oct 23),5
+18,Blood collection and testing status,closed,2026-10-19T15:45:52Z,Sprint 3 (Oct 17 – Oct 23),5
+19,Expiry alerts and stock levels,closed,2026-10-19T15:45:53Z,Sprint 3 (Oct 17 – Oct 23),5
+20,Donor registration,closed,2026-10-19T15:45:54Z,Sprint 3 (Oct 17 – Oct 23),3
+21,Donor eligibility screening,closed,2026-10-19T15:45:54Z,Sprint 3 (Oct 17 – Oct 23),3
+22,Donation appointments,closed,2026-10-19T15:45:55Z,Sprint 3 (Oct 17 – Oct 23),3
+23,Bed registry,closed,2026-10-19T11:51:29Z,Sprint 1 (Oct 03 – Oct 09),3
+24,Real-time bed availability,closed,2026-10-19T11:51:31Z,Sprint 1 (Oct 03 – Oct 09),5
+25,Bed capacity monitoring,closed,2026-10-19T11:51:33Z,Sprint 1 (Oct 03 – Oct 09),3
+26,Equipment registry,closed,2026-11-17T19:54:23Z,Sprint 4 (Oct 24 – Oct 30),3
+27,Equipment operational status,closed,2026-11-17T18:31:56Z,Sprint 4 (Oct 24 – Oct 30),3
+28,Operating room registry,closed,2026-11-17T18:31:57Z,Sprint 4 (Oct 24 – Oct 30),3
+29,Operating room scheduling,closed,2026-11-17T18:31:58Z,Sprint 4 (Oct 24 – Oct 30),5
+30,Create emergency case,closed,2026-11-17T19:54:25Z,Sprint 5 (Oct 31 – Nov 06),5
+31,Emergency severity and priority,closed,2026-11-17T18:31:58Z,Sprint 5 (Oct 31 – Nov 06),3
+32,Define resource requirements for a case,closed,2026-11-17T19:54:28Z,Sprint 5 (Oct 31 – Nov 06),5
+33,Local availability check,closed,2026-11-17T18:31:59Z,Sprint 5 (Oct 31 – Nov 06),5
+34,Emergency request status tracking,closed,2026-11-17T18:31:59Z,Sprint 5 (Oct 31 – Nov 06),5
+35,Request escalation and closure,closed,2026-11-17T18:32:01Z,Sprint 5 (Oct 31 – Nov 06),3
+36,Emergency blood request,closed,2026-11-17T18:32:01Z,Sprint 5 (Oct 31 – Nov 06),5
+37,Blood compatibility matching engine,closed,2026-11-17T19:54:30Z,Sprint 6 (Nov 07 – Nov 13),8
+38,Find candidate hospitals,closed,2026-11-17T19:54:33Z,Sprint 6 (Nov 07 – Nov 13),5
+39,Distance and estimated travel time,closed,2026-11-17T19:54:36Z,Sprint 6 (Nov 07 – Nov 13),3
+40,Configurable scoring model,closed,2026-11-17T19:54:39Z,Sprint 6 (Nov 07 – Nov 13),5
+41,Ranked results with explanation,closed,2026-11-17T19:54:42Z,Sprint 6 (Nov 07 – Nov 13),3
+42,Multi-resource matching,closed,2026-11-17T19:54:44Z,Sprint 6 (Nov 07 – Nov 13),8
+43,Atomic resource reservation,closed,2026-11-17T19:54:47Z,Sprint 7 (Nov 14 – Nov 20),8
+44,Concurrency conflict prevention tests,closed,2026-11-17T19:54:50Z,Sprint 7 (Nov 14 – Nov 20),5
+45,Allocation record,closed,2026-11-17T19:54:52Z,Sprint 7 (Nov 14 – Nov 20),3
+46,Blood allocation workflow,closed,2026-11-17T19:54:55Z,Sprint 7 (Nov 14 – Nov 20),5
+47,Inter-hospital transfer request,closed,2026-11-18T01:53:03Z,Sprint 7 (Nov 14 – Nov 20),5
+48,Transfer tracking,closed,2026-11-18T01:53:05Z,Sprint 7 (Nov 14 – Nov 20),5
+49,Delivery confirmation,closed,2026-11-18T01:53:07Z,Sprint 7 (Nov 14 – Nov 20),3
+50,Ambulance registry,closed,2026-11-22T14:40:21Z,Sprint 8 (Nov 21 – Nov 27),3
+51,Ambulance dispatch and trip tracking,closed,2026-11-22T14:40:22Z,Sprint 8 (Nov 21 – Nov 27),5
+52,Notification service,closed,2026-11-22T14:40:24Z,Sprint 8 (Nov 21 – Nov 27),5
+53,In-app alerts UI,closed,2026-11-22T14:40:26Z,Sprint 8 (Nov 21 – Nov 27),3
+54,Hospital dashboard,closed,2026-11-22T14:40:28Z,Sprint 8 (Nov 21 – Nov 27),5
+55,City command centre dashboard,closed,2026-11-22T14:40:30Z,Sprint 8 (Nov 21 – Nov 27),5
+56,Audit search and export,closed,2026-11-22T14:40:31Z,Sprint 8 (Nov 21 – Nov 27),3
+57,End-to-end MVP scenario test,open,,Sprint 9 (Nov 28 – Dec 04),5
+58,Security and performance hardening,open,,Sprint 9 (Nov 28 – Dec 04),3
+59,Final staging deployment and demo data,open,,Sprint 9 (Nov 28 – Dec 04),3
+60,Final report and demo presentation,open,,Sprint 9 (Nov 28 – Dec 04),3
+61,Specialist doctor profiles,closed,2026-11-22T16:34:39Z,,3
+62,Specialist on-call availability,closed,2026-11-22T16:34:40Z,,3
+63,Patient transfer need check,closed,2026-11-22T16:23:01Z,,3
+64,Patient transfer destination selection,closed,2026-11-22T16:23:02Z,,5
+65,Patient transfer completion,closed,2026-11-22T16:23:03Z,,3
+66,Operational reports,closed,2026-11-22T16:47:32Z,,3
+67,Report export,closed,2026-11-22T16:47:33Z,,2
+68,[Task] Webhook Test,closed,2026-10-03T15:41:10Z,,
+69,Set up staging deployment (Render + Vercel),open,,Sprint 1 (Oct 03 – Oct 09),2
+72,Public landing page with live ER status and today's doctors,closed,2026-10-20T19:19:25Z,Sprint 1 (Oct 03 – Oct 09),
+73,Log in and patient sign-up pages (UI),closed,2026-10-20T19:19:27Z,Sprint 1 (Oct 03 – Oct 09),
+74,Staff workspace shell with preview roles,closed,2026-10-20T19:19:29Z,Sprint 1 (Oct 03 – Oct 09),
+75,Staff overview dashboard (UI),closed,2026-10-20T19:19:31Z,Sprint 1 (Oct 03 – Oct 09),
+76,Bed board page (UI),closed,2026-10-20T19:19:34Z,Sprint 1 (Oct 03 – Oct 09),
+77,Blood bank page (UI),closed,2026-10-20T19:19:37Z,Sprint 1 (Oct 03 – Oct 09),
+78,Pharmacy stock page (UI),closed,2026-10-20T19:19:39Z,Sprint 1 (Oct 03 – Oct 09),
+122,Public status page shows on-shift doctors' names without sign-in (B13 finding F5),open,,,
+123,Pharmacy stock has no hospital scope (B13 finding F7),open,,,

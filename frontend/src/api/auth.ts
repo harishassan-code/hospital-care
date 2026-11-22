@@ -14,7 +14,7 @@ export interface User {
   hospital: { id: number; name: string } | null
 }
 
-export type AuthErrorKind = 'invalid_credentials' | 'locked_out' | 'email_taken' | 'rejected' | 'unavailable'
+export type AuthErrorKind = 'invalid_credentials' | 'locked_out' | 'throttled' | 'email_taken' | 'rejected' | 'unavailable'
 
 export class AuthError extends Error {
   kind: AuthErrorKind
@@ -28,6 +28,7 @@ export class AuthError extends Error {
 const MESSAGES: Record<AuthErrorKind, string> = {
   invalid_credentials: 'That email and password don’t match an account',
   locked_out: 'Too many failed sign-in attempts. Wait 15 minutes, or ask your hospital administrator to reset your password.',
+  throttled: 'Too many attempts from this network just now. Wait a minute and try again.',
   email_taken: 'An account with this email already exists. Log in instead.',
   rejected: 'The hospital couldn’t accept these details. Check them and try again.',
   unavailable: 'The hospital’s server didn’t respond. Try again in a moment.',
@@ -41,12 +42,22 @@ function statusOf(error: unknown): number {
   return error instanceof ApiError ? error.status : 0
 }
 
+/**
+ * A 429 from the per-address limit (B13, F4), not the per-account lockout: DRF's throttle reply says
+ * "Request was throttled. Expected available in N seconds." The lockout's reply names the failed attempts.
+ */
+function throttled(error: unknown): boolean {
+  const body = error instanceof ApiError ? error.body : null
+  const detail = typeof body === 'object' && body !== null && 'detail' in body ? String(body.detail) : ''
+  return detail.startsWith('Request was throttled')
+}
+
 export async function login(values: { email: string; password: string }): Promise<User> {
   try {
     return await apiPost<User>('/auth/login/', { email: values.email.trim(), password: values.password })
   } catch (error) {
     const status = statusOf(error)
-    if (status === 429) throw new AuthError('locked_out')
+    if (status === 429) throw new AuthError(throttled(error) ? 'throttled' : 'locked_out')
     throw new AuthError(status === 400 || status === 401 ? 'invalid_credentials' : 'unavailable')
   }
 }
@@ -69,6 +80,7 @@ export async function signup(values: {
     const body = error instanceof ApiError ? error.body : null
     const emailRejected = typeof body === 'object' && body !== null && 'email' in body
     if (status === 409 || (status === 400 && emailRejected)) throw new AuthError('email_taken')
+    if (status === 429) throw new AuthError('throttled')
     throw new AuthError(status === 400 ? 'rejected' : 'unavailable')
   }
 }

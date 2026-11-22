@@ -6,8 +6,8 @@ points: 3
 priority: highest
 sprint: 9
 depends_on: B00
-owner: Hassan27521
-status: Backlog
+owner: harishassan-code
+status: In Review
 ---
 
 # B15 · Final report and demo presentation
@@ -18,8 +18,8 @@ status: Backlog
 
 [#60](https://github.com/harishassan-code/hospital-care/issues/60): Compile the final project report (process + product), velocity/burndown history and demo slides.
 
-- [ ] All sprint reviews/retros linked
-- [ ] Velocity and burndown charts included
+- [ ] All sprint reviews/retros linked: Sprints 1–7 in the [final report](../../deliverables/final/final-report.md#6-sprint-records); 8 and 9 after their ceremonies
+- [x] Velocity and burndown charts included: [charts](../../deliverables/final/charts/), drawn by `scripts/velocity_charts.py`
 
 ## Build on
 

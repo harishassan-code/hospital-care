@@ -42,6 +42,14 @@ describe('login', () => {
     expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('locked_out')
   })
 
+  it('tells the per-address limit apart from the lockout by its reply (B13, F4)', async () => {
+    const lockout = { detail: 'Too many failed sign-in attempts. Wait 15 minutes, or ask your hospital administrator to reset your password.' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(429, lockout))
+    expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('locked_out')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(429, { detail: 'Request was throttled. Expected available in 42 seconds.' }))
+    expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('throttled')
+  })
+
   it.each([403, 404, 500])('treats %i as the server being unavailable', async (status) => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(status))
     expect(await kindOf(login({ email: 'a@b.co', password: 'pw' }))).toBe('unavailable')
@@ -82,6 +90,11 @@ describe('signup', () => {
   it('treats other 400s as rejected details', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(400, { password: ['too common'] }))
     expect(await kindOf(signup(values))).toBe('rejected')
+  })
+
+  it('treats 429 as the per-address sign-up limit, not a server failure (B13, F4)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(429, { detail: 'Request was throttled. Expected available in 2400 seconds.' }))
+    expect(await kindOf(signup(values))).toBe('throttled')
   })
 
   it('resolves when the account is created', async () => {
@@ -128,5 +141,6 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage('locked_out')).toBe(
       'Too many failed sign-in attempts. Wait 15 minutes, or ask your hospital administrator to reset your password.',
     )
+    expect(authErrorMessage('throttled')).toBe('Too many attempts from this network just now. Wait a minute and try again.')
   })
 })

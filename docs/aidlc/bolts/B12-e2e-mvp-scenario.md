@@ -6,7 +6,7 @@ points: 5
 priority: highest
 sprint: 9
 depends_on: B03
-owner: codewithalphadotcom
+owner: harishassan-code
 status: In Review
 ---
 

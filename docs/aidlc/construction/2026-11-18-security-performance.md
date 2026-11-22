@@ -23,6 +23,9 @@ throttle; units 7 to 9 are the seed option and the load test; unit 10 writes the
 | 10 | **Measured run (spec Q2, acceptance).** Local SQLite (no Docker or Postgres on the build machine), `seed_demo --hospitals 50` on a scratch database, gunicorn with one worker as `render.yaml` runs it. Results and method go in `docs/testing/search-load-test.md`. If p95 misses, find the cause in query counts and fix it only if cheap. | `docs/testing/search-load-test.md` (new), code only if the measurement shows a cheap fix | The measured run itself; row counts, commit, database version and the exact command recorded. |
 | 11 | **Permission review and what was fixed (spec Permission review).** The audit table (every view and URL module, guard, hospital scope, finding) and the status of each finding. `api-contracts.md` updated for the changed responses. | `docs/testing/security-review.md` (new), `docs/architecture/api-contracts.md` | Doc review against the code; the table is checked against the URL walk's count. |
 | 12 | **Acceptance.** Tick the met criteria in the approved spec. | `docs/aidlc/inception/2026-11-18-security-performance.md` | None; checks run as in every unit. |
+| 13 | **Postgres run (22 Nov; closes unit 10's open item).** The exact unit-10 command on PostgreSQL 16, three runs, plus a same-machine SQLite comparison and the per-search query count. | `docs/testing/search-load-test.md` | None; the script and seed are unchanged. |
+| 14 | **Review extended to the routes added since (22 Nov).** The 19 views from #104, #106, #109 and #112 get rows with their guard and scope; the donor rows move to the `donors` module (#104). 66 routes in all, each listed. | `docs/testing/security-review.md` | The two URL walks (`test_permissions.py`, and `test_security.py` from #114) pass on every route. |
+| 15 | **Findings closed or linked (22 Nov).** F5 and F7 linked to follow-ups #122 and #123. Decision 4 fixed: a throttled sign-in or sign-up says "Wait a minute", not the 15-minute lockout or "server didn't respond". Decision 2 (proxy count) analysed, with a check for staging. | `docs/testing/security-review.md`, `frontend/src/api/auth.ts` | `frontend/src/api/auth.test.ts`: lockout vs throttle replies, and a throttled sign-up. |
 
 ## Sequencing
 
@@ -33,6 +36,8 @@ throttle; units 7 to 9 are the seed option and the load test; unit 10 writes the
 - Unit 9 before 10: the measured run uses the script from unit 9.
 - Unit 11 after the code units, so the table describes the code as it ships.
 - Unit 12 last.
+- Units 13 to 15 were added on 22 Nov, after the bolt's PR (#108) merged, to finish the spec's open criteria that
+  don't need staging.
 
 No database migrations are planned. The role table in `apps/accounts/permissions.py` and
 `frontend/src/features/staff/roles.ts` does not change (spec, acceptance criteria).

@@ -34,11 +34,11 @@ ambulances, so an emergency case can find, reserve and transfer what it needs.
 
 | Item | Owner / where |
 |---|---|
-| Staging deployment and demo rehearsal (B14) | In progress |
-| Final report and presentation (B15) | Backlog; uses the [sprint records](README.md#per-sprint-artefacts) |
-| Operations notes for B04–B13 and B16–B18, then mark them Done | Each bolt owner, once staging is live |
-| Search p95 latency measured on staging (#58) | B13 load test |
-| Product Owner UAT sign-off | UAT checklist in [#114](https://github.com/harishassan-code/hospital-care/pull/114) (`docs/testing/uat-checklist.md`) |
+| Staging deployment and demo rehearsal (B14) | Not deployed yet ([#69](https://github.com/harishassan-code/hospital-care/issues/69)); B14 owner, following the [deployment guide](../setup/deployment.md) |
+| Final report and presentation (B15) | Done: [final report](final/final-report.md) and [slides](final/final-presentation.pptx). Add the Sprint 8 and 9 records after their ceremonies, and staging screenshots after B14 |
+| Operations notes for the merged bolts (B01–B13, B16–B18) | Each bolt owner, once staging is live |
+| Search p95 latency rechecked on staging (#58) | Measured on PostgreSQL: [load test](../testing/search-load-test.md); rerun the same command against staging |
+| Product Owner UAT sign-off | [UAT checklist](../testing/uat-checklist.md) |
 
 ## 4. Future roadmap: WBS/FBS items not built
 
