@@ -81,4 +81,4 @@ Proposed answers; the Product Owner confirms them at sign-off:
 
 ## Approval
 
-- [ ] Approved by: pending (Product Owner / Scrum Master, via PR review)
+- [x] Approved by: Hassan Qureshi (Hassan27521) on 2026-11-20, all proposed answers accepted
