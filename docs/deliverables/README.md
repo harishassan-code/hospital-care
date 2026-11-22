@@ -17,8 +17,8 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 | Test report: Authentication & Role-Based Access module (class assignment) | [testing/authentication-test-report.md](../testing/authentication-test-report.md) | ✅ Done |
 | AIDLC process (Inception/Construction/Operations + templates) | [aidlc/](../aidlc/README.md) | ✅ Done |
 | AIDLC bolt board (remaining work, Sprints 7–9) | [aidlc/bolts/](../aidlc/bolts/README.md) | ⏳ Ongoing |
-| Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review | ✅ Sprints 1–7 (B00) |
-| Final report & presentation | `final/` | ⏳ Sprint 9 |
+| Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review; charts in [final/charts/](final/charts/) (`scripts/velocity_charts.py`) | ✅ Sprints 1–7 (B00); Sprint 8 as of 22 Nov (B15) |
+| Final report & presentation | [final/final-report.md](final/final-report.md) ([PDF](final/final-report.pdf)), [final/final-presentation.pptx](final/final-presentation.pptx) | ✅ Done (B15). Add the Sprint 8–9 records and staging screenshots when they exist |
 
 ## Per-sprint artefacts
 

@@ -21,7 +21,8 @@ This is for the Product Owner (the course instructor) and the team presenting th
 
 ## Acceptance criteria
 
-- [ ] `docs/deliverables/final/final-report.md` exists, with a PDF export next to it, and covers:
+- [x] `docs/deliverables/final/final-report.md` exists, with a PDF export next to it, and covers (screenshots are from
+      a local run of the seeded app until staging is deployed, #69):
   - **Product:** the problem, the roles, what shipped (module by module, with the issues and PRs), the architecture
     (link to `docs/architecture/`), screenshots from staging, and what was not built (stretch items) and why.
   - **Process:** the team and roles, Scrum set-up (sprints, ceremonies, working agreement, DoR/DoD), the AIDLC bolt
@@ -29,11 +30,12 @@ This is for the Product Owner (the course instructor) and the team presenting th
     5–7 landing together in #100).
   - **Quality:** test reports, CI checks and the E2E scenario (once B12 is merged).
   - **Lessons learned** from the retrospectives.
-- [ ] Every sprint review and retrospective (Sprints 1–9) is linked from the report.
-- [ ] A velocity chart (planned vs completed points per sprint) and a burndown chart are included as images in
+- [ ] Every sprint review and retrospective (Sprints 1–9) is linked from the report. *Sprints 1–7 are linked; the
+      report has rows for 8 and 9, to fill in after those ceremonies (27 Nov and 4 Dec).*
+- [x] A velocity chart (planned vs completed points per sprint) and a burndown chart are included as images in
       `docs/deliverables/final/charts/`, with the numbers they are drawn from.
-- [ ] Demo slides are in `docs/deliverables/final/` and follow the demo script from B14.
-- [ ] The deliverables index (`docs/deliverables/README.md`) marks the final report and presentation done.
+- [x] Demo slides are in `docs/deliverables/final/` and follow the demo script from B14.
+- [x] The deliverables index (`docs/deliverables/README.md`) marks the final report and presentation done.
 
 ## Design
 
