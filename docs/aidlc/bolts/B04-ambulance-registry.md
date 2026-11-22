@@ -7,7 +7,7 @@ priority: medium
 sprint: 8
 depends_on: -
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B04 · Ambulance registry
@@ -41,8 +41,8 @@ capacity is known.
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-ambulance-registry.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-ambulance-registry.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [ ] Inception spec [`docs/aidlc/inception/2026-11-18-ambulance-registry.md`](../inception/2026-11-18-ambulance-registry.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-ambulance-registry.md`](../construction/2026-11-18-ambulance-registry.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-ambulance-registry.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed

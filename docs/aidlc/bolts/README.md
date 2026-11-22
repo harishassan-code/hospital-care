@@ -23,21 +23,21 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 | Bolt | Title | Issues | Pts | Priority | Depends on | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| [B04](B04-ambulance-registry.md) | Ambulance registry | [#50](https://github.com/harishassan-code/hospital-care/issues/50) | 3 | medium | – | codewithalphadotcom | 🔵 In Review |
-| [B05](B05-ambulance-dispatch.md) | Ambulance dispatch and trip tracking | [#51](https://github.com/harishassan-code/hospital-care/issues/51) | 5 | medium | B02, B04 | codewithalphadotcom | 🔵 In Review |
-| [B06](B06-notification-service.md) | Notification service | [#52](https://github.com/harishassan-code/hospital-care/issues/52) | 5 | high | – | codewithalphadotcom | 🔵 In Review |
-| [B07](B07-alerts-ui.md) | In-app alerts UI | [#53](https://github.com/harishassan-code/hospital-care/issues/53) | 3 | medium | B06 | codewithalphadotcom | 🔵 In Review |
-| [B08](B08-hospital-dashboard.md) | Hospital dashboard: requests, transfers and live refresh | [#54](https://github.com/harishassan-code/hospital-care/issues/54) | 3 | high | B01 | codewithalphadotcom | 🔵 In Review |
-| [B09](B09-city-command-centre.md) | City command centre dashboard | [#55](https://github.com/harishassan-code/hospital-care/issues/55) | 5 | high | – | codewithalphadotcom | 🔵 In Review |
-| [B10](B10-audit-search-export.md) | Audit search and export | [#56](https://github.com/harishassan-code/hospital-care/issues/56) | 3 | medium | – | codewithalphadotcom | 🔵 In Review |
-| [B11](B11-donors-page.md) | Donors page for the existing donor API | [#20](https://github.com/harishassan-code/hospital-care/issues/20), [#21](https://github.com/harishassan-code/hospital-care/issues/21), [#22](https://github.com/harishassan-code/hospital-care/issues/22) | 5 | medium | – | codewithalphadotcom | 🔵 In Review |
+| [B04](B04-ambulance-registry.md) | Ambulance registry | [#50](https://github.com/harishassan-code/hospital-care/issues/50) | 3 | medium | – | codewithalphadotcom | ✅ Done |
+| [B05](B05-ambulance-dispatch.md) | Ambulance dispatch and trip tracking | [#51](https://github.com/harishassan-code/hospital-care/issues/51) | 5 | medium | B02, B04 | codewithalphadotcom | ✅ Done |
+| [B06](B06-notification-service.md) | Notification service | [#52](https://github.com/harishassan-code/hospital-care/issues/52) | 5 | high | – | codewithalphadotcom | ✅ Done |
+| [B07](B07-alerts-ui.md) | In-app alerts UI | [#53](https://github.com/harishassan-code/hospital-care/issues/53) | 3 | medium | B06 | codewithalphadotcom | ✅ Done |
+| [B08](B08-hospital-dashboard.md) | Hospital dashboard: requests, transfers and live refresh | [#54](https://github.com/harishassan-code/hospital-care/issues/54) | 3 | high | B01 | codewithalphadotcom | ✅ Done |
+| [B09](B09-city-command-centre.md) | City command centre dashboard | [#55](https://github.com/harishassan-code/hospital-care/issues/55) | 5 | high | – | codewithalphadotcom | ✅ Done |
+| [B10](B10-audit-search-export.md) | Audit search and export | [#56](https://github.com/harishassan-code/hospital-care/issues/56) | 3 | medium | – | codewithalphadotcom | ✅ Done |
+| [B11](B11-donors-page.md) | Donors page for the existing donor API | [#20](https://github.com/harishassan-code/hospital-care/issues/20), [#21](https://github.com/harishassan-code/hospital-care/issues/21), [#22](https://github.com/harishassan-code/hospital-care/issues/22) | 5 | medium | – | codewithalphadotcom | ✅ Done |
 
 ## Sprint 9 (14 pts)
 
 | Bolt | Title | Issues | Pts | Priority | Depends on | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| [B12](B12-e2e-mvp-scenario.md) | End-to-end MVP scenario test | [#57](https://github.com/harishassan-code/hospital-care/issues/57) | 5 | highest | B03 | Krrishna | 🔵 In Review |
-| [B13](B13-security-performance.md) | Security and performance hardening | [#58](https://github.com/harishassan-code/hospital-care/issues/58) | 3 | high | – | Krrishna | 🔵 In Review |
+| [B12](B12-e2e-mvp-scenario.md) | End-to-end MVP scenario test | [#57](https://github.com/harishassan-code/hospital-care/issues/57) | 5 | highest | B03 | codewithalphadotcom | 🔵 In Review |
+| [B13](B13-security-performance.md) | Security and performance hardening | [#58](https://github.com/harishassan-code/hospital-care/issues/58) | 3 | high | – | codewithalphadotcom | 🔵 In Review |
 | [B14](B14-staging-and-demo.md) | Staging deployment, demo data and demo script | [#59](https://github.com/harishassan-code/hospital-care/issues/59), [#69](https://github.com/harishassan-code/hospital-care/issues/69) | 3 | highest | – | Hassan27521 | 🟡 In Progress |
 | [B15](B15-final-report.md) | Final report and demo presentation | [#60](https://github.com/harishassan-code/hospital-care/issues/60) | 3 | highest | B00 | Hassan27521 | ⚪ Backlog |
 
@@ -45,10 +45,10 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 | Bolt | Title | Issues | Pts | Priority | Depends on | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| [B16](B16-specialists.md) | Specialist profiles and on-call availability | [#61](https://github.com/harishassan-code/hospital-care/issues/61), [#62](https://github.com/harishassan-code/hospital-care/issues/62) | 5 | low | – | Krrishna | 🔵 In Review |
-| [B17](B17-patient-transfer.md) | Patient transfer: need check, destination and arrival | [#63](https://github.com/harishassan-code/hospital-care/issues/63), [#64](https://github.com/harishassan-code/hospital-care/issues/64), [#65](https://github.com/harishassan-code/hospital-care/issues/65) | 5 | low | B01 | Krrishna | 🔵 In Review |
-| [B18](B18-reports.md) | Operational reports and export | [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67) | 5 | low | B10 | Hassan27521 | 🔵 In Review |
+| [B16](B16-specialists.md) | Specialist profiles and on-call availability | [#61](https://github.com/harishassan-code/hospital-care/issues/61), [#62](https://github.com/harishassan-code/hospital-care/issues/62) | 5 | low | – | codewithalphadotcom | ✅ Done |
+| [B17](B17-patient-transfer.md) | Patient transfer: need check, destination and arrival | [#63](https://github.com/harishassan-code/hospital-care/issues/63), [#64](https://github.com/harishassan-code/hospital-care/issues/64), [#65](https://github.com/harishassan-code/hospital-care/issues/65) | 5 | low | B01 | codewithalphadotcom | ✅ Done |
+| [B18](B18-reports.md) | Operational reports and export | [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67) | 5 | low | B10 | Hassan27521 | ✅ Done |
 
 ## Progress
 
-⚪ Backlog: 1 · 🟢 Ready: 0 · 🟡 In Progress: 1 · 🔵 In Review: 14 · ✅ Done: 3
+⚪ Backlog: 1 · 🟢 Ready: 0 · 🟡 In Progress: 1 · 🔵 In Review: 3 · ✅ Done: 14

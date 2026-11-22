@@ -6,14 +6,24 @@ from django.core.management.base import CommandError
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
-from apps.ambulances.models import Ambulance, AmbulanceType
+from apps.ambulances.models import Ambulance, AmbulanceType, Trip
+from apps.ambulances.services import dispatch_trip
 from apps.blood.models import BloodGroup, BloodUnit, Component, UnitStatus
 from apps.blood.services import usable_units
 from apps.core.management.commands.seed_demo import DOCTORS, SPECIALIST_DAYS
 from apps.core.management.commands.seed_demo import Command as SeedCommand
+from apps.emergencies.models import EmergencyRequest, PatientTransfer
+from apps.emergencies.patient_transfers import request_patient_transfer
+from apps.emergencies.services import create_case
 from apps.hospitals.models import Bed, BedType, Department, Hospital, StorageLocation, Ward
+from apps.matching.allocations import allocate
+from apps.matching.models import Allocation, Reservation
+from apps.matching.reservations import reserve
+from apps.notifications.models import Notification
 from apps.pharmacy.models import Medicine
 from apps.specialists.models import OnCallWindow, Specialist
+from apps.transfers.models import Transfer
+from apps.transfers.services import approve, request_transfer
 
 pytestmark = pytest.mark.django_db
 
@@ -239,3 +249,39 @@ def test_reset_starts_the_specialists_over():
     call_command("seed_demo", "--reset", stdout=None)
     assert Specialist.objects.count() == len(DOCTORS)
     assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+
+
+def rehearse():
+    """What a demo rehearsal leaves behind, through the real services: a critical case at CityCare (with its
+    alerts), its local hold allocated, a stock transfer from Seaview carried by an ambulance, and a request to
+    move the patient to Northside. Each of these protects a hospital, a need or a resource from deletion."""
+    main, seaview, northside = (Hospital.objects.get(name=name) for name in (MAIN, SEAVIEW, NORTHSIDE))
+    nurse = User.objects.get(email="nurse@demo.citycare.pk")
+    admin = User.objects.get(email="admin@demo.citycare.pk")
+    need = {"type": "blood", "group": BloodGroup.O_NEG, "component": Component.RED_CELLS, "quantity": 3}
+    case = create_case(severity="critical", patient_ref="SYN-REHEARSAL", items=[need], actor=nurse)
+    item = case.items.get()
+    [hold] = reserve(item, hospital=main, quantity=1, actor=nurse)
+    allocate(hold.pk, actor=admin)
+    transfer = approve(request_transfer(item, supplier=seaview, quantity=1, actor=nurse), actor=admin)
+    van = Ambulance.objects.filter(hospital=seaview).order_by("identifier").first()
+    dispatch_trip(transfer, ambulance_id=van.pk, actor=admin)
+    request_patient_transfer(case, destination=northside, actor=nurse)
+
+
+REHEARSAL_ROWS = (EmergencyRequest, Reservation, Allocation, Transfer, Trip, PatientTransfer, Notification)
+
+
+def test_reset_after_a_rehearsal_clears_its_cases_and_gives_a_fresh_seed():
+    """A rehearsal leaves cases, holds, transfers, a trip and alerts that protect the hospitals and stock the
+    reset deletes. The reset clears them first, so it gives a fresh seed's data, not a ProtectedError."""
+    call_command("seed_demo", stdout=None)
+    fresh = counts()
+    rehearse()
+    assert all(model.objects.exists() for model in REHEARSAL_ROWS), "the rehearsal should leave every kind"
+
+    call_command("seed_demo", "--reset", stdout=None)
+
+    assert [model.__name__ for model in REHEARSAL_ROWS if model.objects.exists()] == []
+    assert counts() == fresh
+    assert usable_units(o_neg_red_cells(Hospital.objects.get(name=MAIN))).count() == 1  # the MVP scenario's

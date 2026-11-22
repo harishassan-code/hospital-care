@@ -7,7 +7,7 @@ priority: medium
 sprint: 8
 depends_on: -
 owner: codewithalphadotcom
-status: In Review
+status: Done
 ---
 
 # B10 · Audit search and export
@@ -39,8 +39,8 @@ status: In Review
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-audit-search-export.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-audit-search-export.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [ ] Inception spec [`docs/aidlc/inception/2026-11-18-audit-search-export.md`](../inception/2026-11-18-audit-search-export.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-audit-search-export.md`](../construction/2026-11-18-audit-search-export.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-audit-search-export.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed

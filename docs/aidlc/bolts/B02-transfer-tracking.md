@@ -40,8 +40,8 @@ status: Done
 
 ## Exit checklist
 
-- [ ] Inception spec `docs/aidlc/inception/<date>-transfer-tracking.md` approved (sign-off line filled in)
-- [ ] Construction plan `docs/aidlc/construction/<date>-transfer-tracking.md` written
-- [ ] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
+- [ ] Inception spec [`docs/aidlc/inception/2026-11-18-transfer-tracking.md`](../inception/2026-11-18-transfer-tracking.md) approved (sign-off line filled in)
+- [x] Construction plan [`docs/aidlc/construction/2026-11-18-transfer-tracking.md`](../construction/2026-11-18-transfer-tracking.md) written
+- [x] Code, tests and docs merged; CI green; [Definition of Done](../../scrum/working-agreement.md) met
 - [ ] Operations notes `docs/aidlc/operations/<date>-transfer-tracking.md` written after it's live on staging
-- [ ] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
+- [x] `status: Done` here, board regenerated (`python3 scripts/aidlc_board.py`), issue(s) closed
