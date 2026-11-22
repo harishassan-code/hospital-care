@@ -4,7 +4,8 @@ blood units, medicines, doctors, specialists with on-call windows, and one login
 patient and unit is made up.
 
     python manage.py seed_demo            # safe to re-run: adds only what's missing, never duplicates
-    python manage.py seed_demo --reset    # wipes the demo hospitals, beds, blood, pharmacy, doctors first
+    python manage.py seed_demo --reset    # wipes the demo hospitals, beds, blood, pharmacy, doctors first,
+                                          # and the cases, holds, transfers, trips and alerts that use them
     python manage.py seed_demo --hospitals 50   # the 3 named hospitals plus 47 synthetic (load tests)
 
 Also links data from before Sprint 2 (wards, beds, units and staff with no hospital) to the first hospital.
@@ -19,7 +20,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
-from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
+from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType, Trip
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
@@ -32,7 +33,7 @@ from apps.blood.models import (
     UnitStatus,
 )
 from apps.blood.services import usable_units
-from apps.emergencies.models import EmergencyStatus, ErStatus
+from apps.emergencies.models import EmergencyRequest, EmergencyStatus, ErStatus, PatientTransfer
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
@@ -45,9 +46,12 @@ from apps.hospitals.models import (
     StorageLocation,
     Ward,
 )
+from apps.matching.models import Allocation, Reservation
+from apps.notifications.models import Notification
 from apps.operating_rooms.models import OperatingRoom, OrBooking, OrStatus
 from apps.pharmacy.models import Batch, Medicine
 from apps.specialists.models import OnCallWindow, Specialist
+from apps.transfers.models import Transfer
 
 DEMO_PASSWORD = "CityCare-demo-1"
 DEMO_USERS = [
@@ -560,7 +564,11 @@ class Command(BaseCommand):
     help = "Load demo wards, beds, blood units, medicines, doctors and one login per role."
 
     def add_arguments(self, parser):
-        parser.add_argument("--reset", action="store_true", help="Delete existing demo-module data first.")
+        parser.add_argument(
+            "--reset",
+            action="store_true",
+            help="Delete existing demo-module data, and the cases, transfers and alerts that use it, first.",
+        )
         parser.add_argument("--seed", type=int, default=7, help="Random seed, for repeatable data.")
         parser.add_argument(
             "--hospitals",
@@ -581,6 +589,15 @@ class Command(BaseCommand):
         now = timezone.now()
         if reset:
             models = (
+                # Cases and what they hold go first: each protects the hospitals and stock below. A rehearsal
+                # leaves them behind, and without this the reset stops at the first case (ProtectedError).
+                Trip,  # before transfers and ambulances: a trip holds both (PROTECT)
+                Allocation,  # before holds and cases: an allocation holds its hold, case and need
+                Reservation,  # before needs and hospitals
+                Transfer,  # before needs and hospitals; its status history goes with it
+                PatientTransfer,  # before cases and hospitals
+                EmergencyRequest,  # its needs and timeline go with it
+                Notification,  # alerts about the cases above; references restart at 0001 after a reset
                 Ambulance,
                 Equipment,
                 OrBooking,  # before the rooms: a booking holds its room (PROTECT)
