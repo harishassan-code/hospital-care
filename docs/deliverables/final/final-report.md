@@ -34,7 +34,7 @@ until the receiving hospital confirms delivery.
 | MVP acceptance criteria (proposal §23) | All 11 covered by the end-to-end browser test; criteria 2 and 4 partly, with the rest in unit tests | [MVP scenario](../../testing/mvp-scenario.md) |
 | Automated tests | 1,857 backend tests (10 more run only on PostgreSQL, in CI), 734 frontend tests, 1 end-to-end scenario | section 4 |
 | Candidate search speed | p95 about 26 ms on PostgreSQL, 50-hospital network | [load test](../../testing/search-load-test.md) |
-| Security | All 66 API routes reviewed; 7 of 10 findings fixed, 1 kept by design, 2 for the Product Owner (#122, #123) | [security review](../../testing/security-review.md) |
+| Security | All 66 API routes reviewed; 9 of 12 findings fixed, 1 kept by design, 2 for the Product Owner (#122, #123) | [security review](../../testing/security-review.md) |
 | Staging | Configured, not yet deployed (#69). Rehearsed locally with its production settings: the full scenario passes | [rehearsal](../../testing/mvp-scenario.md#against-production-settings-staging-rehearsal-22-nov) |
 
 ## 2. Product
@@ -203,12 +203,13 @@ Every push and pull request runs four jobs ([ci.yml](../../../.github/workflows/
 ### 4.3 Security
 
 The review in [security-review.md](../../testing/security-review.md) lists every one of the 66 API routes with its
-permission and hospital scope, and two tests walk every route to keep it that way. Seven of its ten findings are
-fixed: donors and records at
-other hospitals now answer 404 rather than leaking their existence, sign-in and sign-up are rate-limited per address,
-the server refuses to start without a secret key, HTTPS and HSTS are on in production, and the Django admin is off on
-staging. One finding is kept by design (some reads also run housekeeping), and two need a Product Owner decision
-(#122, #123). The deploy check on staging waits for #69.
+permission and hospital scope, and two tests walk every route to keep it that way. Nine of its twelve findings are
+fixed: donors and records at other hospitals now answer 404 rather than leaking their existence, sign-in and sign-up
+are rate-limited per address, the server refuses to start without a secret key, HTTPS and HSTS are on in production,
+the Django admin is off on staging, and staff without a hospital no longer see every hospital's records (with a way
+to give them one; found by the [functional sweep](../../testing/functional-sweep.md)). One finding is kept by design
+(some reads also run housekeeping), and two need a Product Owner decision (#122, #123). The deploy check on staging
+waits for #69.
 
 ### 4.4 Performance
 
