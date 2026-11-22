@@ -38,8 +38,8 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 |---|---|---|---|---|---|---|---|
 | [B12](B12-e2e-mvp-scenario.md) | End-to-end MVP scenario test | [#57](https://github.com/harishassan-code/hospital-care/issues/57) | 5 | highest | B03 | Krrishna | 🔵 In Review |
 | [B13](B13-security-performance.md) | Security and performance hardening | [#58](https://github.com/harishassan-code/hospital-care/issues/58) | 3 | high | – | _unassigned_ | 🟢 Ready |
-| [B14](B14-staging-and-demo.md) | Staging deployment, demo data and demo script | [#59](https://github.com/harishassan-code/hospital-care/issues/59), [#69](https://github.com/harishassan-code/hospital-care/issues/69) | 3 | highest | – | _unassigned_ | 🟢 Ready |
-| [B15](B15-final-report.md) | Final report and demo presentation | [#60](https://github.com/harishassan-code/hospital-care/issues/60) | 3 | highest | B00 | _unassigned_ | ⚪ Backlog |
+| [B14](B14-staging-and-demo.md) | Staging deployment, demo data and demo script | [#59](https://github.com/harishassan-code/hospital-care/issues/59), [#69](https://github.com/harishassan-code/hospital-care/issues/69) | 3 | highest | – | Hassan27521 | 🟡 In Progress |
+| [B15](B15-final-report.md) | Final report and demo presentation | [#60](https://github.com/harishassan-code/hospital-care/issues/60) | 3 | highest | B00 | Hassan27521 | ⚪ Backlog |
 
 ## Stretch (15 pts)
 
@@ -47,8 +47,8 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 |---|---|---|---|---|---|---|---|
 | [B16](B16-specialists.md) | Specialist profiles and on-call availability | [#61](https://github.com/harishassan-code/hospital-care/issues/61), [#62](https://github.com/harishassan-code/hospital-care/issues/62) | 5 | low | – | _unassigned_ | 🟢 Ready |
 | [B17](B17-patient-transfer.md) | Patient transfer: need check, destination and arrival | [#63](https://github.com/harishassan-code/hospital-care/issues/63), [#64](https://github.com/harishassan-code/hospital-care/issues/64), [#65](https://github.com/harishassan-code/hospital-care/issues/65) | 5 | low | B01 | _unassigned_ | ⚪ Backlog |
-| [B18](B18-reports.md) | Operational reports and export | [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67) | 5 | low | B10 | _unassigned_ | ⚪ Backlog |
+| [B18](B18-reports.md) | Operational reports and export | [#66](https://github.com/harishassan-code/hospital-care/issues/66), [#67](https://github.com/harishassan-code/hospital-care/issues/67) | 5 | low | B10 | Hassan27521 | 🟡 In Progress |
 
 ## Progress
 
-⚪ Backlog: 3 · 🟢 Ready: 4 · 🟡 In Progress: 0 · 🔵 In Review: 9 · ✅ Done: 3
+⚪ Backlog: 2 · 🟢 Ready: 3 · 🟡 In Progress: 2 · 🔵 In Review: 9 · ✅ Done: 3
