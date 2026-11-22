@@ -113,6 +113,24 @@ job. On failure it uploads the Playwright report and traces as the `e2e-report` 
 
 The scenario has no retries. A flaky step is a bug to fix (a wait on something visible), not a retry to hide.
 
+## Against production settings (staging rehearsal, 22 Nov)
+
+Staging isn't deployed yet (#69), so the scenario was run once against the same set-up locally, to catch anything
+that only breaks with DEBUG off:
+
+- **API:** a fresh PostgreSQL 16 database, built with `render.yaml`'s build steps (`collectstatic`, `migrate`,
+  `seed_demo`) and its environment: `DJANGO_DEBUG=false`, a random 50-character secret key, `DJANGO_HSTS_SECONDS=3600`,
+  `DJANGO_ADMIN_ENABLED=false`, `DJANGO_TRUSTED_PROXY_COUNT=1`, and `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`
+  set to the site's address. Started with `render.yaml`'s start command, `gunicorn config.wsgi:application`.
+- **Site:** built with `VITE_API_URL=/api`, as on Vercel, and served by a small local proxy standing in for
+  `frontend/vercel.json`. It forwards `/api/*` to gunicorn with a different `Host` and `X-Forwarded-Proto: https`, as
+  Vercel and Render's edge do.
+
+Results: `check --deploy --fail-level WARNING` found no issues; `scripts/smoke_staging.py` passed; the session and
+CSRF cookies came back `Secure; SameSite=None`; plain HTTP straight to the API was redirected to HTTPS; and **the
+whole scenario passed** (314 API requests, none answered 4xx or 5xx). What this can't check is Render and Vercel
+themselves: the real hostnames, TLS, and the proxy count behind Render's edge (security review, decision 2).
+
 ## Limits
 
 - Desktop Chromium only. No mobile layouts, no visual comparisons.
