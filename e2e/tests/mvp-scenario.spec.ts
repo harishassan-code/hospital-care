@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import type { Role } from './support/accounts'
+import { ACCOUNTS, type Role } from './support/accounts'
 import { signIn, type Session } from './support/signIn'
 
 // The MVP acceptance scenario (proposal §23), run in a real browser against the real API and database. Each step
@@ -7,11 +7,10 @@ import { signIn, type Session } from './support/signIn'
 // docs/testing/mvp-scenario.md. Seed preconditions are checked where the scenario depends on them, with a message
 // naming the precondition. Nothing here is skipped or retried.
 //
-// It needs a freshly seeded database: the counts in S12 are the whole database's, and a second run on the same data
-// finds the stock already used. Both CI and the local commands in the testing doc start from an empty database.
-
-/** The Django admin, where the admin reads the transfer, allocation and audit records (step S12). */
-const ADMIN_URL = process.env.E2E_ADMIN_URL ?? 'http://localhost:8000/admin/'
+// It needs the seeded stock: a freshly seeded database, or `seed_demo --reset` after an earlier run, since a run
+// uses the stock it reserves. The audit checks in S12 count only this run's records: the transfer by its id, and the
+// case's holds, allocations and close by its reference, less what was already filed under that reference (a reset
+// starts references again at EC-<year>-0001 and keeps the audit log).
 
 /** Seeded hospitals, in the order the hospitals list shows them (S1). */
 const HOSPITALS = ['CityCare General Hospital', 'Seaview Hospital', "Northside Children's Hospital"]
@@ -21,6 +20,14 @@ const NEED = 3
 const OUTCOME = 'Stock held locally and received from Seaview, as planned. Case closed.'
 
 const CASE_URL = /\/staff\/emergencies\/EC-\d{4}-\d{4}$/
+
+/** Filters typed into the audit log's search form (B10, #56), by their labels there. */
+type AuditSearch = { who?: string; action?: string; type?: string; id?: number; text?: string }
+
+/** The audit log's searches for one case: its holds and allocations (filed "For <reference>"), and its close. */
+const HOLDS = (reference: string): AuditSearch => ({ action: 'reservation.created', text: reference })
+const ALLOCATIONS = (reference: string): AuditSearch => ({ action: 'allocation.created', text: reference })
+const CLOSES = (reference: string): AuditSearch => ({ action: 'emergencyrequest.status_changed', text: reference, who: ACCOUNTS.nurse })
 
 test.describe.configure({ mode: 'serial' })
 
@@ -42,6 +49,8 @@ test('MVP acceptance scenario: request, match, reserve, transfer, receipt, histo
   let short = 0
   let transferId = 0
   let resources: string[] = []
+  /** Audit entries already filed under this run's case reference when the case was opened (S3), by search. */
+  const before = { holds: 0, allocations: 0, closes: 0 }
 
   try {
     await test.step('§23.1 · S1 · Admin sees the three hospitals, all active', async () => {
@@ -88,6 +97,12 @@ test('MVP acceptance scenario: request, match, reserve, transfer, receipt, histo
       await expect(caseFact(page, 'Status')).toHaveText('Open')
       await expect(page.locator('#case').getByText(`${NEED} × O− red cells`, { exact: true })).toBeVisible()
       await expect(page.locator('#case').getByText('Critical', { exact: true })).toBeVisible()
+
+      // What the audit log already holds under this reference, from a case before a reset: S12 counts on from here.
+      const admin = await as('admin')
+      before.holds = (await searchAudit(admin, HOLDS(caseRef))).count
+      before.allocations = (await searchAudit(admin, ALLOCATIONS(caseRef))).count
+      before.closes = (await searchAudit(admin, CLOSES(caseRef))).count
     })
 
     await test.step('§23.4, §23.5 · S4 · Local stock is short; the network offers ranked sources', async () => {
@@ -227,7 +242,7 @@ test('MVP acceptance scenario: request, match, reserve, transfer, receipt, histo
       await expect(page.locator('#outcome')).toContainText(OUTCOME)
     })
 
-    await test.step('§23.10 · S12 · Doctor reads the case history; admin reads the transfer, allocation and audit records', async () => {
+    await test.step('§23.10 · S12 · Doctor reads the case history; admin reads the transfer and the audit log', async () => {
       const doctor = await as('doctor')
       await openCase(doctor, caseRef)
       const history = doctor.locator('#history')
@@ -236,29 +251,30 @@ test('MVP acceptance scenario: request, match, reserve, transfer, receipt, histo
       await expect(history.getByText(/^Allocated O− red cells .* from Seaview Hospital by Tariq Lodhi$/)).toHaveCount(short)
       await expect(doctor.locator('#case-transfers')).toContainText('Delivered')
 
+      // The admin reads the records in the app itself (the Transfers page and the audit log from B10, #56), as an
+      // authorised user would on staging, where the Django admin is off (B13).
       const admin = await as('admin')
-      await admin.goto(`${ADMIN_URL}transfers/transfer/`)
-      const transferRow = admin.locator('#result_list tbody tr').filter({
-        has: admin.getByRole('link', { name: String(transferId), exact: true }),
-      })
-      await expect(transferRow, 'the admin sees the transfer as delivered').toContainText('Delivered')
+      await admin.goto('/staff/transfers?direction=outgoing')
+      const card = admin.getByRole('article', { name: `Transfer #${transferId}`, exact: true })
+      await expect(card.locator('header'), 'the admin sees the transfer as delivered').toContainText('Delivered')
 
-      await admin.goto(`${ADMIN_URL}matching/allocation/`)
-      const allocations = admin.locator('#result_list tbody tr').filter({ hasText: caseRef })
-      await expect(allocations, 'every unit of the need has an allocation record').toHaveCount(NEED)
+      // The transfer's own history in the audit log, found by its id: each move once, with who made it.
+      const { rows: moves } = await searchAudit(admin, { type: 'transfers.transfer', id: transferId })
+      const move = (action: string, who: Role) => moves.filter({ hasText: action }).filter({ hasText: ACCOUNTS[who] })
+      await expect(move('transfer.requested', 'nurse')).toHaveCount(1)
+      await expect(move('transfer.approved', 'admin')).toHaveCount(1)
+      await expect(move('transfer.dispatched', 'admin')).toHaveCount(1)
+      await expect(move('transfer.inTransit', 'admin')).toHaveCount(1)
+      await expect(move('transfer.delivered', 'bloodBank')).toHaveCount(1)
 
-      await admin.goto(`${ADMIN_URL}audit/auditlog/`)
-      const audit = admin.locator('#result_list tbody tr')
-      const entry = (action: string) => audit.filter({ hasText: action })
-      await expect(entry('transfer.requested').filter({ hasText: 'nurse@demo.citycare.pk' })).toHaveCount(1)
-      await expect(entry('transfer.inTransit').filter({ hasText: 'admin@demo.citycare.pk' })).toHaveCount(1)
-      await expect(entry('transfer.delivered').filter({ hasText: 'bloodbank@demo.citycare.pk' })).toHaveCount(1)
-      await expect(entry('reservation.created'), 'every hold made for the case is audited').toHaveCount(NEED)
-      await expect(entry('allocation.created'), 'every allocation is audited').toHaveCount(NEED)
-      // The nurse's close of the case, with her email: the move and its actor are both in the row.
-      await expect(
-        entry('emergencyrequest.status_changed').filter({ hasText: caseRef }).filter({ hasText: 'nurse@demo.citycare.pk' }),
-      ).toHaveCount(1)
+      // The case's holds, allocations and close, found by its reference, on top of what S3 found already there.
+      const holds = await searchAudit(admin, HOLDS(caseRef))
+      expect(holds.count - before.holds, 'every hold made for the case is audited').toBe(NEED)
+      const allocations = await searchAudit(admin, ALLOCATIONS(caseRef))
+      expect(allocations.count - before.allocations, 'every unit of the need has an audited allocation').toBe(NEED)
+      const closes = await searchAudit(admin, CLOSES(caseRef))
+      expect(closes.count - before.closes, 'the nurse’s close of the case is audited, with her email').toBe(1)
+      await expect(closes.rows.first(), 'the newest close is this run’s').toContainText(OUTCOME)
     })
   } finally {
     await Promise.all([...people.values()].map((session) => session.context.close()))
@@ -289,6 +305,40 @@ function armDialog(page: Page): string[] {
     void dialog.accept()
   })
   return messages
+}
+
+/**
+ * Searches the audit log as the signed-in admin, as a person would: fills the form and presses Search. Returns how
+ * many entries match (from the search's own reply, so it never reads the page mid-update) and the rows the table
+ * lists. A page holds 50 entries; every search here matches far fewer.
+ */
+async function searchAudit(page: Page, search: AuditSearch): Promise<{ count: number; rows: Locator }> {
+  await page.goto('/staff/audit')
+  const table = page.getByRole('table', { name: 'Audit entries' })
+  // The unfiltered first page loads on its own; wait for it, so its reply isn't taken for the search's.
+  await expect(table.or(page.getByText('No audit entries match these filters.'))).toBeVisible()
+  const form = page.getByRole('form', { name: 'Search the audit trail' })
+  const fields: [string, string | undefined, string][] = [
+    ['Who (email)', search.who, 'actor'],
+    ['Action', search.action, 'action'],
+    ['Object type', search.type, 'targetType'],
+    ['Object ID', search.id === undefined ? undefined : String(search.id), 'targetId'],
+    ['Search text', search.text, 'q'],
+  ]
+  for (const [label, value] of fields) if (value) await form.getByLabel(label, { exact: true }).fill(value)
+  const reply = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return (
+      url.pathname.endsWith('/audit/entries/') &&
+      fields.every(([, value, name]) => !value || url.searchParams.get(name) === value)
+    )
+  })
+  await form.getByRole('button', { name: 'Search', exact: true }).click()
+  const { count } = (await (await reply).json()) as { count: number }
+  const rows = table.locator('tbody > tr')
+  if (count > 0) await expect(rows, 'the table lists what the search found').toHaveCount(Math.min(count, 50))
+  else await expect(page.getByText('No audit entries match these filters.')).toBeVisible()
+  return { count, rows }
 }
 
 /** Opens a case from its reference and waits for its page. */

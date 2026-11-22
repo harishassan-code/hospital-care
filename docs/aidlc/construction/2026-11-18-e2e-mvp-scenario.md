@@ -55,6 +55,7 @@ Checked by running `migrate` and `seed_demo` on a fresh scratch SQLite database,
 | 4 | Stable hooks in the frontend, only where a step cannot be found by role, label or the existing section id | None expected. If needed: the page, plus a Vitest test | `npm test`, `npm run build` |
 | 5 | CI job `e2e` (triggers per spec Open question 1: pull requests, pushes to `main`, `workflow_dispatch`). Postgres 17 service, migrate, seed, runserver, vite build and preview, Playwright with browsers, report and traces uploaded on failure | `.github/workflows/ci.yml` | The workflow parses (validated with Ruby's YAML loader). The job's commands are run locally in the same order. The CI run itself needs a push, which this bolt does not do |
 | 6 | Docs: `docs/testing/mvp-scenario.md` (how to run it locally, the §23 mapping table, what CI runs), a link from `docs/testing/README.md`, and a short "End-to-end scenario" section in `README.md` | `docs/testing/mvp-scenario.md`, `docs/testing/README.md`, `README.md` | Every local command in the docs run as written |
+| 7 | **S12 on the in-app records (22 Nov, after B10 merged).** The admin reads the transfer on the Transfers page and searches the in-app audit log instead of the Django admin: the transfer's five moves by its id, and the case's holds, allocations and close by its reference, less what S3 found already filed under that reference. §23.10 becomes Covered, the check works where the Django admin is off (staging), and the scenario runs again after `seed_demo --reset`. `E2E_ADMIN_URL` is no longer read. | `e2e/tests/mvp-scenario.spec.ts`, `docs/testing/mvp-scenario.md` | The scenario itself: green on a fresh database, then twice more on the same database after `seed_demo --reset`. |
 
 ## Sequencing
 
@@ -82,8 +83,8 @@ unit 3 for the job to have something to run. Unit 6 documents what units 3 and 5
 - **S10 accepts the allocate confirmation too.** The spec mentions only S9's dialog. The same test step cannot be
   reached without it.
 - **Reservations are checked through the audit log in S12**, because there is no Reservation admin page.
-- **The admin's Django page is opened on `E2E_ADMIN_URL`** (default `http://localhost:8000/admin/`). The spec names no
-  variable for it. It mirrors `E2E_BASE_URL`, and nothing else reads it.
+- **The admin's Django page was opened on `E2E_ADMIN_URL`** (default `http://localhost:8000/admin/`) until unit 7
+  moved S12 to the in-app audit log (B10). The variable is no longer read.
 - **`--noreload` is not used on `runserver`.** The spec's command is kept as written.
 - **`workflow_dispatch` is added to the workflow's top-level `on:`, so a manual run runs every job.** The spec asks for
   manual runs and keeps the existing triggers. The other jobs have no `if:`, so they run on a manual run too. That is a

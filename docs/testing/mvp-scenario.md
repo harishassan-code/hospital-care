@@ -18,7 +18,7 @@ Every login is one `seed_demo` creates (README "Signing in"; password `CityCare-
 |---|---|
 | `nurse@demo.citycare.pk` | Opens the critical request, reserves local stock, asks Seaview for the shortfall, closes the case |
 | `bloodbank@demo.citycare.pk` | Checks CityCare's stock, confirms receipt, allocates the held unit |
-| `admin@demo.citycare.pk` | Checks the hospitals; acts as Seaview's supplier (approve, dispatch, in transit); reads the Django admin |
+| `admin@demo.citycare.pk` | Checks the hospitals; acts as Seaview's supplier (approve, dispatch, in transit); reads the Transfers page and the audit log |
 | `doctor@demo.citycare.pk` | Reads the case history and the transfer panel |
 
 ## The steps
@@ -39,7 +39,7 @@ stock, shortfall, quantities) are read from the page, not assumed.
 | S9 | 8, 9 | Blood bank: Confirm receipt (accepts the confirm) | Transfer Delivered; the units are CityCare's and issued; case Partially fulfilled |
 | S10 | 9 | Blood bank allocates the local hold (accepts the confirm) | Case Fulfilled; "Every need allocated" |
 | S11 | 10 | Nurse closes the case with an outcome note | Case Closed; the outcome shows |
-| S12 | 10 | Doctor reads the history; admin reads the transfer, allocation and audit lists | Every move shows its actor; the audit list has the transfer, reservation and allocation entries |
+| S12 | 10 | Doctor reads the history; admin reads the transfer on the Transfers page and searches the in-app audit log (B10) | Every move shows its actor; the audit log has each of the transfer's five moves once, with who made it (searched by the transfer's id), and the case's 3 holds, 3 allocations and the nurse's close (searched by its reference) |
 
 Two of these steps accept a browser confirm: "Confirm receipt" (S9) and "Allocate" (S10). The spec named only S9.
 
@@ -56,18 +56,22 @@ Two of these steps accept a browser confirm: "Confirm receipt" (S9) and "Allocat
 | 7. Inter-hospital transfer started when stock is short | S7 | Covered | |
 | 8. Supplier approves; units move through defined transfer states | S8, S9 | Covered | The admin acts for Seaview (spec Open question 2) |
 | 9. Receipt confirmed; inventory and request states update | S9, S10 | Covered | |
-| 10. Complete transaction history visible to authorised users | S11, S12 | Partial | No in-app audit view until B10 (#56). The Django admin audit list is read-only, and only the admin opens it |
+| 10. Complete transaction history visible to authorised users | S11, S12 | Covered | The doctor reads the case's history and transfers; the admin reads the transfer and searches the in-app audit log (B10, #56) for this run's records. No Django admin is used, so the check holds on staging too, where it is off (B13) |
 | 11. Complete workflow covered by automated tests of its core rules | The whole `e2e` job, with the pytest suites | Covered jointly | The browser test checks the workflow; rule-level coverage is in the pytest suites |
 
-Criteria 2, 4 and 10 are partial for the reasons above. Nothing in §23 is left out.
+Criteria 2 and 4 are partial for the reasons above. Criterion 10 was partial until the in-app audit log (B10) was
+merged; S12 now uses it. Nothing in §23 is left out.
 
-Reservations have no Django admin page. S12 checks their audit entries (`reservation.created`) instead.
+S12 counts only this run's records. The transfer's moves are searched by its id. The holds, allocations and close are
+searched by the case reference, less what S3 found already filed under it, because `seed_demo --reset` starts
+references again at `EC-<year>-0001` and keeps the audit log.
 
 ## Run it locally
 
 You need Python 3.13 with `backend/requirements-dev.txt`, Node 24, and the Chromium browser for Playwright.
-Start three things, in order. The scenario needs a **fresh database**: each run uses up the stock it reserves, and
-the next run would find none left. The default database is `backend/db.sqlite3`; delete it to start over.
+Start three things, in order. The scenario needs the seeded stock: each run uses up what it reserves. Before running
+it again on the same database, run `python manage.py seed_demo --reset` (or delete the default database,
+`backend/db.sqlite3`, and seed again).
 
 ```bash
 # 1. The API on http://localhost:8000, on a fresh database
@@ -96,7 +100,6 @@ Port 5173 is fixed because the API accepts only `http://localhost:5173` by defau
 Environment variables, if you need them:
 
 - `E2E_BASE_URL` (default `http://localhost:5173`): the frontend the scenario opens.
-- `E2E_ADMIN_URL` (default `http://localhost:8000/admin/`): the Django admin used in S12.
 
 After a failure, `e2e/playwright-report` (open with `npx playwright show-report`) and `e2e/test-results` hold the
 screenshot and the trace of each failed step. `npx playwright show-trace <trace.zip>` replays it.
