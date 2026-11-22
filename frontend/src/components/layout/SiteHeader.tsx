@@ -1,3 +1,4 @@
+import { Logo } from "../brand/Logo";
 import { Link } from "react-router-dom";
 import { hospital } from "../../config/hospital";
 import { useCurrentUser } from "../../features/auth/useCurrentUser";
@@ -21,9 +22,7 @@ export function SiteHeader() {
     <header className={styles.header}>
       <div className={styles.headerInner}>
         <Link to="/" className={styles.brand}>
-          <span className={styles.monogram} aria-hidden="true">
-            {hospital.monogram}
-          </span>
+          <Logo className={styles.logo} size={40} />
           <span className={styles.brandName}>{hospital.name}</span>
         </Link>
         <nav className={styles.headerNav} aria-label="Main">

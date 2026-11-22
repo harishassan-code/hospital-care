@@ -12,9 +12,6 @@
 /* ── Sign band ─────────────────────────────────────────── */
 
 .band {
-  --focus: var(--sign-text);
-  background: var(--sign);
-  color: var(--sign-text);
   padding-top: var(--space-4);
 }
 
@@ -23,14 +20,13 @@
   align-items: center;
   gap: var(--space-2);
   min-height: var(--tap);
-  color: var(--sign-muted);
+  color: var(--ink-muted);
   font-weight: 700;
   text-decoration: none;
 }
 
 .back:hover {
-  color: var(--sign-text);
-  text-decoration: underline;
+  color: var(--accent);
 }
 
 /* The teal stripe starts at the sign row and continues below the band (see .track). */
@@ -53,9 +49,7 @@
 
 .title {
   font-size: var(--text-2xl);
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-weight: 800;
 }
 
 /* ── Form track ────────────────────────────────────────── */
@@ -87,7 +81,9 @@
   padding: var(--space-6) var(--space-5);
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: page-enter var(--duration) var(--ease-out) both;
 }
 
 .footer {

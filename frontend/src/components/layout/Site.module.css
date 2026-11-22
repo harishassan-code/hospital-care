@@ -28,17 +28,13 @@
   text-decoration: none;
 }
 
-.monogram {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  background: var(--sign);
-  color: var(--sign-text);
-  font-family: var(--font-display);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  border-radius: var(--radius);
+.logo {
+  flex: none;
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.brand:hover .logo {
+  transform: rotate(-8deg) scale(1.04);
 }
 
 .brandName {
@@ -87,7 +83,7 @@
 
 .navCta {
   padding: 0 var(--space-4);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--ink-muted);
   border-radius: var(--radius);
 }
 
@@ -100,13 +96,16 @@
 /* A button that looks like the outlined header link (Log out). Stays visible on small screens. */
 .navButton {
   padding: 0 var(--space-4);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .navButton:hover {
@@ -118,9 +117,9 @@
 /* ── Footer ────────────────────────────────────────────── */
 
 .footer {
-  --focus: var(--sign-text);
-  background: var(--sign);
-  color: var(--sign-text);
+  --focus: #8fb6ff;
+  background: var(--footer);
+  color: var(--footer-text);
 }
 
 .footerInner {
@@ -143,7 +142,7 @@
 
 .facts dt {
   font-size: var(--text-sm);
-  color: var(--sign-muted);
+  color: var(--footer-muted);
 }
 
 .facts dd {
@@ -156,9 +155,9 @@
 
 .poweredBy {
   padding-top: var(--space-4);
-  border-top: 1px solid color-mix(in srgb, var(--sign-text) 18%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--footer-text) 18%, transparent);
   font-size: var(--text-sm);
-  color: var(--sign-muted);
+  color: var(--footer-muted);
 }
 
 @media (min-width: 48rem) {
