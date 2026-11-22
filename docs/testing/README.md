@@ -1,6 +1,10 @@
 # QA tests
 
 End-to-end MVP scenario (proposal §23), in a real browser against the real API: [mvp-scenario.md](mvp-scenario.md).
+
+User acceptance test checklist for the Product Owner, one row per MVP story: [uat-checklist.md](uat-checklist.md).
+Security review and deployment checks (#58): [security-review.md](security-review.md). Candidate-search latency
+(#58): [performance-report.md](performance-report.md).
 It maps each §23 criterion to the steps that show it.
 
 Automated smoke cases: `frontend/src/qa/features.qa.test.tsx`

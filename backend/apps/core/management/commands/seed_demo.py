@@ -508,6 +508,33 @@ OR_BOOKINGS = [
 ]
 
 
+def synthetic_spec(n: int):
+    """An extra synthetic hospital for load tests (#58), in the same shape as HOSPITALS."""
+    return (
+        f"Synthetic City Hospital {n:03d}",
+        "hospital",
+        "Karachi (synthetic)",
+        f"{24.80 + (n % 10) * 0.02:.6f}",
+        f"{66.95 + (n // 10 % 10) * 0.02:.6f}",
+        f"+92 21 555 {n:04d}",
+        ["icu"],
+        ["Emergency medicine", "General medicine"],
+        ["Blood fridge", "Main store"],
+        [
+            (
+                f"syn{n}-med",
+                "Medical",
+                "General medicine",
+                f"S{n}-MED",
+                12,
+                0.8,
+                (18, 90),
+                "General medicine",
+            ),
+        ],
+    )
+
+
 def weighted(rand: random.Random, shares: dict):
     return rand.choices(list(shares), weights=list(shares.values()))[0]
 
@@ -518,9 +545,16 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Delete existing demo-module data first.")
         parser.add_argument("--seed", type=int, default=7, help="Random seed, for repeatable data.")
+        parser.add_argument(
+            "--hospitals",
+            type=int,
+            default=len(HOSPITALS),
+            help="Scale the city for load tests (#58): extra synthetic hospitals beyond the demo ones.",
+        )
 
     @transaction.atomic
-    def handle(self, *args, reset=False, seed=7, **options):
+    def handle(self, *args, reset=False, seed=7, hospitals=None, **options):
+        total = hospitals or len(HOSPITALS)
         rand = random.Random(seed)
         now = timezone.now()
         if reset:
@@ -545,7 +579,8 @@ class Command(BaseCommand):
                 model.objects.all().delete()
 
         hospitals = []
-        for index, spec in enumerate(HOSPITALS):
+        specs = HOSPITALS + [synthetic_spec(i) for i in range(len(HOSPITALS) + 1, total + 1)]
+        for index, spec in enumerate(specs):
             # The first hospital keeps the Sprint 1 random sequence, so its beds and blood look as before.
             hospital_rand = rand if index == 0 else random.Random(seed * 100 + index)
             hospitals.append(self.seed_hospital(spec, hospital_rand, now))
