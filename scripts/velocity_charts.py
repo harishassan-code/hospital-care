@@ -12,7 +12,7 @@ Reads two sources and writes four files to docs/deliverables/final/charts/:
   points (the "Initial estimate" in its body) and close date, fetched once from the GitHub API so the chart
   can be rebuilt without network access. It counts the issues on the Sprint 1-9 milestones (the release
   plan) and draws the points still open at the end of each day, against a straight line to zero at the end
-  of Sprint 9. Writes burndown.csv and burndown.png.
+  of Sprint 9, up to the day of the snapshot (SNAPSHOT_DATE). Writes burndown.csv and burndown.png.
 
 matplotlib is needed only here, so it is not in backend/requirements*.txt. Colours follow the dataviz
 reference palette (categorical slots 1-3, validated for colour-vision deficiency), with value labels so no
@@ -38,6 +38,9 @@ ISSUES = OUT / "issues.csv"
 SPRINT_1_START = date(2026, 10, 3)  # as in scripts/backlog.py: sprints run Saturday to Friday
 SPRINTS = 9
 KARACHI = timezone(timedelta(hours=5))
+# The day issues.csv was fetched. The burndown ends here: it knows nothing about later closes. Change it when
+# you refresh the snapshot.
+SNAPSHOT_DATE = date(2026, 11, 22)
 
 SURFACE, INK, INK_2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a"]  # categorical slots 1-3, in order
@@ -79,7 +82,9 @@ def style(ax) -> None:
 
 def velocity_chart(rows: list[dict]) -> None:
     with open(OUT / "velocity.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["sprint", "planned", "committed", "completed", "merged"])
+        writer = csv.DictWriter(
+            f, fieldnames=["sprint", "planned", "committed", "completed", "merged"], lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -140,7 +145,7 @@ def burndown_chart(today: date) -> dict:
     ideal = [round(total * max(0.0, 1 - (day - start).days / ideal_days), 1) for day in days]
 
     with open(OUT / "burndown.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["date", "points_remaining", "ideal"])
         writer.writerows([[d.isoformat(), r, i] for d, r, i in zip(days, remaining, ideal, strict=True)])
 
@@ -205,8 +210,7 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     rows = velocity_rows()
     velocity_chart(rows)
-    today = datetime.now(KARACHI).date()
-    burn = burndown_chart(min(today, sprint_start(SPRINTS) + timedelta(days=6)))
+    burn = burndown_chart(min(SNAPSHOT_DATE, sprint_start(SPRINTS) + timedelta(days=6)))
     print(f"velocity: sprints {rows[0]['sprint']}–{rows[-1]['sprint']} -> {OUT / 'velocity.png'}")
     print(
         f"burndown: {burn['issues']} issues, {burn['total']} points, {burn['remaining']} open"
