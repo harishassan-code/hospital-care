@@ -1,76 +1,97 @@
 import { apiGet, apiPost } from './client'
 
-export type AmbulanceType = 'basic' | 'advanced' | 'patientTransport'
-/** `dispatched` ("On trip") is set and cleared only by trips (story #51); the registry's own moves can't make it. */
-export type AmbulanceStatus = 'available' | 'dispatched' | 'maintenance' | 'outOfService'
+export type AmbulanceType = 'bls' | 'als' | 'pts'
+export type AmbulanceStatus = 'available' | 'onTrip' | 'maintenance' | 'outOfService'
+export type AmbulanceAction = 'startMaintenance' | 'finishMaintenance' | 'outOfService' | 'returnToService'
+export type TripStatus = 'dispatched' | 'enRoute' | 'arrived' | 'completed' | 'cancelled'
 
-export const AMBULANCE_TYPES: readonly { value: AmbulanceType; label: string }[] = [
-  { value: 'basic', label: 'Basic life support' },
-  { value: 'advanced', label: 'Advanced life support' },
-  { value: 'patientTransport', label: 'Patient transport' },
-]
-
-export const AMBULANCE_STATUSES: readonly { value: AmbulanceStatus; label: string }[] = [
-  { value: 'available', label: 'Available' },
-  { value: 'dispatched', label: 'On trip' },
-  { value: 'maintenance', label: 'In maintenance' },
-  { value: 'outOfService', label: 'Out of service' },
-]
-
-/** The trip on the road with an ambulance, if any (story #51). */
-export interface AmbulanceTrip {
-  id: number
-  status: 'dispatched' | 'enRoute' | 'arrived'
-  /** The transfer it carries. */
-  transferId: number
-}
-
-/** One ambulance and its base hospital (story #50), and the trip it is on, if any (story #51). */
+/** One vehicle (story #50). Shape of AmbulanceSerializer in backend/apps/ambulances/views.py. */
 export interface Ambulance {
   id: number
   identifier: string
   type: AmbulanceType
+  plate: string
+  note: string
   status: AmbulanceStatus
   statusSince: string
-  hospital: string | null
-  trip: AmbulanceTrip | null
+  hospital: string
+  hospitalId: number
 }
 
-/** What the register form sends. Admins pick the base hospital; everyone else registers at their own. */
 export interface AmbulanceInput {
   identifier: string
   type: AmbulanceType
-  hospitalId?: number
+  plate: string
 }
 
-export interface AmbulanceFilter {
-  status?: AmbulanceStatus
-  /** A hospital id: only the ambulances based there (admins only see other hospitals' ambulances). */
-  hospitalId?: number
+/** An ambulance carrying a transfer (story #51). */
+export interface Trip {
+  id: number
+  ambulance: { id: number; identifier: string }
+  status: TripStatus
+  etaMinutes: number | null
+  dispatchedAt: string
+  arrivedAt: string | null
 }
 
-/**
- * The ambulances in the user's hospital (all of them for admins), filtered. GET /api/ambulances/ (ambulances: view).
- */
-export function getAmbulances(filter: AmbulanceFilter = {}): Promise<Ambulance[]> {
-  const query = new URLSearchParams()
-  if (filter.status) query.set('status', filter.status)
-  if (filter.hospitalId !== undefined) query.set('hospital', String(filter.hospitalId))
-  const search = query.toString()
-  return apiGet<Ambulance[]>(`/ambulances/${search ? `?${search}` : ''}`)
+export const AMBULANCE_TYPES: readonly { value: AmbulanceType; label: string }[] = [
+  { value: 'als', label: 'Advanced life support' },
+  { value: 'bls', label: 'Basic life support' },
+  { value: 'pts', label: 'Patient transport' },
+]
+
+export const AMBULANCE_STATUSES: readonly { value: AmbulanceStatus; label: string }[] = [
+  { value: 'available', label: 'Available' },
+  { value: 'onTrip', label: 'On trip' },
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'outOfService', label: 'Out of service' },
+]
+
+export const TRIP_STATUS_LABEL: Record<TripStatus, string> = {
+  dispatched: 'Dispatched',
+  enRoute: 'En route',
+  arrived: 'Arrived',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 }
 
-/** Register an ambulance. POST /api/ambulances/ (ambulances: edit). 400 with field errors, e.g. a taken asset tag. */
-export function createAmbulance(input: AmbulanceInput): Promise<Ambulance> {
+/** The moves staff make by hand from each status; startTrip and endTrip are made only by a trip. */
+export const AMBULANCE_MOVES: Record<AmbulanceStatus, { action: AmbulanceAction; label: string }[]> = {
+  available: [
+    { action: 'startMaintenance', label: 'Start maintenance' },
+    { action: 'outOfService', label: 'Out of service' },
+  ],
+  onTrip: [],
+  maintenance: [
+    { action: 'finishMaintenance', label: 'Finish maintenance' },
+    { action: 'outOfService', label: 'Out of service' },
+  ],
+  outOfService: [{ action: 'returnToService', label: 'Return to service' }],
+}
+
+/** The fleet at the user's hospital (admins: the network). GET /api/ambulances/ (ambulances: view). */
+export function getAmbulances(): Promise<Ambulance[]> {
+  return apiGet<Ambulance[]>('/ambulances/')
+}
+
+/** Available ambulances at a supplying hospital, for dispatch. GET /api/ambulances/available/ (transfers: view). */
+export function getAvailableAmbulances(hospitalId: number): Promise<Ambulance[]> {
+  return apiGet<Ambulance[]>(`/ambulances/available/?hospital=${hospitalId}`)
+}
+
+export function registerAmbulance(input: AmbulanceInput): Promise<Ambulance> {
   return apiPost<Ambulance>('/ambulances/', input)
 }
 
-export type AmbulanceAction = 'startMaintenance' | 'finishMaintenance' | 'outOfService' | 'returnToService'
-
-/**
- * Move an ambulance along its lifecycle. POST /api/ambulances/<id>/actions/ (ambulances: edit). 409 if not allowed now,
- * and for a move a trip makes (dispatch, release), which the registry never offers.
- */
 export function postAmbulanceAction(id: number, action: AmbulanceAction): Promise<Ambulance> {
   return apiPost<Ambulance>(`/ambulances/${id}/actions/`, { action })
+}
+
+/** Send an ambulance with an approved transfer; the transfer goes to dispatched. */
+export function dispatchTrip(transferId: number, ambulanceId: number): Promise<Trip> {
+  return apiPost<Trip>('/ambulances/trips/', { transferId, ambulanceId })
+}
+
+export function postTripAction(tripId: number, action: 'enRoute' | 'arrive'): Promise<Trip> {
+  return apiPost<Trip>(`/ambulances/trips/${tripId}/actions/`, { action })
 }

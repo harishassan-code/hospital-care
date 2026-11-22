@@ -1,6 +1,5 @@
 import { vi } from 'vitest'
 import type { User } from '../api/auth'
-import type { CommandCentre } from '../api/commandCentre'
 import type { BedAction, BedBoard } from '../api/beds'
 import type {
   CandidatesResponse,
@@ -18,11 +17,8 @@ import type {
   Severity,
   StatusChange,
 } from '../api/emergencies'
-import { AUDIT_EXPORT_LIMIT, type AuditEntry } from '../api/audit'
-import { BLOOD_GROUPS, COMPONENTS, REQUIRED_TESTS, type BloodUnit, type BloodUnitInput, type ScreeningTest, type TestResult } from '../api/blood'
-import { DONOR_SLOT_MINUTES, type Appointment, type Donor, type DonorInput, type ScreeningInput } from '../api/donors'
+import { COMPONENTS, REQUIRED_TESTS, type BloodUnit, type BloodUnitInput, type ScreeningTest, type TestResult } from '../api/blood'
 import type { Equipment, EquipmentAction, EquipmentInput } from '../api/equipment'
-import { AMBULANCE_STATUSES, type Ambulance, type AmbulanceAction, type AmbulanceInput, type AmbulanceType } from '../api/ambulances'
 import type {
   OperatingRoom,
   OperatingRoomAction,
@@ -32,30 +28,28 @@ import type {
   OrCapability,
 } from '../api/operatingRooms'
 import type { HospitalInput, StructureKind } from '../api/hospitals'
-import type { Notification } from '../api/notifications'
 import type { PublicStatus } from '../api/publicStatus'
-import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferMove, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
-import { TRIP_STATUS_LABEL, type Trip, type TripAction, type TripStatus } from '../api/trips'
+import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
 import type { UserSummary } from '../api/users'
+import { AMBULANCE_MOVES, type Ambulance, type AmbulanceAction, type AmbulanceStatus } from '../api/ambulances'
+import type { AuditEntry } from '../api/audit'
+import type { NetworkSnapshot } from '../api/commandCentre'
+import type { Appointment, Donor } from '../api/donors'
+import type { AppNotification } from '../api/notifications'
 import { applyAction } from '../features/beds/beds'
 import { actionsFor, nextStatus, STATUS_LABEL } from '../features/emergencies/emergencies'
 import { applyEquipmentAction } from '../features/equipment/equipment'
-import { applyAmbulanceAction } from '../features/ambulances/ambulances'
 import { applyOperatingRoomAction } from '../features/operatingRooms/operatingRooms'
 import { canEdit, canSee, type Module, type Role } from '../features/staff/roles'
 import { dateKey } from '../lib/time'
 import { sampleBedBoard } from './fixtures/beds'
-import { auditCsv, filterAudit, karachiDay, sampleAuditEntries } from './fixtures/audit'
 import { sampleBloodUnits } from './fixtures/blood'
-import { sampleCommandCentre } from './fixtures/commandCentre'
-import { sampleAppointments, sampleDonors, sampleDonorUnits } from './fixtures/donors'
 import { sampleCandidates, sampleCases, sampleLocalAvailable, sampleNetworkRequests } from './fixtures/emergencies'
 import { sampleCapabilities, sampleHospitals, sampleUsers } from './fixtures/hospitals'
 import { sampleMedicines } from './fixtures/pharmacy'
 import { samplePublicStatus } from './fixtures/publicStatus'
 
-/** A reply is JSON (`body`), or a file (`file`): its text, sent with the type and the name the server gives it. */
-export type Reply = { status?: number; body?: unknown; file?: { name: string; type: string; text: string } }
+export type Reply = { status?: number; body?: unknown }
 type Request = { params: Record<string, string>; body: unknown; query: URLSearchParams }
 type Route = Reply | ((request: Request) => Reply)
 
@@ -91,10 +85,6 @@ export function mockApi(routes: Record<string, Route>) {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined
       const reply = typeof route === 'function' ? route({ params, body, query: url.searchParams }) : route
       const status = reply.status ?? 200
-      if (reply.file) {
-        const headers = { 'Content-Type': reply.file.type, 'Content-Disposition': `attachment; filename="${reply.file.name}"` }
-        return new Response(reply.file.text, { status, headers })
-      }
       return new Response(status === 204 ? null : JSON.stringify(reply.body ?? {}), { status })
     }
     return new Response(JSON.stringify({ detail: 'Not found' }), { status: 404 })
@@ -125,16 +115,6 @@ const TRANSFER_MOVES: readonly { action: TransferAction; from: readonly Transfer
 
 /** Transfer holds don't expire: a far-future stamp keeps them out of the expiry sweep, as the server does. */
 const NO_EXPIRY = '9999-12-31T23:59:59.000Z'
-
-/** The estimated trip time the mock gives every trip (the server works it out from hospital coordinates). */
-const TRIP_ETA_MINUTES = 25
-
-/** The trip's steps (story #51): the status each step starts from, and the status it reaches. */
-const TRIP_MOVES: readonly { action: TripAction; from: TripStatus; to: TripStatus }[] = [
-  { action: 'depart', from: 'dispatched', to: 'enRoute' },
-  { action: 'arrive', from: 'enRoute', to: 'arrived' },
-  { action: 'complete', from: 'arrived', to: 'completed' },
-]
 
 /** The transfers the mock supplies when a test doesn't say what the supplier has free. */
 const DEFAULT_SUPPLY = 5
@@ -207,18 +187,8 @@ type StaffApiOptions = {
   held?: { reference: string; itemId: number; count: number }[]
   /** Start with these transfers (stories #47 to #49). Approved, dispatched and in-transit ones set their units aside. */
   transfers?: Transfer[]
-  /** Use these command centre figures (story #55) instead of the sample network. */
-  commandCentre?: CommandCentre
-  /** Use this audit trail instead of the sample one (B10, #56). */
-  audit?: AuditEntry[]
-  /** Start with these notifications for the signed-in user (story #52). */
-  notifications?: Notification[]
-  /** Start with these donors (B11). Defaults to the synthetic sample. */
-  donors?: Donor[]
-  /** Start with these donation appointments (B11). Defaults to the synthetic sample. */
-  appointments?: Appointment[]
-  /** Use these ambulances (story #50) instead of the sample ones. */
-  ambulances?: Ambulance[]
+  /** Start with these server notifications (story #52). None by default, so the bell counts only attention items. */
+  notifications?: AppNotification[]
 }
 
 /** A few pieces of equipment across types and statuses (story #26). */
@@ -232,23 +202,6 @@ export function sampleEquipment(now: Date): Equipment[] {
     item(3, 'VENT-003', 'ventilator', 'maintenance', 'HDU'),
     item(4, 'DEFIB-001', 'defibrillator', 'available', 'Emergency department'),
     item(5, 'DIAL-001', 'dialysis', 'outOfService', 'Dialysis unit'),
-  ]
-}
-
-/** The hospital the mock's signed-in staff work at (userFor gives every staff member this one). */
-const HOME_HOSPITAL = 'CityCare General Hospital'
-
-/** A few ambulances across types and statuses, at two hospitals, in the order the server lists them (story #50). */
-export function sampleAmbulances(now: Date): Ambulance[] {
-  const at = now.toISOString()
-  const vehicle = (id: number, identifier: string, type: AmbulanceType, status: Ambulance['status'], hospital: string) =>
-    ({ id, identifier, type, status, statusSince: at, hospital, trip: null }) satisfies Ambulance
-  return [
-    vehicle(1, 'AMB-01', 'advanced', 'available', HOME_HOSPITAL),
-    vehicle(2, 'AMB-02', 'basic', 'maintenance', HOME_HOSPITAL),
-    vehicle(3, 'AMB-03', 'patientTransport', 'available', HOME_HOSPITAL),
-    vehicle(4, 'AMB-04', 'advanced', 'outOfService', HOME_HOSPITAL),
-    vehicle(5, 'AMB-05', 'basic', 'available', 'Seaview Hospital'),
   ]
 }
 
@@ -318,12 +271,7 @@ export function mockStaffApi({
   stock: customStock,
   held: seedHolds = [],
   transfers: seedTransfers = [],
-  commandCentre: customCommandCentre,
-  audit: customAudit,
   notifications: seedNotifications = [],
-  donors: customDonors,
-  appointments: customAppointments,
-  ambulances: customAmbulances,
 }: StaffApiOptions) {
   const now = new Date()
   const board = customBoard ?? sampleBedBoard(now)
@@ -549,57 +497,12 @@ export function mockStaffApi({
     const hospital = who === 'supplier' ? t.supplier.id : t.receiver.id
     return canEdit(role, TYPE_MODULE[t.resourceType]) && reachesHospital(hospital)
   }
-  /**
-   * The transfer as this user gets it: its units set aside now, its latest trip, and the moves they may make now. While a
-   * trip carries it, no manual move is offered; an approved one offers dispatching an ambulance (story #51).
-   */
-  const transferView = (t: Transfer): Transfer => {
-    const trip = latestTripOf(t)
-    const moves: TransferMove[] = activeTripOf(t)
-      ? []
-      : TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who)).map((m) => m.action)
-    if (!activeTripOf(t) && t.status === 'approved' && mayStepTrip(t.supplier.id)) moves.push('dispatchAmbulance')
-    return {
-      ...t,
-      resources: transferHolds(t).filter((h) => h.status === 'held').map((h) => h.resource),
-      // A seeded transfer keeps its seeded trip until the mock has a trip of its own for it.
-      trip: trip ? tripView(trip) : t.trip,
-      etaMinutes: TRIP_ETA_MINUTES,
-      actions: moves,
-    }
-  }
-  /** The trips carried so far (story #51). A trip is active until it completes. */
-  const trips: { id: number; transferId: number; ambulanceId: number; status: TripStatus; stamps: Partial<Record<'departedAt' | 'arrivedAt' | 'completedAt', string>>; dispatchedBy: string; dispatchedAt: string }[] = []
-  let nextTripId = 1
-  const activeTripOf = (t: Transfer) => trips.find((x) => x.transferId === t.id && x.status !== 'completed')
-  const latestTripOf = (t: Transfer) => [...trips].reverse().find((x) => x.transferId === t.id)
-  const mayStepTrip = (supplierId: number) => !!role && role !== 'patient' && canEdit(role, 'ambulances') && reachesHospital(supplierId)
-  /** The trip as the user gets it: its times and the steps they may take now (the server's TripSerializer). */
-  const tripView = (trip: (typeof trips)[number]): Trip => {
-    const t = transfers.find((x) => x.id === trip.transferId)!
-    const vehicle = ambulances.find((a) => a.id === trip.ambulanceId)!
-    const step = TRIP_MOVES.find((m) => m.from === trip.status)
-    return {
-      id: trip.id,
-      transferId: trip.transferId,
-      status: trip.status,
-      ambulance: { id: vehicle.id, identifier: vehicle.identifier, type: vehicle.type },
-      etaMinutes: TRIP_ETA_MINUTES,
-      dispatchedBy: trip.dispatchedBy,
-      dispatchedAt: trip.dispatchedAt,
-      departedAt: trip.stamps.departedAt ?? null,
-      arrivedAt: trip.stamps.arrivedAt ?? null,
-      completedAt: trip.stamps.completedAt ?? null,
-      actions: step && mayStepTrip(t.supplier.id) ? [step.action] : [],
-    }
-  }
-  /** The ambulance as the list shows it: its status, and the trip it is on, if any. */
-  const ambulanceView = (a: Ambulance): Ambulance => {
-    // A seeded ambulance keeps its seeded trip until the mock has trips of its own for it.
-    if (!trips.some((x) => x.ambulanceId === a.id)) return a
-    const trip = trips.find((x) => x.ambulanceId === a.id && x.status !== 'completed')
-    return { ...a, trip: trip ? { id: trip.id, status: trip.status as 'dispatched' | 'enRoute' | 'arrived', transferId: trip.transferId } : null }
-  }
+  /** The transfer as this user gets it: its units set aside now, and the moves they may make now. */
+  const transferView = (t: Transfer): Transfer => ({
+    ...t,
+    resources: transferHolds(t).filter((h) => h.status === 'held').map((h) => h.resource),
+    actions: TRANSFER_MOVES.filter((m) => m.from.includes(t.status) && mayMove(t, m.who)).map((m) => m.action),
+  })
   const transfersOfCase = (reference: string) =>
     transfers
       .filter((t) => t.case.reference === reference)
@@ -614,20 +517,7 @@ export function mockStaffApi({
   }
 
   const equipment = sampleEquipment(now)
-  const ambulances = customAmbulances ?? sampleAmbulances(now)
-  const auditEntries = customAudit ?? sampleAuditEntries(now)
   const rooms = sampleOperatingRooms(now)
-
-  // Donors (B11). The server scopes them to the user's hospital (admins see all), so the mock does the same.
-  // Every mock user works at hospital HOSPITAL_ID, as userFor says.
-  const HOSPITAL_ID = 1
-  const donors = customDonors ?? sampleDonors(now)
-  const donorUnits = sampleDonorUnits(now)
-  const appointments = customAppointments ?? sampleAppointments(now)
-  let nextDonorNumber = Math.max(0, ...donors.map((d) => Number(d.id.slice(4)))) + 1
-  let nextAppointmentId = Math.max(0, ...appointments.map((a) => a.id)) + 1
-  const inMyHospital = (row: { hospitalId: number | null }) => role === 'admin' || row.hospitalId === HOSPITAL_ID
-  const findDonor = (code: string) => donors.find((d) => d.id === code)
   const bookings = sampleOrBookings(now)
   const gate = (module: Module, reply: () => Reply): Route => () =>
     role && role !== 'patient' && canSee(role, module) ? reply() : fail(403)
@@ -651,8 +541,15 @@ export function mockStaffApi({
   let nextId = 100
   let nextAllocationId = 1
 
-  /** The signed-in user's notifications (story #52). Marking one read sets its `readAt` once, as the server does. */
-  const notifications: Notification[] = seedNotifications.map((n) => ({ ...n }))
+  const notifications = seedNotifications.map((n) => ({ ...n }))
+  const notificationsFor = (query: URLSearchParams) =>
+    notifications.filter(
+      (n) => (query.get('unread') !== '1' || !n.read) && (query.get('critical') !== '1' || (n.severity === 'critical' && !n.acknowledged)),
+    )
+  const ambulances = sampleAmbulances(now)
+  const donors = sampleDonors()
+  const appointments: Appointment[] = []
+  const auditEntries = sampleAuditEntries(now)
   const fetchMock = mockApi({
     'GET /auth/me/': role ? ok(userFor(role)) : fail(403),
     'POST /auth/login/': role ? ok(userFor(role)) : fail(401, { detail: 'That email and password don’t match an account.' }),
@@ -697,106 +594,6 @@ export function mockStaffApi({
       else if (REQUIRED_TESTS.every((t) => passedTests.has(t.id))) unit.status = 'available'
       return { status: 201, body: unitDetailBody(unit) }
     },
-    'GET /blood/donors/': view('donors', ({ query }) => {
-      const q = (query.get('q') ?? '').trim().toLowerCase()
-      const group = query.get('bloodGroup')
-      const matched = donors.filter(
-        (d) =>
-          inMyHospital(d) &&
-          (!q || d.fullName.toLowerCase().includes(q) || d.id.toLowerCase() === q || d.phone.includes(q)) &&
-          (!group || d.bloodGroup === group),
-      )
-      return ok(matched.slice(0, 200))
-    }),
-    'POST /blood/donors/': edit('donors', ({ body }) => {
-      const input = body as DonorInput
-      if (!input.fullName?.trim()) return fail(400, { fullName: ['This field may not be blank.'] })
-      if (!BLOOD_GROUPS.includes(input.bloodGroup)) return fail(400, { bloodGroup: [`"${input.bloodGroup}" is not a valid choice.`] })
-      const created: Donor = {
-        id: `DNR-${String(nextDonorNumber++).padStart(5, '0')}`,
-        fullName: input.fullName.trim(),
-        bloodGroup: input.bloodGroup,
-        phone: input.phone ?? '',
-        email: input.email ?? '',
-        lastDonationAt: null,
-        eligible: true,
-        ineligibleReason: '',
-        eligibleFrom: null,
-        hospitalId: HOSPITAL_ID,
-      }
-      donors.push(created)
-      return { status: 201, body: created }
-    }),
-    'GET /blood/donors/:code/': view('donors', ({ params }) => {
-      const donor = findDonor(params.code)
-      return donor && inMyHospital(donor) ? ok({ ...donor, units: donorUnits[donor.id] ?? [] }) : fail(404)
-    }),
-    'POST /blood/donors/:code/screening/': edit('donors', ({ params, body }) => {
-      const donor = findDonor(params.code)
-      if (!donor) return fail(404)
-      if (!inMyHospital(donor)) return fail(403, { detail: 'You can only screen donors registered at your own hospital.' })
-      const input = body as ScreeningInput
-      const reason = (input.reason ?? '').trim()
-      if (!input.eligible && !reason) return fail(400, { reason: ['Say why the donor is not eligible.'] })
-      if (input.deferredUntil && input.deferredUntil <= dateKey(new Date())) {
-        return fail(400, { deferredUntil: ['The deferral must end in the future (or leave it empty for permanent).'] })
-      }
-      Object.assign(
-        donor,
-        input.eligible
-          ? { eligible: true, ineligibleReason: '', eligibleFrom: null }
-          : { eligible: false, ineligibleReason: reason, eligibleFrom: input.deferredUntil ?? null },
-      )
-      return ok(donor)
-    }),
-    'GET /blood/appointments/': view('donors', () =>
-      ok(
-        appointments.filter(
-          (a) => a.status === 'booked' && new Date(a.startsAt).getTime() > Date.now() && inMyHospital(a),
-        ),
-      ),
-    ),
-    'POST /blood/appointments/': edit('donors', ({ body }) => {
-      const input = body as { donorId: string; startsAt: string }
-      const donor = findDonor(input.donorId)
-      if (!donor) return fail(400, { donorId: [`Object with code=${input.donorId} does not exist.`] })
-      if (!inMyHospital(donor)) return fail(403, { detail: 'You can only book donors registered at your own hospital.' })
-      const start = new Date(input.startsAt)
-      const minuteOfDay = start.getHours() * 60 + start.getMinutes()
-      if (start.getSeconds() || minuteOfDay % DONOR_SLOT_MINUTES) {
-        return fail(400, { startsAt: [`Appointments start on a ${DONOR_SLOT_MINUTES}-minute slot (e.g. 10:00, 10:30).`] })
-      }
-      if (start.getTime() <= Date.now()) return fail(400, { startsAt: ['Pick a time in the future.'] })
-      if (!donor.eligible && (!donor.eligibleFrom || dateKey(start) < donor.eligibleFrom)) {
-        return fail(400, { donorId: [`This donor can't be booked: ${donor.ineligibleReason}`] })
-      }
-      const upcoming = (a: Appointment) => a.status === 'booked' && new Date(a.startsAt).getTime() > Date.now()
-      if (appointments.some((a) => upcoming(a) && a.donorId === donor.id)) {
-        return fail(400, { donorId: ['This donor already has an upcoming appointment.'] })
-      }
-      if (appointments.some((a) => a.status === 'booked' && a.hospitalId === HOSPITAL_ID && new Date(a.startsAt).getTime() === start.getTime())) {
-        return fail(400, { startsAt: ['That slot is already booked.'] })
-      }
-      const created: Appointment = {
-        id: nextAppointmentId++,
-        donorId: donor.id,
-        donorName: donor.fullName,
-        startsAt: start.toISOString(),
-        slotMinutes: DONOR_SLOT_MINUTES,
-        status: 'booked',
-        hospitalId: HOSPITAL_ID,
-      }
-      appointments.push(created)
-      return { status: 201, body: created }
-    }),
-    'POST /blood/appointments/:id/cancel/': edit('donors', ({ params }) => {
-      const appointment = appointments.find((a) => a.id === Number(params.id))
-      if (!appointment) return fail(404)
-      if (!inMyHospital(appointment)) return fail(403, { detail: 'You can only cancel appointments at your own hospital.' })
-      if (appointment.status !== 'booked') return fail(409, { detail: 'This appointment is already cancelled.' })
-      appointment.status = 'cancelled'
-      return ok(appointment)
-    }),
     'GET /pharmacy/stock/': gate('pharmacy', () => ok(sampleMedicines(now))),
     'POST /beds/:id/actions/': ({ params, body }) => {
       if (!role || role === 'patient' || !canEdit(role, 'beds')) return fail(403)
@@ -950,18 +747,6 @@ export function mockStaffApi({
       if (refusal) return refusal
       return { status: 201, body: allocateHold(entry.c, entry.hold, ((body as { note?: string } | undefined)?.note ?? '').trim()) }
     },
-    // Notifications (story #52). Every staff member may read their own; the mock has one user, so every row is theirs.
-    'GET /notifications/': ({ query }) => {
-      const unread = query.get('unread') === 'true'
-      return ok(notifications.filter((n) => !unread || n.readAt === null).slice(0, 50))
-    },
-    'GET /notifications/unread-count/': () => ok({ count: notifications.filter((n) => n.readAt === null).length }),
-    'POST /notifications/:id/read/': ({ params }) => {
-      const found = notifications.find((n) => n.id === Number(params.id))
-      if (!found) return fail(404)
-      if (found.readAt === null) found.readAt = new Date().toISOString()
-      return ok(found)
-    },
     // Transfers between hospitals (stories #47 to #49). Reads need view, asks and moves need edit; each move is then checked
     // against the lifecycle (409), the role at the hospital concerned (403), and whether the user's hospital is involved at all (404).
     'GET /transfers/': view('transfers', ({ query }) => {
@@ -1000,8 +785,6 @@ export function mockStaffApi({
       if (input.quantity > askable) return fail(400, { detail: `Only ${Math.max(askable, 0)} more can be asked for this need.` })
       const created: Transfer = {
         id: nextTransferId++,
-        trip: null,
-        etaMinutes: TRIP_ETA_MINUTES,
         case: { reference: found.id, severity: found.severity },
         itemId: input.itemId,
         resourceType: transferableType(need)!,
@@ -1040,9 +823,6 @@ export function mockStaffApi({
       const { action, reason = '', note = '' } = body as { action: TransferAction; reason?: string; note?: string }
       const move = TRANSFER_MOVES.find((m) => m.action === action)
       if (!move) return fail(400, { action: ['Not a transfer action.'] })
-      if (activeTripOf(t) && mayMove(t, move.who)) {
-        return fail(409, { detail: 'An ambulance is carrying this transfer. Use the trip’s steps instead.' })
-      }
       if (!move.from.includes(t.status)) {
         return fail(409, { detail: `Can't ${action} a transfer that is ${TRANSFER_STATUS_LABEL[t.status].toLowerCase()}.` })
       }
@@ -1078,7 +858,6 @@ export function mockStaffApi({
       return ok(transferView(t))
     }),
     'GET /users/': view('users', () => ok(users)),
-    'GET /command-centre/': view('commandCentre', () => ok(customCommandCentre ?? sampleCommandCentre(now))),
     'PATCH /users/:id/': edit('users', ({ params, body }) => {
       const user = users.find((u) => u.id === Number(params.id))
       if (!user) return fail(404)
@@ -1090,24 +869,106 @@ export function mockStaffApi({
     // Before /hospitals/:id/, which would otherwise match it.
     'GET /hospitals/capabilities/': view('hospitals', () => ok(sampleCapabilities)),
     'GET /hospitals/': view('hospitals', () => ok(hospitals)),
-    'GET /equipment/': view('equipment', () => ok(equipment)),
-    // The audit trail (B10, #56): admins only. The export is capped and sent as a file, not JSON.
-    'GET /audit/entries/': view('audit', ({ query }) => {
-      const found = filterAudit(auditEntries, query)
-      if ('detail' in found) return fail(400, found)
-      const limit = Math.min(Number(query.get('limit') ?? 50), 200)
-      const offset = Number(query.get('offset') ?? 0)
-      return ok({ count: found.entries.length, limit, offset, results: found.entries.slice(offset, offset + limit) })
-    }),
-    'GET /audit/entries/export/': view('audit', ({ query }) => {
-      const found = filterAudit(auditEntries, query)
-      if ('detail' in found) return fail(400, found)
-      if (found.entries.length > AUDIT_EXPORT_LIMIT) {
-        return fail(400, { detail: `More than ${AUDIT_EXPORT_LIMIT.toLocaleString('en-US')} entries match, so the file would be incomplete. Narrow the filters, for example a shorter date range, and export again.` })
+    // Sprint 8: notifications (#52), ambulances (#50, #51), command centre (#55), audit (#56), donors (#20 to #22).
+    'GET /notifications/': ({ query }) => (role && role !== 'patient' ? ok(notificationsFor(query)) : fail(403)),
+    'GET /notifications/unread-count/': () =>
+      role && role !== 'patient'
+        ? ok({
+            unread: notifications.filter((n) => !n.read).length,
+            critical: notifications.filter((n) => n.severity === 'critical' && !n.acknowledged).length,
+          })
+        : fail(403),
+    'POST /notifications/:id/read/': ({ params }) => {
+      const n = notifications.find((x) => x.id === Number(params.id))
+      if (!n) return fail(404)
+      n.read = true
+      return { status: 204 }
+    },
+    'POST /notifications/read-all/': () => {
+      const unread = notifications.filter((n) => !n.read)
+      unread.forEach((n) => (n.read = true))
+      return ok({ marked: unread.length })
+    },
+    'POST /notifications/:id/acknowledge/': ({ params }) => {
+      const n = notifications.find((x) => x.id === Number(params.id))
+      if (!n) return fail(404)
+      n.read = true
+      n.acknowledged = true
+      return { status: 204 }
+    },
+    'GET /ambulances/': view('ambulances', ({ query }) =>
+      ok(ambulances.filter((a) => !query.get('status') || a.status === query.get('status'))),
+    ),
+    'POST /ambulances/': edit('ambulances', ({ body }) => {
+      const input = body as { identifier: string; type: Ambulance['type']; plate: string }
+      const ambulance: Ambulance = {
+        id: nextId++,
+        identifier: input.identifier.toUpperCase(),
+        type: input.type,
+        plate: input.plate,
+        note: '',
+        status: 'available',
+        statusSince: now.toISOString(),
+        hospital: 'CityCare General Hospital',
+        hospitalId: 1,
       }
-      const name = `audit-${karachiDay(now.toISOString())}.csv`
-      return { file: { name, type: 'text/csv; charset=utf-8', text: auditCsv(found.entries) } }
+      ambulances.push(ambulance)
+      return { status: 201, body: ambulance }
     }),
+    'POST /ambulances/:id/actions/': edit('ambulances', ({ params, body }) => {
+      const ambulance = ambulances.find((a) => a.id === Number(params.id))
+      if (!ambulance) return fail(404)
+      const move = AMBULANCE_MOVES[ambulance.status].find((m) => m.action === (body as { action: string }).action)
+      if (!move) return fail(409, { detail: 'Not allowed from this status.' })
+      ambulance.status = AMBULANCE_NEXT[move.action]
+      return ok(ambulance)
+    }),
+    'GET /command-centre/': view('commandCentre', () => ok(sampleNetworkSnapshot())),
+    'GET /audit/': view('audit', ({ query }) => {
+      const action = query.get('action') ?? ''
+      const results = auditEntries.filter((e) => !action || (action.endsWith('.') ? e.action.startsWith(action) : e.action === action))
+      return ok({ count: results.length, page: 1, pageSize: 50, results })
+    }),
+    'GET /blood/donors/': view('blood', () => ok(donors)),
+    'POST /blood/donors/': edit('blood', ({ body }) => {
+      const input = body as { fullName: string; bloodGroup: Donor['bloodGroup']; phone: string }
+      const donor: Donor = {
+        id: 'DN-' + String(donors.length + 1).padStart(4, '0'),
+        fullName: input.fullName,
+        bloodGroup: input.bloodGroup,
+        phone: input.phone,
+        email: '',
+        lastDonationAt: null,
+        eligible: true,
+        ineligibleReason: '',
+        eligibleFrom: null,
+      }
+      donors.unshift(donor)
+      return { status: 201, body: donor }
+    }),
+    'POST /blood/donors/:code/screening/': edit('blood', ({ params, body }) => {
+      const donor = donors.find((d) => d.id === params.code)
+      if (!donor) return fail(404)
+      const input = body as { eligible: boolean; reason: string; deferredUntil: string | null }
+      Object.assign(donor, { eligible: input.eligible, ineligibleReason: input.reason, eligibleFrom: input.deferredUntil })
+      return ok(donor)
+    }),
+    'GET /blood/appointments/': view('blood', () => ok(appointments.filter((a) => a.status === 'booked'))),
+    'POST /blood/appointments/': edit('blood', ({ body }) => {
+      const input = body as { donorId: string; startsAt: string }
+      const donor = donors.find((d) => d.id === input.donorId)
+      if (!donor) return fail(400, { donorId: ['Unknown donor.'] })
+      const appointment: Appointment = { id: nextId++, donorId: donor.id, donorName: donor.fullName, startsAt: input.startsAt, slotMinutes: 30, status: 'booked' }
+      appointments.push(appointment)
+      return { status: 201, body: appointment }
+    }),
+    'POST /blood/appointments/:id/cancel/': edit('blood', ({ params }) => {
+      const appointment = appointments.find((a) => a.id === Number(params.id))
+      if (!appointment) return fail(404)
+      appointment.status = 'cancelled'
+      return ok(appointment)
+    }),
+    'GET /equipment/': view('equipment', () => ok(equipment)),
     'POST /equipment/': edit('equipment', ({ body }) => {
       const input = body as EquipmentInput
       const tag = input.identifier.toUpperCase()
@@ -1127,96 +988,6 @@ export function mockStaffApi({
         return fail(409, { detail: (error as Error).message })
       }
       return ok(equipment[index])
-    }),
-    // Staff see their own hospital's ambulances; admins see all of them (story #50). `status` and `hospital` (an id) filter.
-    'GET /ambulances/': view('ambulances', ({ query }) => {
-      const status = query.get('status')
-      const hospitalId = query.get('hospital')
-      const hospital = hospitalId ? hospitals.find((h) => h.id === Number(hospitalId))?.name : undefined
-      return ok(
-        ambulances
-          .filter((a) => role === 'admin' || a.hospital === HOME_HOSPITAL)
-          .filter((a) => !status || a.status === status)
-          .filter((a) => !hospitalId || a.hospital === hospital)
-          .map(ambulanceView),
-      )
-    }),
-    'POST /ambulances/': edit('ambulances', ({ body }) => {
-      const input = body as AmbulanceInput
-      // Admins name the base hospital; everyone else registers at their own, and a hospital id they send is ignored.
-      const hospital = role === 'admin' ? hospitals.find((h) => h.id === input.hospitalId)?.name : HOME_HOSPITAL
-      if (!hospital) return fail(400, { hospitalId: ['Pick the base hospital for this ambulance.'] })
-      const tag = input.identifier.trim().toUpperCase()
-      if (ambulances.some((a) => a.identifier === tag && a.hospital === hospital)) {
-        return fail(400, { identifier: ['This asset tag is already registered at this hospital.'] })
-      }
-      const created: Ambulance = { id: nextId++, identifier: tag, type: input.type, status: 'available', statusSince: now.toISOString(), hospital, trip: null }
-      ambulances.push(created)
-      return { status: 201, body: created }
-    }),
-    'POST /ambulances/:id/actions/': edit('ambulances', ({ params, body }) => {
-      const index = ambulances.findIndex((a) => a.id === Number(params.id))
-      if (index < 0 || (role !== 'admin' && ambulances[index].hospital !== HOME_HOSPITAL)) return fail(404)
-      const action = (body as { action: string }).action
-      if (action === 'dispatch' || action === 'release') {
-        return fail(409, { detail: 'A trip moves this vehicle. Use the transfer’s trip instead.' })
-      }
-      try {
-        ambulances[index] = applyAmbulanceAction(ambulances[index], action as AmbulanceAction, new Date())
-      } catch (error) {
-        return fail(409, { detail: (error as Error).message })
-      }
-      return ok(ambulanceView(ambulances[index]))
-    }),
-    // Trips (story #51): an approved transfer is sent with an available ambulance from its supplier, then stepped.
-    'POST /transfers/:id/trips/': edit('ambulances', ({ params, body }) => {
-      const t = transfers.find((x) => x.id === Number(params.id))
-      if (!t || !(reachesHospital(t.supplier.id) || reachesHospital(t.receiver.id))) return fail(404)
-      if (!mayStepTrip(t.supplier.id)) return fail(403, { detail: 'Only staff at the supplying hospital can dispatch an ambulance.' })
-      if (t.status !== 'approved') {
-        return fail(409, { detail: `Can't dispatch a transfer that is ${TRANSFER_STATUS_LABEL[t.status].toLowerCase()}.` })
-      }
-      const ambulanceId = Number((body as { ambulance?: number }).ambulance)
-      const vehicle = ambulances.find((a) => a.id === ambulanceId && (role === 'admin' || a.hospital === HOME_HOSPITAL))
-      if (!vehicle) return fail(404)
-      const status = AMBULANCE_STATUSES.find((x) => x.value === vehicle.status)!.label.toLowerCase()
-      if (vehicle.status !== 'available') return fail(409, { detail: `Can't dispatch a vehicle that is ${status}.` })
-      if (vehicle.hospital !== t.supplier.name) {
-        return fail(400, { ambulance: ['Only an ambulance based at the supplying hospital can carry this transfer.'] })
-      }
-      const at = new Date().toISOString()
-      vehicle.status = 'dispatched'
-      vehicle.statusSince = at
-      t.history = [...t.history, { fromStatus: t.status, toStatus: 'dispatched', action: 'dispatch', note: '', actor: role ? NAMES[role] : null, at }]
-      t.status = 'dispatched'
-      const trip = { id: nextTripId++, transferId: t.id, ambulanceId: vehicle.id, status: 'dispatched' as const, stamps: {}, dispatchedBy: role ? NAMES[role] : '', dispatchedAt: at }
-      trips.push(trip)
-      return { status: 201, body: tripView(trip) }
-    }),
-    'POST /trips/:id/actions/': edit('ambulances', ({ params, body }) => {
-      const trip = trips.find((x) => x.id === Number(params.id))
-      const t = trip && transfers.find((x) => x.id === trip.transferId)
-      if (!trip || !t || !(reachesHospital(t.supplier.id) || reachesHospital(t.receiver.id))) return fail(404)
-      if (!mayStepTrip(t.supplier.id)) return fail(403, { detail: 'Only staff at the supplying hospital can move a trip.' })
-      const { action } = body as { action: TripAction }
-      const step = TRIP_MOVES.find((m) => m.action === action && m.from === trip.status)
-      if (!step) return fail(409, { detail: `Can't ${action} a trip that is ${TRIP_STATUS_LABEL[trip.status].toLowerCase()}.` })
-      const at = new Date().toISOString()
-      const vehicle = ambulances.find((a) => a.id === trip.ambulanceId)!
-      if (action === 'depart') {
-        t.history = [...t.history, { fromStatus: t.status, toStatus: 'inTransit', action: 'startTransit', note: '', actor: role ? NAMES[role] : null, at }]
-        t.status = 'inTransit'
-        trip.stamps.departedAt = at
-      }
-      if (action === 'arrive') trip.stamps.arrivedAt = at
-      if (action === 'complete') {
-        // Completing frees the ambulance. The transfer stays in transit: the receiver confirms it (story #49).
-        trip.stamps.completedAt = at
-        vehicle.status = 'available'
-        vehicle.statusSince = at
-      }
-      trip.status = step.to
-      return ok(tripView(trip))
     }),
     'GET /operating-rooms/': view('operatingRooms', ({ query }) => {
       const capability = query.get('capability')
@@ -1334,5 +1105,132 @@ export function mockStaffApi({
       return { status: 204 }
     }),
   })
-  return { fetchMock, board, hospitals, users, cases, ambulances }
+  return { fetchMock, board, hospitals, users, cases }
+}
+
+/** Where each hand move takes an ambulance (story #50), as the server's AMBULANCE_LIFECYCLE. */
+const AMBULANCE_NEXT: Record<AmbulanceAction, AmbulanceStatus> = {
+  startMaintenance: 'maintenance',
+  finishMaintenance: 'available',
+  outOfService: 'outOfService',
+  returnToService: 'maintenance',
+}
+
+/** One unread critical alert and one read info notification (story #52). */
+export function sampleNotifications(now: Date): AppNotification[] {
+  const at = now.toISOString()
+  return [
+    {
+      id: 901,
+      kind: 'transfer.requested',
+      severity: 'critical',
+      title: 'Transfer requested for EC-2026-0001',
+      body: '2 x O- red cells',
+      link: '/staff/transfers',
+      createdAt: at,
+      read: false,
+      acknowledged: false,
+    },
+    { id: 902, kind: 'transfer.approved', severity: 'info', title: 'Transfer approved', body: '', link: '/staff/transfers', createdAt: at, read: true, acknowledged: false },
+  ]
+}
+
+/** A small fleet across statuses (story #50). */
+export function sampleAmbulances(now: Date): Ambulance[] {
+  const at = now.toISOString()
+  const item = (id: number, identifier: string, type: Ambulance['type'], status: Ambulance['status']): Ambulance => ({
+    id,
+    identifier,
+    type,
+    plate: 'KHI-' + id,
+    note: '',
+    status,
+    statusSince: at,
+    hospital: 'CityCare General Hospital',
+    hospitalId: 1,
+  })
+  return [item(801, 'AMB-CGH-01', 'als', 'available'), item(802, 'AMB-CGH-02', 'bls', 'onTrip'), item(803, 'AMB-CGH-03', 'pts', 'maintenance')]
+}
+
+/** Two synthetic donors, one deferred (stories #20, #21). */
+export function sampleDonors(): Donor[] {
+  return [
+    { id: 'DN-0001', fullName: 'Donor One', bloodGroup: 'O-', phone: '', email: '', lastDonationAt: null, eligible: true, ineligibleReason: '', eligibleFrom: null },
+    {
+      id: 'DN-0002',
+      fullName: 'Donor Two',
+      bloodGroup: 'A+',
+      phone: '',
+      email: '',
+      lastDonationAt: null,
+      eligible: false,
+      ineligibleReason: 'Low haemoglobin',
+      eligibleFrom: '2027-01-01',
+    },
+  ]
+}
+
+/** Two audit entries, one made by the system (story #56). */
+export function sampleAuditEntries(now: Date): AuditEntry[] {
+  const at = now.toISOString()
+  return [
+    {
+      id: 1,
+      at,
+      actor: 'nurse@demo.test',
+      action: 'transfer.requested',
+      targetType: 'transfers.transfer',
+      targetId: '1',
+      target: 'Transfer #1',
+      reason: 'For EC-2026-0001',
+      before: null,
+      after: { status: 'requested' },
+    },
+    {
+      id: 2,
+      at,
+      actor: 'system',
+      action: 'bed.status_changed',
+      targetType: 'hospitals.bed',
+      targetId: 'ICU-01',
+      target: 'ICU-01',
+      reason: 'clean',
+      before: { status: 'cleaning' },
+      after: { status: 'free' },
+    },
+  ]
+}
+
+/** The network as the command centre sees it (story #55): CityCare General has no free ICU bed and is short of O-. */
+export function sampleNetworkSnapshot(): NetworkSnapshot {
+  const red = { 'O-': 1, 'O+': 40, 'A-': 5, 'A+': 25, 'B-': 5, 'B+': 31, 'AB-': 3, 'AB+': 9 }
+  return {
+    totals: { hospitals: 2, freeBeds: 12, freeIcu: 2, redCells: 238, nearExpiry: 3, activeEmergencies: 2 },
+    hospitals: [
+      {
+        id: 1,
+        name: 'CityCare General Hospital',
+        beds: { free: 4, total: 60 },
+        icu: { free: 0, total: 10 },
+        redCells: red,
+        nearExpiry: 3,
+        equipment: { available: 8, total: 15 },
+        emergencies: { critical: 1, high: 1 },
+      },
+      {
+        id: 2,
+        name: 'Seaview Hospital',
+        beds: { free: 8, total: 30 },
+        icu: { free: 2, total: 6 },
+        redCells: red,
+        nearExpiry: 0,
+        equipment: { available: 2, total: 2 },
+        emergencies: {},
+      },
+    ],
+    shortages: [
+      { hospital: 'CityCare General Hospital', kind: 'icu', level: 'critical' },
+      { hospital: 'CityCare General Hospital', kind: 'blood', group: 'O-', count: 1, minimum: 6, level: 'critical' },
+    ],
+  }
 }

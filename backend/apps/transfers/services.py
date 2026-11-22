@@ -7,11 +7,9 @@ from django.db.models import Q, Sum
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import Role
-from apps.accounts.permissions import can_edit, may_change
-from apps.ambulances.models import TRIP_ACTIVE, Trip
+from apps.accounts.permissions import ACCESS, EDIT, can_edit, may_change
 from apps.audit.services import record
-from apps.emergencies.models import EmergencyRequest, RequestItem, ResourceType, Severity
-from apps.emergencies.serializers import need_label
+from apps.emergencies.models import EmergencyRequest, RequestItem, ResourceType
 from apps.hospitals.models import Hospital
 from apps.matching.allocations import ALLOCATION_MODULE, AllocationRefused, allocate
 from apps.matching.models import Reservation, ReservationStatus
@@ -23,6 +21,7 @@ from apps.matching.reservations import (
     release,
     reserve,
 )
+from apps.notifications.models import Severity
 from apps.notifications.services import notify
 from apps.resources.state_machine import TransitionNotAllowed
 
@@ -33,8 +32,6 @@ from .models import LIVE, TRANSFER_LIFECYCLE, Transfer, TransferStatus, Transfer
 TRANSFERABLE = (ResourceType.BLOOD, ResourceType.EQUIPMENT)
 # The moves the supplier's staff make. The requester makes cancel and deliver.
 SUPPLIER_MOVES = ("approve", "reject", "dispatch", "startTransit")
-# The staff page a transfer's notifications link to (notification spec: Link).
-TRANSFER_LINK = "/staff/transfers"
 
 
 class TransferRefused(Exception):
@@ -49,6 +46,24 @@ class TransferRefused(Exception):
 class TransferConflict(Exception):
     """The move isn't allowed now: the lifecycle refuses it, the stock is no longer free, or the case or a
     hold has moved on. Views answer 409, and nothing is saved."""
+
+
+def _tell(transfer: Transfer, *, kind: str, title: str, to_supplier: bool, critical: bool = False) -> None:
+    """Notify the other side of a move (story #52). The supplier hears from the roles that answer for the
+    resource; the receiver's whole staff hears how its request is going."""
+    module = ALLOCATION_MODULE[transfer.request_item.resource_type]
+    roles = (
+        tuple(role for role, rights in ACCESS.items() if rights.get(module) == EDIT) if to_supplier else ()
+    )
+    notify(
+        hospital_id=transfer.supplier_id if to_supplier else transfer.receiver_id,
+        roles=roles,
+        kind=kind,
+        severity=Severity.CRITICAL if critical else Severity.INFO,
+        title=title,
+        body=f"Transfer #{transfer.pk}: {transfer.quantity} × {transfer.request_item}",
+        link="/staff/transfers",
+    )
 
 
 # ── Who sees and who may act ──────────────────────────────────────────────────────────────────────
@@ -91,10 +106,7 @@ def may_act(user, transfer: Transfer, action: str) -> bool:
 
 
 def actions_for(user, transfer: Transfer) -> list[str]:
-    """The moves the user may make on this transfer now: valid from its status and allowed to the user. While
-    a trip carries the transfer, none of them is offered: the trip's steps make its moves."""
-    if any(trip.status in TRIP_ACTIVE for trip in transfer.trips.all()):
-        return []
+    """The moves the user may make on this transfer now: valid from its status and allowed to the user."""
     return [
         action
         for status, action in TRANSFER_LIFECYCLE.transitions
@@ -105,9 +117,8 @@ def actions_for(user, transfer: Transfer) -> list[str]:
 # ── Locks, checks and the one place a status changes ──────────────────────────────────────────────
 
 
-def lock_transfer(transfer: Transfer) -> Transfer:
-    """Lock the case, the need, then the transfer, and return the transfer as it now is. Trips lock in the
-    same order."""
+def _lock(transfer: Transfer) -> Transfer:
+    """Lock the case, the need, then the transfer, and return the transfer as it now is."""
     case_id, item_id = Transfer.objects.values_list("request_item__request_id", "request_item_id").get(
         pk=transfer.pk
     )
@@ -116,22 +127,12 @@ def lock_transfer(transfer: Transfer) -> Transfer:
     return Transfer.objects.select_for_update().get(pk=transfer.pk)
 
 
-def has_active_trip(transfer: Transfer) -> bool:
-    """Whether an ambulance is carrying this transfer right now (story #51)."""
-    return Trip.objects.filter(transfer=transfer, status__in=TRIP_ACTIVE).exists()
-
-
-def _begin(transfer: Transfer, action: str, *, actor, via_trip: bool = False) -> Transfer:
-    """The start of every move: lock the rows, then refuse with 403 if the user may not make the move, with
-    409 while a trip carries the transfer (the trip's steps make its moves), or with 409 if the lifecycle
-    doesn't allow it from the current status. A trip's own move (`via_trip`) skips the first two: the trip
-    checked the user at the supplier. Returns the locked transfer."""
-    locked = lock_transfer(transfer)
-    if not via_trip:
-        if not may_act(actor, locked, action):
-            raise PermissionDenied("Your role or hospital can't make this move.")
-        if has_active_trip(locked):
-            raise TransferConflict("An ambulance is carrying this transfer. Use the trip's steps instead.")
+def _begin(transfer: Transfer, action: str, *, actor) -> Transfer:
+    """The start of every move: lock the rows, then refuse with 403 if the user may not make the move, or with
+    409 if the lifecycle doesn't allow it from the current status. Returns the locked transfer."""
+    locked = _lock(transfer)
+    if not may_act(actor, locked, action):
+        raise PermissionDenied("Your role or hospital can't make this move.")
     try:
         TRANSFER_LIFECYCLE.next(locked.status, action)
     except TransitionNotAllowed as exc:
@@ -172,35 +173,15 @@ def _move(transfer: Transfer, action: str, *, actor, note: str = "", reason: str
         after={"status": transfer.status},
         reason=note or action,
     )
-    _notify_move(transfer, action, actor=actor)
+    status = transfer.get_status_display().lower()
+    if transfer.status in (TransferStatus.DELIVERED, TransferStatus.CANCELLED):
+        _tell(transfer, kind=f"transfer.{transfer.status}", title=f"Transfer {status}", to_supplier=True)
+        from apps.ambulances.services import end_trip_for  # ambulances builds on transfers
+
+        end_trip_for(transfer, actor=actor)
+    else:
+        _tell(transfer, kind=f"transfer.{transfer.status}", title=f"Transfer {status}", to_supplier=False)
     return transfer
-
-
-def _notify_move(transfer: Transfer, action: str, *, actor) -> None:
-    """Tell the side that did not make the move (notification spec, Transfer rule). The supplier answers, so
-    the case side hears approved, rejected and dispatched. The requester cancels or confirms receipt, so
-    the supplier hears. Starting transit tells nobody: dispatched already did."""
-    supplier, receiver = transfer.supplier, transfer.receiver
-    if action in ("approve", "reject", "dispatch"):
-        verb = {"approve": "approved by", "reject": "rejected by", "dispatch": "dispatched by"}[action]
-        notify(
-            f"transfer.{transfer.status}",
-            hospital=receiver,
-            module="emergencies",
-            message=f"Transfer #{transfer.pk} {verb} {supplier.name}.",
-            link=TRANSFER_LINK,
-            actor=actor,
-        )
-    elif action in ("cancel", "deliver"):
-        verb = {"cancel": "cancelled by", "deliver": "received by"}[action]
-        notify(
-            f"transfer.{transfer.status}",
-            hospital=supplier,
-            module=ALLOCATION_MODULE[transfer.request_item.resource_type],
-            message=f"Transfer #{transfer.pk} {verb} {receiver.name}.",
-            link=TRANSFER_LINK,
-            actor=actor,
-        )
 
 
 # ── Requesting (story #47) ────────────────────────────────────────────────────────────────────────
@@ -252,14 +233,12 @@ def request_transfer(
         after={"status": transfer.status, "quantity": quantity},
         reason=f"For {case.reference}",
     )
-    notify(
-        "transfer.requested",
-        hospital=supplier,
-        module=ALLOCATION_MODULE[need.resource_type],
-        severity=Severity.CRITICAL,
-        message=f"{transfer.receiver.name} asks for {quantity} of {need_label(need)} for {case.reference}.",
-        link=TRANSFER_LINK,
-        actor=actor,
+    _tell(
+        transfer,
+        kind="transfer.requested",
+        title=f"Transfer requested for {case.reference}",
+        to_supplier=True,
+        critical=True,
     )
     return transfer
 
@@ -317,15 +296,8 @@ def cancel_for_case(case: EmergencyRequest, *, actor, reason: str) -> int:
     unfinished = Transfer.objects.select_for_update().filter(
         request_item__request=case, status__in=(TransferStatus.REQUESTED, *LIVE)
     )
-    transfers = list(unfinished.order_by("id"))
-    if Trip.objects.filter(transfer__in=transfers, status__in=TRIP_ACTIVE).exists():
-        # Story #51: an ambulance on the road can't be left with its transfer cancelled, so the case
-        # can't close while a trip is active (409).
-        raise TransitionNotAllowed(
-            "An ambulance is still carrying stock for this case. Complete its trip first."
-        )
     cancelled = 0
-    for transfer in transfers:
+    for transfer in unfinished.order_by("id"):
         for hold in _holds(transfer):
             if hold.status == ReservationStatus.HELD:
                 release(hold, actor=actor, reason=f"Transfer #{transfer.pk} cancelled", transfer_ok=True)
@@ -335,17 +307,16 @@ def cancel_for_case(case: EmergencyRequest, *, actor, reason: str) -> int:
 
 
 @transaction.atomic
-def dispatch(transfer: Transfer, *, actor, note: str = "", via_trip: bool = False) -> Transfer:
-    """The supplier sends an approved transfer on its way. Its holds stay pinned. `via_trip` is the trip's
-    dispatch (apps.ambulances): it is checked there, not here."""
-    transfer = _begin(transfer, "dispatch", actor=actor, via_trip=via_trip)
+def dispatch(transfer: Transfer, *, actor, note: str = "") -> Transfer:
+    """The supplier sends an approved transfer on its way. Its holds stay pinned."""
+    transfer = _begin(transfer, "dispatch", actor=actor)
     return _move(transfer, "dispatch", actor=actor, note=note)
 
 
 @transaction.atomic
-def start_transit(transfer: Transfer, *, actor, note: str = "", via_trip: bool = False) -> Transfer:
-    """The stock is on the road: a dispatched transfer goes in transit. `via_trip` is the trip's departure."""
-    transfer = _begin(transfer, "startTransit", actor=actor, via_trip=via_trip)
+def start_transit(transfer: Transfer, *, actor, note: str = "") -> Transfer:
+    """The stock is on the road: a dispatched transfer goes in transit."""
+    transfer = _begin(transfer, "startTransit", actor=actor)
     return _move(transfer, "startTransit", actor=actor, note=note)
 
 

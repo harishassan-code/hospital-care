@@ -21,14 +21,23 @@ describe('routes', () => {
   })
 })
 
-// Every Sprint 8 placeholder now has its real page; the check comes back when a new planned module is listed.
-describe.skipIf(PLANNED.length === 0)('route placeholders (issue #5)', () => {
+describe('route placeholders (issue #5)', () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it.each(PLANNED.map((p) => [p.path, p.label, p.sprint] as const))('%s says when %s arrives', async (path, label, sprint) => {
-    mockStaffApi({ role: 'doctor' })
+  it('has none left: every MVP module has its page (Sprint 8)', () => {
+    expect(PLANNED).toEqual([])
+  })
+
+  it.each([
+    ['/staff/donors', 'Donors'],
+    ['/staff/ambulances', 'Ambulances'],
+    ['/staff/alerts', 'Alerts'],
+    ['/staff/command-centre', 'City command centre'],
+    ['/staff/audit', 'Audit log'],
+  ])('%s opens the %s page for an admin', async (path, label) => {
+    mockStaffApi({ role: 'admin' })
     renderAt(path)
     expect(await screen.findByRole('heading', { level: 1, name: label })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: `${label}: coming in Sprint ${sprint}` })).toBeInTheDocument()
+    expect(screen.queryByText(/coming in Sprint/)).not.toBeInTheDocument()
   })
 })

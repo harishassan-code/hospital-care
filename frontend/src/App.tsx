@@ -6,13 +6,13 @@ import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import SignupPage from './pages/SignupPage'
 import AlertsPage from './pages/staff/AlertsPage'
-import BedsPage from './pages/staff/BedsPage'
+import AmbulancesPage from './pages/staff/AmbulancesPage'
 import AuditPage from './pages/staff/AuditPage'
+import BedsPage from './pages/staff/BedsPage'
 import BloodPage from './pages/staff/BloodPage'
 import CommandCentrePage from './pages/staff/CommandCentrePage'
 import DonorsPage from './pages/staff/DonorsPage'
 import EmergenciesPage from './pages/staff/EmergenciesPage'
-import AmbulancesPage from './pages/staff/AmbulancesPage'
 import EmergencyFeedPage from './pages/staff/EmergencyFeedPage'
 import EmergencyCasePage from './pages/staff/EmergencyCasePage'
 import HospitalDetailPage from './pages/staff/HospitalDetailPage'
@@ -35,18 +35,14 @@ export function AppRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/staff" element={<StaffLayout />}>
         <Route index element={<OverviewPage />} />
-        <Route path="alerts" element={<AlertsPage />} />
-        <Route path="command-centre" element={<CommandCentrePage />} />
         <Route path="emergencies" element={<EmergenciesPage />} />
         <Route path="emergencies/feed" element={<EmergencyFeedPage />} />
         <Route path="emergencies/:reference" element={<EmergencyCasePage />} />
         <Route path="transfers" element={<TransfersPage />} />
         <Route path="beds" element={<BedsPage />} />
         <Route path="blood" element={<BloodPage />} />
-        <Route path="donors" element={<DonorsPage />} />
         <Route path="pharmacy" element={<PharmacyPage />} />
         <Route path="equipment" element={<EquipmentPage />} />
-        <Route path="ambulances" element={<AmbulancesPage />} />
         <Route path="operating-rooms" element={<OperatingRoomsPage />} />
         <Route path="operating-rooms/schedule" element={<OperatingRoomSchedulePage />} />
         <Route path="hospitals" element={<HospitalsPage />} />
@@ -54,6 +50,10 @@ export function AppRoutes() {
         <Route path="hospitals/:id" element={<HospitalDetailPage />} />
         <Route path="hospitals/:id/edit" element={<HospitalFormPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="donors" element={<DonorsPage />} />
+        <Route path="ambulances" element={<AmbulancesPage />} />
+        <Route path="alerts" element={<AlertsPage />} />
+        <Route path="command-centre" element={<CommandCentrePage />} />
         <Route path="audit" element={<AuditPage />} />
         {PLANNED.map((p) => (
           <Route key={p.path} path={p.path.replace('/staff/', '')} element={<PlannedPage />} />

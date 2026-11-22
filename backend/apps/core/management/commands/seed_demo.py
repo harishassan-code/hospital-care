@@ -12,16 +12,15 @@ Demo data only: never run against a database with real patients.
 import random
 from datetime import date, datetime, time, timedelta
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
-from apps.ambulances.models import Ambulance, AmbulanceStatus, AmbulanceType
+from apps.ambulances.models import Ambulance, Trip
 from apps.blood.models import (
     REQUIRED_TESTS,
     AppointmentStatus,
-    BloodGroup,
     BloodUnit,
     Component,
     DonationAppointment,
@@ -29,7 +28,6 @@ from apps.blood.models import (
     TestResult,
     UnitStatus,
 )
-from apps.blood.services import usable_units
 from apps.emergencies.models import EmergencyStatus, ErStatus
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
@@ -55,6 +53,21 @@ DEMO_USERS = [
     ("pharmacist@demo.citycare.pk", "Saima", "Raza", Role.PHARMACIST),
     ("patient@demo.citycare.pk", "Ali", "Patient", Role.PATIENT),
 ]
+
+# Staff at the other demo hospitals, so a transfer can be answered on the supplier's side (B12 scenario).
+# One list per hospital after the first, in HOSPITALS order.
+PARTNER_USERS = [
+    [
+        ("bloodbank.seaview@demo.citycare.pk", "Nadia", "Qureshi", Role.BLOOD_BANK),
+        ("nurse.seaview@demo.citycare.pk", "Bilal", "Ahmed", Role.NURSE),
+    ],
+    [
+        ("bloodbank.northside@demo.citycare.pk", "Zara", "Malik", Role.BLOOD_BANK),
+        ("nurse.northside@demo.citycare.pk", "Omar", "Farooq", Role.NURSE),
+    ],
+]
+# Fleet per hospital (#50): type and status; identifiers are AMB-<hospital initials><id>-<n>.
+AMBULANCES = [("als", "available"), ("bls", "available"), ("pts", "maintenance")]
 
 # code, name, kind, label prefix, size, occupancy, (min age, max age), department
 WARDS = [
@@ -508,6 +521,33 @@ OR_BOOKINGS = [
 ]
 
 
+def synthetic_spec(n: int):
+    """An extra synthetic hospital for load tests (#58), in the same shape as HOSPITALS."""
+    return (
+        f"Synthetic City Hospital {n:03d}",
+        "hospital",
+        "Karachi (synthetic)",
+        f"{24.80 + (n % 10) * 0.02:.6f}",
+        f"{66.95 + (n // 10 % 10) * 0.02:.6f}",
+        f"+92 21 555 {n:04d}",
+        ["icu"],
+        ["Emergency medicine", "General medicine"],
+        ["Blood fridge", "Main store"],
+        [
+            (
+                f"syn{n}-med",
+                "Medical",
+                "General medicine",
+                f"S{n}-MED",
+                12,
+                0.8,
+                (18, 90),
+                "General medicine",
+            ),
+        ],
+    )
+
+
 def weighted(rand: random.Random, shares: dict):
     return rand.choices(list(shares), weights=list(shares.values()))[0]
 
@@ -518,13 +558,21 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Delete existing demo-module data first.")
         parser.add_argument("--seed", type=int, default=7, help="Random seed, for repeatable data.")
+        parser.add_argument(
+            "--hospitals",
+            type=int,
+            default=len(HOSPITALS),
+            help="Scale the city for load tests (#58): extra synthetic hospitals beyond the demo ones.",
+        )
 
     @transaction.atomic
-    def handle(self, *args, reset=False, seed=7, **options):
+    def handle(self, *args, reset=False, seed=7, hospitals=None, **options):
+        total = hospitals or len(HOSPITALS)
         rand = random.Random(seed)
         now = timezone.now()
         if reset:
             models = (
+                Trip,
                 Ambulance,
                 Equipment,
                 OrBooking,  # before the rooms: a booking holds its room (PROTECT)
@@ -545,20 +593,24 @@ class Command(BaseCommand):
                 model.objects.all().delete()
 
         hospitals = []
-        for index, spec in enumerate(HOSPITALS):
+        specs = HOSPITALS + [synthetic_spec(i) for i in range(len(HOSPITALS) + 1, total + 1)]
+        for index, spec in enumerate(specs):
             # The first hospital keeps the Sprint 1 random sequence, so its beds and blood look as before.
             hospital_rand = rand if index == 0 else random.Random(seed * 100 + index)
             hospitals.append(self.seed_hospital(spec, hospital_rand, now))
         main = hospitals[0]
 
         self.seed_users(main)
+        for partner, users in zip(hospitals[1:], PARTNER_USERS, strict=False):
+            self.seed_users(partner, users)
+        for hospital in hospitals:
+            if not Ambulance.objects.filter(hospital=hospital).exists():
+                self.seed_ambulances(hospital)
         if not BloodUnit.objects.exists():
             self.seed_blood(rand, now, main)
-            self.seed_scenario_stock(main, now)
         BloodUnit.objects.filter(hospital=None).update(hospital=main)
         if not Equipment.objects.exists():
             self.seed_equipment(main)
-        self.seed_ambulances(hospitals)
         for index, partner in enumerate(hospitals[1:], start=1):
             if not BloodUnit.objects.filter(hospital=partner).exists():
                 self.seed_partner_stock(partner, index, now)
@@ -586,12 +638,12 @@ class Command(BaseCommand):
         for hospital in hospitals:
             self.stdout.write(f"  {hospital.name}: {Bed.objects.filter(hospital=hospital).count()} beds")
         self.stdout.write(f"Demo logins (password for all: {DEMO_PASSWORD}):")
-        for email, *_, role in DEMO_USERS:
+        for email, *_, role in DEMO_USERS + [user for users in PARTNER_USERS for user in users]:
             self.stdout.write(f"  {role:<11} {email}")
 
-    def seed_users(self, hospital: Hospital):
+    def seed_users(self, hospital: Hospital, users=DEMO_USERS):
         """One login per role; staff work at `hospital`."""
-        for email, first, last, role in DEMO_USERS:
+        for email, first, last, role in users:
             user, created = User.objects.get_or_create(
                 username=email,
                 defaults={"email": email, "first_name": first, "last_name": last, "role": role},
@@ -674,32 +726,6 @@ class Command(BaseCommand):
                     bed.status = BedStatus.OUT_OF_SERVICE
             beds.append(bed)
         Bed.objects.bulk_create(beds)
-
-    def seed_scenario_stock(self, hospital: Hospital, now):
-        """MVP scenario (B12): the main hospital has exactly one usable O- red-cell unit, the local stock the
-        end-to-end test reserves from. Runs right after the blood draws and draws nothing, so every other
-        unit keeps its random values. Surplus usable units become `issued` (already given out). The unit
-        that expires last stays usable, so a slow run can't watch it expire. With none usable, the
-        unexpired reserved or issued unit that expires last is made available again. Raises CommandError
-        when there is neither."""
-        units = BloodUnit.objects.filter(
-            hospital=hospital, group=BloodGroup.O_NEG, component=Component.RED_CELLS
-        )
-        usable = list(usable_units(units, now).order_by("-expires_at", "donation_number"))
-        if len(usable) > 1:
-            BloodUnit.objects.filter(pk__in=[unit.pk for unit in usable[1:]]).update(status=UnitStatus.ISSUED)
-        elif not usable:
-            spare = (
-                units.filter(expires_at__gt=now, status__in=(UnitStatus.RESERVED, UnitStatus.ISSUED))
-                .order_by("-expires_at", "donation_number")
-                .first()
-            )
-            if spare is None:
-                raise CommandError(
-                    "No unexpired O- red cells to use for the MVP scenario: try another --seed."
-                )
-            spare.status = UnitStatus.AVAILABLE
-            spare.save(update_fields=["status"])
 
     def seed_blood(self, rand: random.Random, now, hospital: Hospital, count=320):
         storage = {loc.name: loc for loc in StorageLocation.objects.filter(hospital=hospital)}
@@ -802,6 +828,20 @@ class Command(BaseCommand):
             for i, d in enumerate(free)
         )
 
+    def seed_ambulances(self, hospital: Hospital):
+        """Sprint 8 (#50): a small fleet at every hospital."""
+        initials = "".join(word[0] for word in hospital.name.split() if word[0].isalpha())[:3].upper()
+        Ambulance.objects.bulk_create(
+            Ambulance(
+                hospital=hospital,
+                identifier=f"AMB-{initials}{hospital.pk}-{n:02d}",
+                ambulance_type=type_,
+                plate=f"KHI-{hospital.pk:02d}{n:02d}",
+                status=status,
+            )
+            for n, (type_, status) in enumerate(AMBULANCES, start=1)
+        )
+
     def seed_equipment(self, hospital: Hospital):
         """Sprint 4 (#26): a small, fixed set of critical equipment in the main hospital."""
         T, St = EquipmentType, EquipmentStatus
@@ -826,24 +866,6 @@ class Command(BaseCommand):
             Equipment(hospital=hospital, identifier=i, equipment_type=t, name=n, location=loc, status=st)
             for i, t, n, loc, st in items
         )
-
-    def seed_ambulances(self, hospitals: list[Hospital]):
-        """Story #50: two ambulances per hospital (advanced and basic), and a patient transport at the main
-        hospital. Looked up by tag at each hospital, so a re-run adds only the ones that are missing."""
-        T, St = AmbulanceType, AmbulanceStatus
-        fleet = [
-            ("AMB-01", T.ADVANCED, St.AVAILABLE, 0),
-            ("AMB-02", T.BASIC, St.MAINTENANCE, 0),
-            ("AMB-03", T.PATIENT_TRANSPORT, St.AVAILABLE, 0),
-            ("AMB-04", T.ADVANCED, St.AVAILABLE, 1),
-            ("AMB-05", T.BASIC, St.AVAILABLE, 1),
-            ("AMB-06", T.ADVANCED, St.AVAILABLE, 2),
-            ("AMB-07", T.BASIC, St.AVAILABLE, 2),
-        ]
-        for tag, kind, status, index in fleet:
-            Ambulance.objects.get_or_create(
-                hospital=hospitals[index], identifier=tag, defaults={"type": kind, "status": status}
-            )
 
     def seed_partner_stock(self, hospital: Hospital, index: int, now):
         """Sprint 7 (#47): a little stock at the other hospitals, so a short case at CityCare General has

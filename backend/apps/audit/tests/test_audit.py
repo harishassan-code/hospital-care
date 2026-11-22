@@ -3,7 +3,6 @@
 import pytest
 from django.contrib.admin.sites import site
 from django.test import RequestFactory
-from django.urls import Resolver404, resolve
 
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
@@ -65,9 +64,10 @@ def test_the_actors_email_survives_their_account(entry):
     assert entry.actor is None and entry.actor_email == "admin@example.com"
 
 
-def test_there_is_no_api_to_change_entries():
-    with pytest.raises(Resolver404):
-        resolve("/api/audit/")
+def test_there_is_no_api_to_change_entries(client_as):
+    admin = client_as(Role.ADMIN)
+    for method in (admin.post, admin.put, admin.patch, admin.delete):
+        assert method("/api/audit/").status_code in (403, 405)  # view-only module, no write handlers
 
 
 def test_admin_is_read_only(make_user):

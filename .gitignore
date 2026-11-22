@@ -13,10 +13,6 @@ backend/media/
 node_modules/
 frontend/dist/
 
-# End-to-end scenario (e2e/, docs/testing/mvp-scenario.md)
-e2e/playwright-report/
-e2e/test-results/
-
 # Env / secrets
 .env
 .env.*
@@ -31,3 +27,7 @@ Thumbs.db
 
 # Local-only files kept out of the public repo
 .quarantine/
+
+# Playwright
+e2e/playwright-report/
+e2e/test-results/

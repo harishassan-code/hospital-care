@@ -6,8 +6,8 @@ points: 3
 priority: high
 sprint: 9
 depends_on: -
-owner: unassigned
-status: Ready
+owner: kabirraj0011
+status: In Review
 ---
 
 # B13 · Security and performance hardening

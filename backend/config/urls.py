@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core.command_centre import CommandCentreView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.core.urls")),
@@ -16,9 +18,8 @@ urlpatterns = [
     path("api/equipment/", include("apps.equipment.urls")),
     path("api/operating-rooms/", include("apps.operating_rooms.urls")),
     path("api/transfers/", include("apps.transfers.urls")),
-    path("api/ambulances/", include("apps.ambulances.urls")),
-    path("api/command-centre/", include("apps.command_centre.urls")),
-    path("api/audit/", include("apps.audit.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
-    path("api/trips/", include("apps.ambulances.trip_urls")),
+    path("api/ambulances/", include("apps.ambulances.urls")),
+    path("api/audit/", include("apps.audit.urls")),
+    path("api/command-centre/", CommandCentreView.as_view(), name="command-centre"),
 ]

@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { hospital } from '../../config/hospital'
-import { CriticalBanners } from '../notifications/CriticalBanners'
-import { NotificationBell } from '../notifications/NotificationBell'
 import { currentShift, formatDuration } from '../../lib/time'
 import { AccessDenied } from './AccessDenied'
 import { PLANNED } from './planned'
 import { canSee, moduleForPath, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
+import { useNotifications } from './useNotifications'
 import styles from './StaffLayout.module.css'
 import { StaffProvider } from './StaffProvider'
 
@@ -24,6 +23,7 @@ function StaffShell() {
   const { role } = useStaff()
   const { pathname } = useLocation()
   const module = moduleForPath(pathname)
+  const notifications = useNotifications()
 
   return (
     <div className={styles.shell}>
@@ -32,13 +32,29 @@ function StaffShell() {
       </a>
       <Sidebar />
       <div className={styles.column}>
-        <TopBar title={PLANNED.find((p) => p.path === pathname.replace(/\/$/, ''))?.label ?? module.label} />
-        <div>
-          <CriticalBanners />
-          <main id="main" className={styles.main}>
-            {canSee(role, module.id) ? <Outlet /> : <AccessDenied what={module.label} />}
-          </main>
-        </div>
+        <TopBar
+          title={PLANNED.find((p) => p.path === pathname.replace(/\/$/, ''))?.label ?? module.label}
+          unread={notifications.unread}
+        />
+        {notifications.critical.map((n) => (
+          <div key={n.id} role="alert" className={styles.banner}>
+            <span>
+              <strong>{n.title}</strong> {n.body}
+              {n.link && (
+                <>
+                  {' '}
+                  <Link to={n.link}>Open</Link>
+                </>
+              )}
+            </span>
+            <button type="button" className={styles.signOut} onClick={() => notifications.acknowledge(n.id)}>
+              Acknowledge
+            </button>
+          </div>
+        ))}
+        <main id="main" className={styles.main}>
+          {canSee(role, module.id) ? <Outlet /> : <AccessDenied what={module.label} />}
+        </main>
       </div>
     </div>
   )
@@ -98,9 +114,11 @@ function Sidebar() {
   )
 }
 
-function TopBar({ title }: { title: string }) {
-  const { now } = useStaff()
+function TopBar({ title, unread }: { title: string; unread: number }) {
+  const { now, attention } = useStaff()
   const shift = currentShift(hospital.shifts, now)
+  // One badge: server notifications (story #53) plus the items worked out in the browser.
+  const count = attention.length + unread
 
   return (
     <header className={styles.topBar}>
@@ -109,7 +127,16 @@ function TopBar({ title }: { title: string }) {
         <p className={styles.shift}>
           {`${shift.name} shift · ${shift.start}–${shift.end} · ${formatDuration(shift.minutesLeft)} left`}
         </p>
-        <NotificationBell />
+        <Link
+          to={unread > 0 ? '/staff/alerts' : { pathname: '/staff', hash: 'attention' }}
+          className={styles.bell}
+          aria-label={`${count} ${count === 1 ? 'item needs' : 'items need'} attention`}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6Zm-2.5 15a2.5 2.5 0 0 0 5 0" fill="none" stroke="currentColor" strokeWidth="2" />
+          </svg>
+          {count > 0 && <span className={styles.bellCount}>{count}</span>}
+        </Link>
       </div>
     </header>
   )

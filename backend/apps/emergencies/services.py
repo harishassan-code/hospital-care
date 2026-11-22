@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from apps.accounts.permissions import may_change
 from apps.audit.services import record
+from apps.notifications.models import Severity as NotificationSeverity
 from apps.notifications.services import notify
 
 from .models import (
@@ -32,11 +33,6 @@ class OutcomeNoteRequired(Exception):
 
     def __init__(self):
         super().__init__("Add an outcome note to close the case.")
-
-
-def case_path(case: EmergencyRequest) -> str:
-    """The staff page of one case, for a notification's link."""
-    return f"/staff/emergencies/{case.reference}"
 
 
 def next_reference(year: int) -> str:
@@ -96,16 +92,15 @@ def create_case(*, severity: str, patient_ref: str, items: list[dict], actor) ->
         case,
         after={"severity": severity, "status": case.status, "items": len(items)},
     )
-    if severity == Severity.CRITICAL:
-        notify(
-            "case.created",
-            hospital=case.hospital,
-            module="emergencies",
-            severity=Severity.CRITICAL,
-            message=f"Critical case {case.reference} is open.",
-            link=case_path(case),
-            actor=actor,
-        )
+    notify(
+        hospital_id=case.hospital_id,
+        kind="emergency.created",
+        severity=NotificationSeverity.CRITICAL
+        if severity == Severity.CRITICAL
+        else NotificationSeverity.INFO,
+        title=f"New {case.get_severity_display().lower()} case {case.reference}",
+        link=f"/staff/emergencies/{case.reference}",
+    )
     return case
 
 
@@ -130,15 +125,14 @@ def move_case(case: EmergencyRequest, action: str, *, note: str, actor, at=None)
         after={"status": case.status},
         reason=note or action,
     )
-    if action == "escalate":
+    if case.status == RequestStatus.ESCALATED:
         notify(
-            "case.escalated",
-            hospital=case.hospital,
-            module="emergencies",
-            severity=Severity.CRITICAL,
-            message=f"Case {case.reference} is escalated and needs attention now.",
-            link=case_path(case),
-            actor=actor,
+            hospital_id=case.hospital_id,
+            kind="emergency.escalated",
+            severity=NotificationSeverity.CRITICAL,
+            title=f"Case {case.reference} escalated",
+            body=note,
+            link=f"/staff/emergencies/{case.reference}",
         )
     return case
 

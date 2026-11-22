@@ -1,15 +1,11 @@
 {
   "name": "hospital-care-e2e",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "playwright test",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1",
-    "@types/node": "24.19.1",
-    "typescript": "6.0.3"
+    "@playwright/test": "^1.52.0"
   }
 }

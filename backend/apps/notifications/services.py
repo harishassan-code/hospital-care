@@ -1,90 +1,112 @@
-"""In-app notifications (story #52; bolt B06). Domain code calls `notify` next to its audit record and
-names the hospital and the module. This module picks the people and the channels; the domain never does.
-It imports nothing from the domain apps, so there are no import cycles."""
+"""In-app notifications from domain events (story #52). Other modules call `notify` next to their audit
+record. Channels are the extension point: email or SMS is one more `Channel` subclass in CHANNELS."""
 
-from django.contrib.auth import get_user_model
+import logging
+
 from django.db import transaction
-from django.db.models import Q
-from django.http import Http404
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from apps.accounts.models import Role
-from apps.accounts.permissions import can_edit
-from apps.audit.services import record
 
-from .channels import CHANNELS
-from .models import Notification, Severity
+from .models import Notification, NotificationReceipt, Severity
 
-# The most rows the list returns. The list is not paged in the MVP.
-LIST_LIMIT = 50
-MESSAGE_MAX = 300
+log = logging.getLogger(__name__)
 
 
-def recipients(hospital, module: str):
-    """Active users at `hospital` whose role can edit `module`. A superuser counts as an admin."""
-    roles = [role for role in Role.values if can_edit(role, module)]
-    who = Q(role__in=roles)
-    if Role.ADMIN in roles:
-        who |= Q(is_superuser=True)
-    return get_user_model().objects.filter(who, is_active=True, hospital=hospital)
+class Channel:
+    """Delivers a saved notification somewhere. Must not raise for a delivery problem it can retry."""
+
+    def send(self, notification: Notification) -> None:
+        raise NotImplementedError
+
+
+class InAppChannel(Channel):
+    """In-app delivery is the saved row itself: the bell reads it. Nothing more to do."""
+
+    def send(self, notification: Notification) -> None:
+        pass
+
+
+CHANNELS: list[Channel] = [InAppChannel()]
 
 
 def notify(
-    kind: str,
     *,
-    hospital,
-    module: str,
-    message: str,
-    link: str,
+    hospital_id,
+    kind: str,
+    title: str,
+    body: str = "",
+    link: str = "",
     severity: str = Severity.INFO,
-    actor=None,
-) -> list[Notification]:
-    """Tell the staff at `hospital` who can edit `module` about one event: one row per recipient, handed to
-    every channel. Nothing is created when `hospital` is None. The actor, who made the move, is left out.
-    Call it inside the move's transaction, so a rolled-back move sends nothing."""
-    if hospital is None:
-        return []
-    people = recipients(hospital, module)
-    if actor is not None and actor.pk is not None:
-        people = people.exclude(pk=actor.pk)
-    rows = Notification.objects.bulk_create(
-        Notification(
-            user=person,
-            kind=kind,
-            severity=severity,
-            message=message[:MESSAGE_MAX],
-            link=link,
-        )
-        for person in people
+    roles: tuple[str, ...] = (),
+) -> Notification | None:
+    """Save a notification for `roles` at `hospital_id` (empty roles: all staff) and send it on every channel.
+    Never breaks the action that caused it: a failure is logged and rolled back to a savepoint."""
+    if roles and Role.ADMIN not in roles:
+        roles = (*roles, Role.ADMIN)  # admins act for any hospital, so they hear about everything
+    try:
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                hospital_id=hospital_id,
+                roles=f",{','.join(roles)}," if roles else "",
+                kind=kind,
+                severity=severity,
+                title=title[:160],
+                body=body[:300],
+                link=link,
+            )
+            for channel in CHANNELS:
+                channel.send(notification)
+            return notification
+    except Exception:
+        log.exception("Notification %s not sent", kind)
+        return None
+
+
+def for_user(user):
+    """The notifications this user sees: their hospital's, for their role. Admins see what is addressed to
+    admins (every event) at any hospital, plus network-wide ones. Annotated with read and acknowledged for
+    this user."""
+    role = user.effective_role
+    if role == Role.PATIENT:
+        return Notification.objects.none()
+    role_match = Q(roles="") | Q(roles__contains=f",{role},")
+    if role == Role.ADMIN:
+        where = role_match
+    elif user.hospital_id is None:
+        return Notification.objects.none()
+    else:
+        where = role_match & Q(hospital_id=user.hospital_id)
+    mine = NotificationReceipt.objects.filter(notification=OuterRef("pk"), user=user)
+    return Notification.objects.filter(where).annotate(
+        is_read=Exists(mine.filter(read_at__isnull=False)),
+        is_acknowledged=Exists(mine.filter(acknowledged_at__isnull=False)),
     )
-    for row in rows:
-        for channel in CHANNELS:
-            channel.send(row)
-    return rows
 
 
-def inbox(user, *, unread_only: bool = False):
-    """The user's own notifications, newest first, at most LIST_LIMIT. Never another user's rows."""
-    rows = Notification.objects.filter(user=user)
-    if unread_only:
-        rows = rows.filter(read_at__isnull=True)
-    return rows.order_by("-created_at", "-id")[:LIST_LIMIT]
+def _receipt(notification: Notification, user) -> NotificationReceipt:
+    receipt, _ = NotificationReceipt.objects.get_or_create(notification=notification, user=user)
+    return receipt
 
 
-def unread_count(user) -> int:
-    return Notification.objects.filter(user=user, read_at__isnull=True).count()
+def mark_read(notification: Notification, user) -> None:
+    receipt = _receipt(notification, user)
+    if receipt.read_at is None:
+        receipt.read_at = timezone.now()
+        receipt.save(update_fields=["read_at"])
 
 
-@transaction.atomic
-def mark_read(pk: int, *, user) -> Notification:
-    """Mark one of the user's notifications read. `read_at` is set once: a second call returns the row as it
-    is, with the first time, and writes no audit record (nothing changed). The first call writes
-    `notification.read`. Another user's row is a 404, as if it didn't exist."""
-    row = Notification.objects.select_for_update().filter(pk=pk, user=user).first()
-    if row is None:
-        raise Http404("No notification with that id.")
-    if row.read_at is None:
-        row.read_at = timezone.now()
-        row.save(update_fields=["read_at"])
-        record(user, "notification.read", row, before={"read": False}, after={"read": True})
-    return row
+def mark_all_read(user) -> int:
+    unread = list(for_user(user).filter(is_read=False))
+    for notification in unread:
+        mark_read(notification, user)
+    return len(unread)
+
+
+def acknowledge(notification: Notification, user) -> None:
+    receipt = _receipt(notification, user)
+    now = timezone.now()
+    receipt.read_at = receipt.read_at or now
+    receipt.acknowledged_at = receipt.acknowledged_at or now
+    receipt.save(update_fields=["read_at", "acknowledged_at"])

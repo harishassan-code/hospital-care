@@ -1,8 +1,5 @@
 # QA tests
 
-End-to-end MVP scenario (proposal §23), in a real browser against the real API: [mvp-scenario.md](mvp-scenario.md).
-It maps each §23 criterion to the steps that show it.
-
 Automated smoke cases: `frontend/src/qa/features.qa.test.tsx`
 
 ```bash

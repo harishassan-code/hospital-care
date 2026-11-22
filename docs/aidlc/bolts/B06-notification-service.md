@@ -6,7 +6,7 @@ points: 5
 priority: high
 sprint: 8
 depends_on: -
-owner: codewithalphadotcom
+owner: kabirraj0011
 status: In Review
 ---
 

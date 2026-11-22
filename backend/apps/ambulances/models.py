@@ -1,75 +1,67 @@
-from django.conf import settings
 from django.db import models
-from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
-from apps.resources.models import Resource
 from apps.resources.state_machine import StateMachine
 
 
 class AmbulanceType(models.TextChoices):
-    """Life support level of the vehicle (story #50)."""
+    """Story #50."""
 
-    BASIC = "basic", "Basic life support"
-    ADVANCED = "advanced", "Advanced life support"
-    PATIENT_TRANSPORT = "patientTransport", "Patient transport"
+    BLS = "bls", "Basic life support"
+    ALS = "als", "Advanced life support"
+    PTS = "pts", "Patient transport"
 
 
 class AmbulanceStatus(models.TextChoices):
     AVAILABLE = "available", "Available"
-    DISPATCHED = "dispatched", "On trip"
-    MAINTENANCE = "maintenance", "In maintenance"
+    ON_TRIP = "onTrip", "On trip"
+    MAINTENANCE = "maintenance", "Maintenance"
     OUT_OF_SERVICE = "outOfService", "Out of service"
 
 
-S = AmbulanceStatus
+A = AmbulanceStatus
 
-# Status changes by hand go through POST /api/ambulances/<id>/actions/. `dispatch` and `release` are the
-# trip's moves (story #51): the manual endpoint refuses them, see TRIP_ONLY_ACTIONS.
+# startTrip and endTrip are made only by a trip (story #51); MANUAL_ACTIONS are what staff can do by hand.
 AMBULANCE_LIFECYCLE = StateMachine(
-    "vehicle",  # for the 409 message: "Can't outOfService a vehicle that is out of service."
+    "ambulance",
     AmbulanceStatus,
     {
-        (S.AVAILABLE, "startMaintenance"): S.MAINTENANCE,
-        (S.MAINTENANCE, "finishMaintenance"): S.AVAILABLE,
-        (S.AVAILABLE, "outOfService"): S.OUT_OF_SERVICE,
-        (S.MAINTENANCE, "outOfService"): S.OUT_OF_SERVICE,
-        (S.OUT_OF_SERVICE, "returnToService"): S.MAINTENANCE,
-        (S.AVAILABLE, "dispatch"): S.DISPATCHED,
-        (S.DISPATCHED, "release"): S.AVAILABLE,
+        (A.AVAILABLE, "startTrip"): A.ON_TRIP,
+        (A.ON_TRIP, "endTrip"): A.AVAILABLE,
+        (A.AVAILABLE, "startMaintenance"): A.MAINTENANCE,
+        (A.MAINTENANCE, "finishMaintenance"): A.AVAILABLE,
+        (A.AVAILABLE, "outOfService"): A.OUT_OF_SERVICE,
+        (A.MAINTENANCE, "outOfService"): A.OUT_OF_SERVICE,
+        (A.OUT_OF_SERVICE, "returnToService"): A.MAINTENANCE,
     },
 )
-TRIP_ONLY_ACTIONS = ("dispatch", "release")
+MANUAL_ACTIONS = [a for a in AMBULANCE_LIFECYCLE.actions if a not in ("startTrip", "endTrip")]
 
 
-class Ambulance(Resource):
-    """One ambulance at its base hospital, e.g. AMB-04, advanced life support (story #50)."""
+class Ambulance(models.Model):
+    """One vehicle in a hospital's fleet, e.g. AMB-CG-01 (story #50)."""
 
     machine = AMBULANCE_LIFECYCLE
 
-    identifier = models.CharField(
-        max_length=40, help_text="Asset tag, e.g. AMB-04. Unique within a hospital."
-    )
-    type = models.CharField(max_length=20, choices=AmbulanceType.choices)
+    hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.PROTECT, related_name="ambulances")
+    identifier = models.CharField(max_length=40, help_text="Fleet number, e.g. AMB-CG-01.")
+    ambulance_type = models.CharField(max_length=10, choices=AmbulanceType.choices)
+    plate = models.CharField(max_length=20, blank=True)
+    note = models.CharField(max_length=200, blank=True)
     status = models.CharField(
         max_length=20, choices=AmbulanceStatus.choices, default=AmbulanceStatus.AVAILABLE
     )
+    status_since = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ["type", "identifier"]
-        indexes = [models.Index(fields=["type", "status"])]
+        ordering = ["hospital_id", "identifier"]
         constraints = [
-            models.UniqueConstraint(
-                "hospital",
-                Lower("identifier"),
-                nulls_distinct=False,  # unique for network-level (no hospital) rows too
-                name="ambulance_identifier_unique_per_hospital",
-            )
+            models.UniqueConstraint(Lower("identifier"), name="ambulance_identifier_unique"),
         ]
 
     def __str__(self):
-        return f"{self.identifier} ({self.get_type_display()})"
+        return f"{self.identifier} ({self.get_ambulance_type_display()})"
 
 
 class TripStatus(models.TextChoices):
@@ -77,51 +69,43 @@ class TripStatus(models.TextChoices):
     EN_ROUTE = "enRoute", "En route"
     ARRIVED = "arrived", "Arrived"
     COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
 
 
 T = TripStatus
-# A trip that is still on the road: its transfer and its ambulance are tied up (story #51).
-TRIP_ACTIVE = (T.DISPATCHED, T.EN_ROUTE, T.ARRIVED)
 
+# Story #51. Simulated by buttons: staff mark en route and arrived; receipt completes, cancel cancels.
 TRIP_LIFECYCLE = StateMachine(
     "trip",
     TripStatus,
     {
-        (T.DISPATCHED, "depart"): T.EN_ROUTE,
+        (T.DISPATCHED, "enRoute"): T.EN_ROUTE,
         (T.EN_ROUTE, "arrive"): T.ARRIVED,
+        (T.DISPATCHED, "complete"): T.COMPLETED,
+        (T.EN_ROUTE, "complete"): T.COMPLETED,
         (T.ARRIVED, "complete"): T.COMPLETED,
+        (T.DISPATCHED, "cancel"): T.CANCELLED,
+        (T.EN_ROUTE, "cancel"): T.CANCELLED,
+        (T.ARRIVED, "cancel"): T.CANCELLED,
     },
 )
+OPEN_TRIP = (T.DISPATCHED, T.EN_ROUTE, T.ARRIVED)
 
 
 class Trip(models.Model):
-    """One ambulance carrying one approved transfer from its supplier to its receiver (story #51). The ETA is
-    stored once, at dispatch. Completing a trip frees the ambulance; the receiver still confirms receipt."""
+    """One ambulance carrying one transfer (story #51)."""
 
-    transfer = models.ForeignKey("transfers.Transfer", on_delete=models.PROTECT, related_name="trips")
     ambulance = models.ForeignKey(Ambulance, on_delete=models.PROTECT, related_name="trips")
+    transfer = models.OneToOneField("transfers.Transfer", on_delete=models.CASCADE, related_name="trip")
     status = models.CharField(max_length=12, choices=TripStatus.choices, default=TripStatus.DISPATCHED)
-    eta_minutes = models.PositiveSmallIntegerField(help_text="Estimated minutes, set at dispatch.")
-    dispatched_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    eta_minutes = models.PositiveIntegerField(null=True, blank=True)
     dispatched_at = models.DateTimeField(default=timezone.now)
-    departed_at = models.DateTimeField(null=True, blank=True)
+    en_route_at = models.DateTimeField(null=True, blank=True)
     arrived_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-dispatched_at", "-id"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["transfer"],
-                condition=Q(status__in=TRIP_ACTIVE),
-                name="trip_one_active_per_transfer",
-            ),
-            models.UniqueConstraint(
-                fields=["ambulance"],
-                condition=Q(status__in=TRIP_ACTIVE),
-                name="trip_one_active_per_ambulance",
-            ),
-        ]
 
     def __str__(self):
-        return f"Trip #{self.pk}"
+        return f"Trip #{self.pk} {self.ambulance.identifier}"

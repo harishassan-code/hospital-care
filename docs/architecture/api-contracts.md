@@ -12,36 +12,24 @@ unknown id, **400** `{field: ["message"]}` for invalid input.
 `ACCESS` in `backend/apps/accounts/permissions.py` and `frontend/src/features/staff/roles.ts` must stay
 identical. Reads need *view*, writes need *edit*.
 
-| Role | overview | alerts | emergencies | beds | blood | donors | pharmacy | hospitals | users | equipment | operatingRooms | orBookings | transfers | ambulances | commandCentre | audit |
+| Role | overview | emergencies | beds | blood | pharmacy | hospitals | users | equipment | operatingRooms | orBookings | transfers | ambulances | donors | alerts | commandCentre | audit |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| admin | view | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | view | view |
-| doctor | view | view | edit | view | view | – | view | view | – | view | view | edit | edit | view | – | – |
-| nurse | view | view | edit | edit | – | – | view | view | – | edit | edit | edit | edit | edit | – | – |
-| bloodBank | view | view | view | – | edit | edit | – | view | – | – | – | – | edit | – | – | – |
-| pharmacist | view | view | view | – | – | – | edit | view | – | – | – | – | – | – | – | – |
+| admin | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | view | view | view |
+| doctor | view | edit | view | view | view | view | – | view | view | edit | edit | view | – | view | – | – |
+| nurse | view | edit | edit | – | view | view | – | edit | edit | edit | edit | edit | – | view | – | – |
+| bloodBank | view | view | – | edit | – | view | – | – | – | – | edit | – | edit | view | – | – |
+| pharmacist | view | view | – | – | edit | view | – | – | – | – | – | – | – | view | – | – |
 | patient | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – |
+
+Sprint 8 added `ambulances` (B04/B05, #50 #51), `donors` (B11: a nav item only; the donor endpoints check `blood`),
+`alerts` (B07: every staff role; the notification endpoints only need a staff sign-in), `commandCentre` (B09, #55)
+and `audit` (B10, #56). Dispatching an ambulance uses the transfer's supplier-side rule.
 
 `emergencies` was added in Sprint 7 with #30 (see [api.md](api.md#emergency-cases-30-32)). `transfers` was added with
 B01 (#47): it lets a role use the transfer endpoints at all. Who may ask, approve, ship or receive is narrowed per move
 (see [transfers](api.md#transfers-47-48-49)).
 
-`ambulances` (B04, #50) is the ambulance registry: admin and nurse edit, doctor views. Blood bank and pharmacist have no access (see [ambulances](api.md#ambulances-b04-50)).
-Trips (B05, #51) add two endpoints under it: `POST /transfers/<id>/trips/` and `POST /trips/<id>/actions/`. They need edit on
-`ambulances` at the supplying hospital, so the receiving hospital's staff (and blood bank, which has no `ambulances` access)
-can't send or step a trip. Trips add no module (see [trips](api.md#trips-b05-51)).
-
 `orBookings` (story #29) is the module for booking and cancelling operating room slots. It has no nav item of its own: the day schedule is part of operating rooms.
-
-`commandCentre` (story #55) is the city-wide figures page. Admins only, and view only: nobody can change anything through it. The page's
-endpoint is in [api.md](api.md#city-command-centre-55).
-
-`audit` (#56) is the audit trail: admins only, and read only (`view`). Its endpoints are in [api.md](api.md#audit-trail-56).
-
-`alerts` (B07, #53) is the Alerts page: every staff role views it. It lists only the user's own notifications, so nobody edits
-through it. The endpoints stay on `IsStaff` (`apps/accounts/permissions.py`), so patients and signed-out users get 403 (see
-[api.md](api.md#notifications-52)).
-
-`donors` (B11) covers the donor endpoints: names, phones and emails, screening and donation appointments. Only admin and blood bank may use it, so doctors, nurses and pharmacists get **403** there (they can still read blood units). It has its own nav item, **Donors**.
 
 **Own hospital only:** a user who isn't an admin may change a resource only if it belongs to their own
 hospital (`resource.hospital == user.hospital`); otherwise **403**. Admins manage the whole network.
@@ -140,8 +128,40 @@ There's no new endpoint. `POST /beds/<id>/actions/` now runs through the shared 
 (`apps/resources`). It records who, when, from, to and why in `StatusChange`, writes the audit entry
 `bed.status_changed`, and answers 403 for a bed in another hospital (non-admins).
 
-## Audit (story 8.1)
+## Audit (stories 8.1, #56)
 
-Entries are append-only (the model refuses update and delete), so the API can neither edit nor delete them. Admins
-search and export them with `GET /api/audit/entries/` and `GET /api/audit/entries/export/` (issue #56, see
-[api.md](api.md#audit-trail-56)). Django admin stays read-only as well (`/admin/audit/auditlog/`).
+Entries are append-only (the model refuses update and delete). Admins search them with
+`GET /api/audit/?actor=&action=&targetType=&targetId=&from=YYYY-MM-DD&to=YYYY-MM-DD&q=&page=` →
+`{count, page, pageSize: 50, results: [{id, at, actor, action, targetType, targetId, target, reason, before, after}]}`
+(newest first; `action` ending in `.` is a prefix, e.g. `transfer.`). `GET /api/audit/export.csv` with the same
+filters streams CSV; each export is itself logged as `audit.exported`.
+
+## Notifications (#52, #53)
+
+Any staff role. `GET /api/notifications/?unread=1&critical=1` → the latest 50 `{id, kind, severity, title, body, link,
+createdAt, read, acknowledged}` for the user's hospital and role (admins: every hospital).
+`GET /api/notifications/unread-count/` → `{unread, critical}`. `POST /api/notifications/<id>/read/`,
+`POST /api/notifications/read-all/` → `{marked}`, `POST /api/notifications/<id>/acknowledge/` (clears a critical
+banner for that user). Events: `emergency.created`, `emergency.escalated`, `transfer.requested` (critical, to the
+supplier's answering roles), `transfer.<status>` (to the other side), `reservation.expired`.
+
+## Ambulances (#50, #51)
+
+`GET /api/ambulances/?type=&status=&hospital=` (own hospital; admins all) → `[{id, identifier, type: bls|als|pts, plate, note, status: available|onTrip|maintenance|outOfService,
+statusSince, hospital, hospitalId}]`. `POST` registers (ambulances: edit). `POST /api/ambulances/<id>/actions/`
+`{action: startMaintenance|finishMaintenance|outOfService|returnToService}`; 409 if the lifecycle refuses.
+
+`GET /api/ambulances/available/?hospital=` (transfers: view; non-admins get their own hospital) lists available
+ambulances for the dispatch picker. `POST /api/ambulances/trips/ {transferId, ambulanceId}` dispatches an available ambulance of the supplier's fleet
+with an approved transfer (the transfer goes to *dispatched*) → `{id, ambulance: {id, identifier}, status, etaMinutes,
+dispatchedAt, arrivedAt}`; 409 if the ambulance isn't available or belongs elsewhere.
+`POST /api/ambulances/trips/<id>/actions/ {action: enRoute|arrive}` (en route also moves the transfer to
+*in transit*). Receipt completes the trip and frees the ambulance; cancelling the transfer cancels it. Each transfer
+now has `trip` (or `null`).
+
+## City command centre (#55)
+
+`GET /api/command-centre/` (admin) → `{totals: {hospitals, freeBeds, freeIcu, redCells, nearExpiry,
+activeEmergencies}, hospitals: [{id, name, beds: {free, total}, icu: {free, total}, redCells: {group: n}, nearExpiry,
+equipment: {available, total}, emergencies: {severity: n}}], shortages: [{hospital, kind: blood|icu, level, group?,
+count?, minimum?}]}`. A fixed number of queries however many hospitals there are.
