@@ -17,22 +17,23 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 | Test report: Authentication & Role-Based Access module (class assignment) | [testing/authentication-test-report.md](../testing/authentication-test-report.md) | ✅ Done |
 | AIDLC process (Inception/Construction/Operations + templates) | [aidlc/](../aidlc/README.md) | ✅ Done |
 | AIDLC bolt board (remaining work, Sprints 7–9) | [aidlc/bolts/](../aidlc/bolts/README.md) | ⏳ Ongoing |
-| Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review | ⏳ Ongoing |
+| Velocity & burndown history | [scrum/timeline.md#velocity-check](../scrum/timeline.md#velocity-check) + per-sprint review | ✅ Sprints 1–7 (B00) |
 | Final report & presentation | `final/` | ⏳ Sprint 9 |
 
 ## Per-sprint artefacts
 
-Created during the Friday ceremonies:
+Created during the Friday ceremonies. Sprints 1–7 were reconstructed from the GitHub record by bolt B00 (#2); each
+file marks what the team still has to confirm (attendance, Product Owner feedback, mood).
 
 | Sprint | Planning | Review | Retrospective | Burndown |
 |---|---|---|---|---|
-| 1 | [✅](sprint-01/sprint-planning.md) | [⏳](sprint-01/sprint-review.md) | [⏳](sprint-01/retrospective.md) | in review doc |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
-| 6 | | | | |
-| 7 | | | | |
+| 1 | [✅](sprint-01/sprint-planning.md) | [✅](sprint-01/sprint-review.md) | [✅](sprint-01/retrospective.md) | not captured |
+| 2 | [✅](sprint-02/sprint-planning.md) | [✅](sprint-02/sprint-review.md) | [✅](sprint-02/retrospective.md) | not captured |
+| 3 | [✅](sprint-03/sprint-planning.md) | [✅](sprint-03/sprint-review.md) | [✅](sprint-03/retrospective.md) | not captured |
+| 4 | [✅](sprint-04/sprint-planning.md) | [✅](sprint-04/sprint-review.md) | [✅](sprint-04/retrospective.md) | not captured |
+| 5 | [✅](sprint-05/sprint-planning.md) | [✅](sprint-05/sprint-review.md) | [✅](sprint-05/retrospective.md) | not captured |
+| 6 | [✅](sprint-06/sprint-planning.md) | [✅](sprint-06/sprint-review.md) | [✅](sprint-06/retrospective.md) | not captured |
+| 7 | [✅](sprint-07/sprint-planning.md) | [✅](sprint-07/sprint-review.md) | [✅](sprint-07/retrospective.md) | not captured |
 | 8 | | | | |
 | 9 | | | | |
 

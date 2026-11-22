@@ -62,14 +62,22 @@ These make up the MVP acceptance scenario in the proposal (§23).
 
 ## Velocity check
 
-| Sprint | Planned | Completed | Notes |
-|---|---|---|---|
-| 1 | 27 | | |
-| 2 | 32 | | |
-| 3 | 24 | | |
-| 4 | 25 | | |
-| 5 | 31 | | |
-| 6 | 32 | | |
-| 7 | 34 | | |
-| 8 | 29 | | |
-| 9 | 14 | | |
+Filled in by bolt B00 (#2) from GitHub: **Committed** is the points on each sprint milestone (planned points in
+brackets where they differ), **Completed** is the committed points merged to `main` by the sprint end (the Definition
+of Done), and **Merged in window** is every point that reached `main` during the sprint, whichever sprint planned it.
+
+| Sprint | Planned | Committed (milestone) | Completed in sprint | Merged in window | Notes |
+|---|---|---|---|---|---|
+| 1 | 27 | 43 | 3 | 0 | Milestone also held the beds (#23–#25) and UI stories (#72–#78); only #1 was merged by 9 Oct, the rest landed 19–20 Oct |
+| 2 | 32 | 27 | 0 | 0 | Nothing merged to `main` in the window; Sprint 2 items landed in the 19 Oct integration (#81) |
+| 3 | 24 | 24 | 24 | 90 | Integration #81–#86 (19–20 Oct) merged Sprints 1–3 together: 90 points reached `main` in this window |
+| 4 | 25 | 14 | 0 | 0 | Nothing merged; equipment and operating rooms landed in integration #100 (17 Nov) |
+| 5 | 31 | 31 | 0 | 0 | Nothing merged; emergency cases landed in #100 (17 Nov) |
+| 6 | 32 | 32 | 0 | 0 | Only AIDLC docs merged (#91, #92); matching landed in #100 (17 Nov) |
+| 7 | 34 | 34 | 34 | 111 | #100 and #102 merged Sprints 4–7 together: 111 points reached `main` in this window |
+| 8 | 29 | | | | In progress |
+| 9 | 14 | | | |  |
+
+**Average merged per sprint, Sprints 1–7:** 201 points / 7 ≈ 29 (plus #1, 3 points, merged at kickoff on 2 Oct), close to the ≈ 27 the plan needs. The problem
+was not throughput but timing: work was integrated in two big batches (19 Oct and 17 Nov) instead of each sprint,
+so five sprint reviews had nothing new on `main` to demo. See the Sprint 2–7 retrospectives.
