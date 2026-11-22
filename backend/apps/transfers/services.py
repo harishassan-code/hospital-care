@@ -334,6 +334,30 @@ def cancel_for_case(case: EmergencyRequest, *, actor, reason: str) -> int:
     return cancelled
 
 
+def live_transfers_of_case(case: EmergencyRequest) -> list[Transfer]:
+    """The case's stock transfers that are approved, dispatched or in transit. A patient can't arrive while
+    any is (story #65): their stock is already on its way to the sending hospital's case (B17)."""
+    return list(Transfer.objects.filter(request_item__request=case, status__in=LIVE).order_by("id"))
+
+
+@transaction.atomic
+def cancel_requested_for_case(case: EmergencyRequest, *, actor, reason: str) -> int:
+    """Cancel the case's stock transfers that nobody has answered yet, and return how many. Used when the
+    patient arrives (B17): the case is the receiving hospital's now, so the sending hospital's requests for
+    stock are no longer its to answer. Only requested transfers are touched, so it is narrower than
+    `cancel_for_case`. A requested transfer has no holds (approval makes them), so none are released here.
+    Like `cancel_for_case`, it does no per-transfer check: the case move has checked the actor. The caller
+    holds the case lock and the transaction."""
+    requested = Transfer.objects.select_for_update().filter(
+        request_item__request=case, status=TransferStatus.REQUESTED
+    )
+    cancelled = 0
+    for transfer in requested.order_by("id"):
+        _move(transfer, "cancel", actor=actor, note=reason, reason=reason)
+        cancelled += 1
+    return cancelled
+
+
 @transaction.atomic
 def dispatch(transfer: Transfer, *, actor, note: str = "", via_trip: bool = False) -> Transfer:
     """The supplier sends an approved transfer on its way. Its holds stay pinned. `via_trip` is the trip's
