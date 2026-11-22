@@ -1,0 +1,77 @@
+.stack {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.meta,
+.note {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.note {
+  margin-top: var(--space-3);
+}
+
+.alert {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--status-warning);
+  background: color-mix(in srgb, var(--status-warning) 8%, var(--surface));
+  font-weight: 700;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+/* ── The board: one column per hospital, one for the network ──────────── */
+
+.board {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.board th,
+.board td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.board thead th {
+  border-bottom: 2px solid var(--ink);
+}
+
+.board tbody th[scope='row'] {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.section th {
+  padding-top: var(--space-4);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.total {
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
+}
+
+.count {
+  display: block;
+  font-size: var(--text-base);
+  font-weight: 700;
+}

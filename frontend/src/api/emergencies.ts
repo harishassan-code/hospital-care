@@ -244,6 +244,40 @@ export interface HeldReservation {
   canAllocate: boolean
 }
 
+/** A patient transfer's status (B17). Arrived and cancelled are final. */
+export type PatientTransferStatus = 'requested' | 'arrived' | 'cancelled'
+/** A move on a patient transfer (B17): the receiving hospital confirms arrival; the sending one cancels. */
+export type PatientTransferAction = 'arrive' | 'cancel'
+
+/**
+ * A case's patient moved to another hospital (B17, stories #63 to #65). The row is also the case's ownership history.
+ * Shape of `PatientTransferSerializer`. It never carries the patient reference, stock or holds.
+ */
+export interface PatientTransfer {
+  id: number
+  reference: string
+  severity: Severity
+  status: PatientTransferStatus
+  /** The sending hospital: the case's hospital when the move was asked for. */
+  from: { id: number; name: string }
+  /** The receiving hospital. */
+  to: { id: number; name: string }
+  /** The case's needs as labels, as the sources list shows them: "O− red cells", "ICU bed". */
+  needs: string[]
+  /** The receiving hospital's #42 entry as it stood when the move was asked for. Kept, so the reason survives later changes. */
+  match: HospitalMatch
+  requestedBy: string
+  requestedAt: string
+  arrivedBy: string | null
+  arrivedAt: string | null
+  /** Why the move was asked for. */
+  note: string
+  /** Why it was cancelled. */
+  reason: string
+  /** The moves this user may make now. */
+  actions: PatientTransferAction[]
+}
+
 /**
  * A case with its timeline, the moves valid from its current status, and what its hospital has for each need
  * (story #33). Shape of `CaseDetailSerializer`.
@@ -262,6 +296,10 @@ export interface EmergencyCaseDetail extends EmergencyCase {
   allocations: CaseAllocation[]
   /** The transfers asked for this case, newest first (stories #47 to #49). */
   transfers: Transfer[]
+  /** Critical, and at least one need is short here after local availability (story #63): a transfer may be needed. */
+  transferFlag: boolean
+  /** The case's patient transfers, newest first (B17). */
+  patientTransfers: PatientTransfer[]
 }
 
 export const SEVERITIES: readonly { id: Severity; label: string; hint: string }[] = [
@@ -300,6 +338,36 @@ export function getCase(reference: string): Promise<EmergencyCaseDetail> {
 /** Move a case. POST /api/emergencies/<reference>/actions/ (emergencies: edit). 409 if the move isn't allowed now. */
 export function postCaseAction(reference: string, action: CaseAction, note: string): Promise<EmergencyCaseDetail> {
   return apiPost<EmergencyCaseDetail>(`/emergencies/${encodeURIComponent(reference)}/actions/`, { action, note })
+}
+
+/**
+ * Ask to move the case's patient to one of the hospitals in its list (story #64). POST
+ * /api/emergencies/<reference>/patient-transfer/ (emergencies: edit, at the case's hospital). 400 with a `detail` or a
+ * `destinationId` message when the move can't be asked for; 409 when the case already has one on its way.
+ */
+export function requestPatientTransfer(reference: string, destinationId: number, note = ''): Promise<PatientTransfer> {
+  return apiPost<PatientTransfer>(`/emergencies/${encodeURIComponent(reference)}/patient-transfer/`, { destinationId, note })
+}
+
+/**
+ * The patient transfers that involve the user's hospital, newest first: incoming (it receives the patient), outgoing (it
+ * sends one), or both. GET /api/patient-transfers/ (emergencies: view).
+ */
+export function getPatientTransfers(direction?: 'incoming' | 'outgoing', status?: PatientTransferStatus): Promise<PatientTransfer[]> {
+  const query = new URLSearchParams()
+  if (direction) query.set('direction', direction)
+  if (status) query.set('status', status)
+  const search = query.toString()
+  return apiGet<PatientTransfer[]>(`/patient-transfers/${search ? `?${search}` : ''}`)
+}
+
+/**
+ * Confirm the patient has arrived (`arrive`, at the receiving hospital), or cancel the move with a reason (`cancel`, at
+ * the sending one). POST /api/patient-transfers/<id>/actions/. 409 when it is no longer requested, or the case's stock
+ * is still on its way; 400 for a cancel without a reason.
+ */
+export function patientTransferAction(id: number, action: PatientTransferAction, reason = ''): Promise<PatientTransfer> {
+  return apiPost<PatientTransfer>(`/patient-transfers/${id}/actions/`, { action, reason })
 }
 
 /**

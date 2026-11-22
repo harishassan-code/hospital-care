@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Max
+from django.http import Http404
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
@@ -55,6 +56,8 @@ def register_unit(serializer, actor) -> BloodUnit:
     """Create a blood unit from a valid serializer, scoped to the actor's hospital, and audit-log it."""
     donor = serializer.validated_data.get("donor")
     if donor is not None:
+        if not may_change(actor, donor):  # F2: another hospital's donor is as good as an unknown one
+            raise Http404("No donor with that id.")
         check_donation_interval(donor, serializer.validated_data["collected_at"])
     unit = serializer.save(hospital=getattr(actor, "hospital", None))
     after = BloodUnitSerializer(unit, context={"now": timezone.now()}).data
@@ -178,6 +181,21 @@ def stock_summary(units, *, near_expiry_days: int, low_stock_units: int, now=Non
     }
 
 
+# Red-cell minimum per group (story #55). A copy of MINIMUM_STOCK.redCells in frontend/src/api/blood.ts:
+# change both together. Ceiling: two copies; move them into one JSON file if they drift.
+RED_CELL_MINIMUM = {"O-": 6, "O+": 30, "A-": 4, "A+": 20, "B-": 4, "B+": 30, "AB-": 2, "AB+": 8}
+
+
+def stock_level(count: int, minimum: int) -> str:
+    """'critical' below half the minimum, 'low' below the minimum, otherwise 'ok'. The same rule as stockLevel
+    in frontend/src/features/blood/blood.ts."""
+    if count < minimum / 2:
+        return "critical"
+    if count < minimum:
+        return "low"
+    return "ok"
+
+
 # ── Donors (stories #20, #21) ─────────────────────────────────────────────────────────────────────
 
 
@@ -217,6 +235,8 @@ def screen_donor(donor: Donor, *, eligible: bool, reason: str, deferred_until, a
 
 
 def book_appointment(donor: Donor, starts_at: datetime, *, actor) -> DonationAppointment:
+    if not may_change(actor, donor):  # F1: another hospital's donor is as good as an unknown one
+        raise Http404("No donor with that id.")
     slot = settings.BLOOD_APPOINTMENT_SLOT_MINUTES
     local = timezone.localtime(starts_at)
     if local.second or local.microsecond or (local.hour * 60 + local.minute) % slot:

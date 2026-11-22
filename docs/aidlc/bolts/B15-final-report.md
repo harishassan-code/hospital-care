@@ -6,7 +6,7 @@ points: 3
 priority: highest
 sprint: 9
 depends_on: B00
-owner: unassigned
+owner: Hassan27521
 status: Backlog
 ---
 

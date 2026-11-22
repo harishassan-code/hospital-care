@@ -21,7 +21,8 @@ describe('routes', () => {
   })
 })
 
-describe('route placeholders (issue #5)', () => {
+// Every Sprint 8 placeholder now has its real page; the check comes back when a new planned module is listed.
+describe.skipIf(PLANNED.length === 0)('route placeholders (issue #5)', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it.each(PLANNED.map((p) => [p.path, p.label, p.sprint] as const))('%s says when %s arrives', async (path, label, sprint) => {

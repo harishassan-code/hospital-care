@@ -6,8 +6,8 @@ points: 5
 priority: high
 sprint: 8
 depends_on: -
-owner: unassigned
-status: Ready
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B06 · Notification service

@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import module_permission, own_hospital
+from apps.accounts.permissions import changeable_by, module_permission, own_hospital
 from apps.resources.state_machine import TransitionNotAllowed
 
 from . import services
@@ -23,6 +23,8 @@ from .serializers import (
 )
 
 BloodAccess = module_permission("blood")
+# Donors are personal data, so they have their own module: admin and blood bank only (B11).
+DonorAccess = module_permission("donors")
 
 
 def conflict(exc):
@@ -51,7 +53,7 @@ class BloodUnitListView(APIView):
         return Response(BloodUnitSerializer(units, many=True, context={"now": now}).data)
 
     def post(self, request):
-        serializer = BloodUnitCreateSerializer(data=request.data)
+        serializer = BloodUnitCreateSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         unit = services.register_unit(serializer, request.user)
         return Response(
@@ -84,7 +86,7 @@ class BloodUnitTestView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, unit_id):
-        get_object_or_404(BloodUnit, donation_number=unit_id)
+        get_object_or_404(changeable_by(BloodUnit.objects.all(), request.user), donation_number=unit_id)
         serializer = RecordTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -101,7 +103,7 @@ class BloodUnitActionView(APIView):
     permission_classes = [BloodAccess]
 
     def post(self, request, unit_id):
-        get_object_or_404(BloodUnit, donation_number=unit_id)
+        get_object_or_404(changeable_by(BloodUnit.objects.all(), request.user), donation_number=unit_id)
         serializer = UnitActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -135,7 +137,7 @@ class BloodStockView(APIView):
 class DonorListView(APIView):
     """GET /api/blood/donors/?q=… (name, code or phone) · POST registers a donor (story #20)."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def get(self, request):
         donors = own_hospital(Donor.objects.all(), request.user)
@@ -155,7 +157,7 @@ class DonorListView(APIView):
 class DonorDetailView(APIView):
     """GET /api/blood/donors/<id>/ → the donor, their eligibility and their units."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def get(self, request, donor_id):
         donor = get_object_or_404(own_hospital(Donor.objects.all(), request.user), code=donor_id)
@@ -169,10 +171,10 @@ class DonorDetailView(APIView):
 class DonorScreeningView(APIView):
     """POST /api/blood/donors/<id>/screening/ {eligible, reason?, deferredUntil?} (story #21)."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def post(self, request, donor_id):
-        donor = get_object_or_404(Donor, code=donor_id)
+        donor = get_object_or_404(changeable_by(Donor.objects.all(), request.user), code=donor_id)
         serializer = ScreeningSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -184,9 +186,9 @@ class DonorScreeningView(APIView):
 
 
 class AppointmentListView(APIView):
-    """GET /api/blood/appointments/?from=YYYY-MM-DD (upcoming by default) · POST books one (story #22)."""
+    """GET /api/blood/appointments/ (upcoming; ?all=true for all) · POST books one (story #22)."""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def get(self, request):
         appointments = own_hospital(DonationAppointment.objects.select_related("donor"), request.user)
@@ -195,7 +197,7 @@ class AppointmentListView(APIView):
         return Response(AppointmentSerializer(appointments, many=True).data)
 
     def post(self, request):
-        serializer = AppointmentSerializer(data=request.data)
+        serializer = AppointmentSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         appointment = services.book_appointment(data["donor"], data["starts_at"], actor=request.user)
@@ -205,10 +207,12 @@ class AppointmentListView(APIView):
 class AppointmentCancelView(APIView):
     """POST /api/blood/appointments/<id>/cancel/"""
 
-    permission_classes = [BloodAccess]
+    permission_classes = [DonorAccess]
 
     def post(self, request, appointment_id):
-        appointment = get_object_or_404(DonationAppointment, pk=appointment_id)
+        appointment = get_object_or_404(
+            changeable_by(DonationAppointment.objects.all(), request.user), pk=appointment_id
+        )
         try:
             appointment = services.cancel_appointment(appointment, actor=request.user)
         except TransitionNotAllowed as exc:

@@ -6,8 +6,8 @@ points: 5
 priority: medium
 sprint: 8
 depends_on: -
-owner: unassigned
-status: Ready
+owner: codewithalphadotcom
+status: In Review
 ---
 
 # B11 · Donors page for the existing donor API
