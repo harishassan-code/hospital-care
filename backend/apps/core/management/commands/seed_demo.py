@@ -1,6 +1,7 @@
 """
 Fill the database with synthetic demo data: 3 hospitals with departments, wards, storage locations and beds,
-blood units, medicines, doctors, and one login per role. Every name, patient and unit is made up.
+blood units, medicines, doctors, specialists with on-call windows, and one login per role. Every name,
+patient and unit is made up.
 
     python manage.py seed_demo            # safe to re-run: adds only what's missing, never duplicates
     python manage.py seed_demo --reset    # wipes the demo hospitals, beds, blood, pharmacy, doctors first
@@ -46,6 +47,7 @@ from apps.hospitals.models import (
 )
 from apps.operating_rooms.models import OperatingRoom, OrBooking, OrStatus
 from apps.pharmacy.models import Batch, Medicine
+from apps.specialists.models import OnCallWindow, Specialist
 
 DEMO_PASSWORD = "CityCare-demo-1"
 DEMO_USERS = [
@@ -186,6 +188,10 @@ DOCTORS = [
     ("Dr. Fatima Zaidi", "Gynaecology", "08:00", "14:00"),
     ("Dr. Rabia Anwar", "Gynaecology", "20:00", "08:00"),
 ]
+# The demo doctors are also the specialists (B16). Each one's hospital, by department; everything not listed
+# is at the main hospital. Each specialist gets an on-call window for each of the next SPECIALIST_DAYS days.
+SPECIALIST_HOSPITAL = {"Cardiology": "Seaview Hospital", "Paediatrics": "Northside Children's Hospital"}
+SPECIALIST_DAYS = 7
 
 # component: (shelf life days, storage locations, share of stock)
 COMPONENTS = {
@@ -589,6 +595,8 @@ class Command(BaseCommand):
                 Batch,
                 Medicine,
                 DoctorShift,
+                OnCallWindow,  # before the specialists: a window holds its specialist (PROTECT)
+                Specialist,  # before the hospitals: a specialist holds its hospital (PROTECT)
                 Hospital,
             )
             for model in models:
@@ -631,6 +639,7 @@ class Command(BaseCommand):
                 DoctorShift(name=n, department=d, start=time.fromisoformat(s), end=time.fromisoformat(e))
                 for n, d, s, e in DOCTORS
             )
+        self.seed_specialists({h.name: h for h in hospitals}, now)
         er = EmergencyStatus.current()
         if reset or er.wait_minutes == 0:
             er.status, er.wait_minutes, er.waiting_count = ErStatus.ACCEPTING, 24, 7
@@ -642,6 +651,32 @@ class Command(BaseCommand):
         self.stdout.write(f"Demo logins (password for all: {DEMO_PASSWORD}):")
         for email, *_, role in DEMO_USERS:
             self.stdout.write(f"  {role:<11} {email}")
+
+    def seed_specialists(self, hospitals: dict[str, Hospital], now):
+        """The demo doctors, listed as specialists the first time (B16). Every run then adds the window of
+        each of the next SPECIALIST_DAYS days (Karachi calendar) that a specialist doesn't have yet, so the
+        demo never runs out."""
+        if not Specialist.objects.exists():
+            for name, department, _, _ in DOCTORS:
+                hospital = hospitals[SPECIALIST_HOSPITAL.get(department, "CityCare General Hospital")]
+                Specialist.objects.create(hospital=hospital, name=name, specialty=department)
+        shifts = {name: (start, end) for name, _, start, end in DOCTORS}
+        today = timezone.localdate(now)
+        missing = []
+        for specialist in Specialist.objects.all():
+            if specialist.name not in shifts:
+                continue  # added by staff, not a demo doctor: the seed leaves its windows alone
+            start, end = (time.fromisoformat(clock) for clock in shifts[specialist.name])
+            booked = set(specialist.on_call_windows.values_list("starts_at", flat=True))
+            for offset in range(SPECIALIST_DAYS):
+                day = today + timedelta(days=offset)
+                starts = timezone.make_aware(datetime.combine(day, start))
+                # An end before the start means the shift runs past midnight and ends the next morning.
+                ends_on = day if end > start else day + timedelta(days=1)
+                ends = timezone.make_aware(datetime.combine(ends_on, end))
+                if starts not in booked:
+                    missing.append(OnCallWindow(specialist=specialist, starts_at=starts, ends_at=ends))
+        OnCallWindow.objects.bulk_create(missing)
 
     def seed_users(self, hospital: Hospital):
         """One login per role; staff work at `hospital`."""

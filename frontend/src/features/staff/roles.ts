@@ -13,6 +13,7 @@ export type Module =
   | 'orBookings'
   | 'ambulances'
   | 'hospitals'
+  | 'specialists'
   | 'users'
   | 'commandCentre'
   | 'audit'
@@ -39,6 +40,7 @@ export const MODULES: readonly { id: Module; label: string; path: string }[] = [
   { id: 'operatingRooms', label: 'Operating rooms', path: '/staff/operating-rooms' },
   { id: 'ambulances', label: 'Ambulances', path: '/staff/ambulances' },
   { id: 'hospitals', label: 'Hospitals', path: '/staff/hospitals' },
+  { id: 'specialists', label: 'Specialists', path: '/staff/specialists' },
   { id: 'users', label: 'Users and roles', path: '/staff/users' },
   { id: 'audit', label: 'Audit log', path: '/staff/audit' },
 ]
@@ -71,6 +73,7 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     orBookings: 'edit',
     ambulances: 'edit',
     hospitals: 'edit',
+    specialists: 'edit',
     users: 'edit',
     audit: 'view',
   },
@@ -87,6 +90,7 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     orBookings: 'edit', // surgeons book their own slots (story #29)
     ambulances: 'view',
     hospitals: 'view',
+    specialists: 'view',
   },
   nurse: {
     overview: 'view',
@@ -100,9 +104,10 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     orBookings: 'edit',
     ambulances: 'edit',
     hospitals: 'view',
+    specialists: 'edit', // own hospital only; the API refuses other hospitals (apps.specialists.services)
   },
-  bloodBank: { overview: 'view', alerts: 'view', emergencies: 'view', transfers: 'edit', blood: 'edit', donors: 'edit', hospitals: 'view' },
-  pharmacist: { overview: 'view', alerts: 'view', emergencies: 'view', pharmacy: 'edit', hospitals: 'view' },
+  bloodBank: { overview: 'view', alerts: 'view', emergencies: 'view', transfers: 'edit', blood: 'edit', donors: 'edit', hospitals: 'view', specialists: 'view' },
+  pharmacist: { overview: 'view', alerts: 'view', emergencies: 'view', pharmacy: 'edit', hospitals: 'view', specialists: 'view' },
 }
 
 export function canSee(role: Role, module: Module): boolean {
