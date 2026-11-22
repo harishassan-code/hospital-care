@@ -338,6 +338,39 @@ describe('QA · audit log (B10, #56)', () => {
   })
 })
 
+describe('QA · reports (B18, #66, #67)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(at('15:00'))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  const navLabels = () => within(screen.getByRole('navigation', { name: 'Staff' })).getAllByRole('link').map((a) => a.textContent)
+
+  it('admin nav links to reports', async () => {
+    mockStaffApi({ role: 'admin' })
+    renderStaff('/staff')
+    await screen.findByRole('navigation', { name: 'Staff' })
+    expect(navLabels()).toEqual(expect.arrayContaining(['Reports']))
+    expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/staff/reports')
+  })
+
+  it.each(['doctor', 'nurse', 'bloodBank', 'pharmacist'] as const)('%s nav has no reports', async (role) => {
+    mockStaffApi({ role })
+    renderStaff('/staff')
+    await screen.findByRole('navigation', { name: 'Staff' })
+    expect(navLabels()).not.toContain('Reports')
+  })
+
+  it('admin can open reports with both exports', async () => {
+    mockStaffApi({ role: 'admin' })
+    renderStaff('/staff/reports')
+    expect(await screen.findByRole('table', { name: 'Fulfilment time' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeInTheDocument()
+  })
+})
+
 describe('QA · alerts (B07, #53)', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
