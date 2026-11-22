@@ -14,9 +14,13 @@ describe('UsersPage (story 1.2 Role management)', () => {
     renderStaff('/staff/users')
     expect(await screen.findByRole('table', { name: 'Users and their roles' })).toBeInTheDocument()
     expect(within(await row('Hina Javed')).getByRole('combobox', { name: 'Role for Hina Javed' })).toHaveValue('nurse')
-    expect(within(await row('Hina Javed')).getByText('CityCare General Hospital')).toBeInTheDocument()
+    expect(within(await row('Hina Javed')).getByRole('combobox', { name: 'Hospital for Hina Javed' })).toHaveDisplayValue(
+      'CityCare General Hospital',
+    )
     expect(within(await row('Root Admin')).getByText('All hospitals')).toBeInTheDocument()
-    expect(within(await row(/^Sara Ahmed/)).getByText('No hospital')).toBeInTheDocument()
+    expect(within(await row(/^Sara Ahmed/)).getByRole('combobox', { name: 'Hospital for Sara Ahmed' })).toHaveDisplayValue(
+      'No hospital',
+    )
     expect(screen.getByText('5 accounts')).toBeInTheDocument()
   })
 
@@ -26,9 +30,11 @@ describe('UsersPage (story 1.2 Role management)', () => {
     const nurse = await row('Hina Javed')
     const save = within(nurse).getByRole('button', { name: 'Save role for Hina Javed' })
     expect(save).toBeDisabled()
-    await userEvent.selectOptions(within(nurse).getByRole('combobox'), 'doctor')
+    await userEvent.selectOptions(within(nurse).getByRole('combobox', { name: 'Role for Hina Javed' }), 'doctor')
     await userEvent.click(save)
-    expect(await screen.findByText('Hina Javed is now Doctor. The change applies on their next page load.')).toHaveAttribute(
+    expect(
+      await screen.findByText('Hina Javed is now Doctor at CityCare General Hospital. The change applies on their next page load.'),
+    ).toHaveAttribute(
       'aria-live',
       'polite',
     )
@@ -51,10 +57,33 @@ describe('UsersPage (story 1.2 Role management)', () => {
     renderStaff('/staff/users')
     const nurse = await row('Hina Javed')
     users[1].roleLocked = true // the server starts refusing after the page has loaded
-    await userEvent.selectOptions(within(nurse).getByRole('combobox'), 'admin')
+    await userEvent.selectOptions(within(nurse).getByRole('combobox', { name: 'Role for Hina Javed' }), 'admin')
     await userEvent.click(within(nurse).getByRole('button', { name: /Save/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent('You can’t change your own role.')
-    expect(within(nurse).getByRole('combobox')).toHaveValue('nurse')
+    expect(within(nurse).getByRole('combobox', { name: 'Role for Hina Javed' })).toHaveValue('nurse')
+  })
+
+  it('gives a new signup a staff role and a hospital in one change (functional sweep, F12)', async () => {
+    const { fetchMock, users } = mockStaffApi({ role: 'admin' })
+    renderStaff('/staff/users')
+    const signup = await row(/^Sara Ahmed/)
+    await userEvent.selectOptions(within(signup).getByRole('combobox', { name: 'Role for Sara Ahmed' }), 'nurse')
+    await userEvent.selectOptions(within(signup).getByRole('combobox', { name: 'Hospital for Sara Ahmed' }), 'CityCare General Hospital')
+    await userEvent.click(within(signup).getByRole('button', { name: 'Save role for Sara Ahmed' }))
+    expect(await screen.findByText(/Sara Ahmed is now Nurse at CityCare General Hospital\./)).toBeInTheDocument()
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ role: 'nurse', hospitalId: 1 })
+    expect(users.find((u) => u.id === 5)?.hospital).toEqual({ id: 1, name: 'CityCare General Hospital' })
+  })
+
+  it('asks for a hospital before giving a hospital role, without calling the API', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'admin' })
+    renderStaff('/staff/users')
+    const signup = await row(/^Sara Ahmed/)
+    await userEvent.selectOptions(within(signup).getByRole('combobox', { name: 'Role for Sara Ahmed' }), 'doctor')
+    await userEvent.click(within(signup).getByRole('button', { name: 'Save role for Sara Ahmed' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Choose the hospital this person works at.')
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
   })
 
   it('says so plainly when the list cannot be loaded', async () => {

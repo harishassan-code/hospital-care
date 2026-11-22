@@ -19,7 +19,13 @@ export function getUsers(): Promise<UserSummary[]> {
   return apiGet<UserSummary[]>('/users/')
 }
 
-/** PATCH /api/users/<id>/ (users: edit). 400 {role: [...]} when refused. */
-export function updateUserRole(id: number, role: AccountRole): Promise<UserSummary> {
-  return apiPatch<UserSummary>(`/users/${id}/`, { role })
+/** Roles that work at one hospital: the API refuses them without one (400 {hospitalId: [...]}). */
+export const HOSPITAL_ROLES: readonly AccountRole[] = ['doctor', 'nurse', 'bloodBank', 'pharmacist']
+
+/**
+ * PATCH /api/users/<id>/ (users: edit). 400 {role: [...]} or {hospitalId: [...]} when refused.
+ * `hospitalId` is sent only when it changes: left out keeps the user's hospital, null clears it.
+ */
+export function updateUserRole(id: number, role: AccountRole, hospitalId?: number | null): Promise<UserSummary> {
+  return apiPatch<UserSummary>(`/users/${id}/`, hospitalId === undefined ? { role } : { role, hospitalId })
 }

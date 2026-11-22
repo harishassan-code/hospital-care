@@ -2,6 +2,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from apps.hospitals.models import Hospital
+
 from .models import Role, User
 from .services import email_in_use, split_full_name
 
@@ -81,3 +83,7 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 class RoleChangeSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=Role.choices)
+    # Optional: left out keeps the user's hospital, null clears it. Only active hospitals can take staff.
+    hospitalId = serializers.PrimaryKeyRelatedField(
+        queryset=Hospital.objects.filter(is_active=True), required=False, allow_null=True
+    )

@@ -1278,7 +1278,18 @@ export function mockStaffApi({
       const user = users.find((u) => u.id === Number(params.id))
       if (!user) return fail(404)
       if (user.roleLocked) return fail(400, { role: ['You can’t change your own role.'] })
-      user.role = (body as { role: UserSummary['role'] }).role
+      const change = body as { role: UserSummary['role']; hospitalId?: number | null }
+      let hospital = user.hospital
+      if (change.hospitalId !== undefined) {
+        const found = hospitals.find((h) => h.id === change.hospitalId && h.isActive)
+        if (change.hospitalId !== null && !found) return fail(400, { hospitalId: ['Invalid pk - object does not exist.'] })
+        hospital = found ? { id: found.id, name: found.name } : null
+      }
+      if (['doctor', 'nurse', 'bloodBank', 'pharmacist'].includes(change.role) && !hospital) {
+        return fail(400, { hospitalId: ['Choose the hospital this person works at.'] })
+      }
+      user.role = change.role
+      user.hospital = hospital
       return ok(user)
     }),
 
