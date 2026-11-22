@@ -1,7 +1,7 @@
 # Inception Spec: Ambulance registry
 
 **Date:** 2026-11-22
-**Author:** Claude, drafted for review
+**Author:** Kabir-Raj-01, drafted with Claude
 **Bolt:** [B04](../bolts/B04-ambulance-registry.md)
 **Related backlog item:** #50 Ambulance registry (Sprint 8)
 
@@ -47,4 +47,4 @@ Proposed answers; the Product Owner confirms them at sign-off:
 
 ## Approval
 
-- [x] Approved by: kabirraj0011 (for the Product Owner) on 2026-11-22
+- [x] Approved by: Kabir-Raj-01 (author) on 2026-11-22 · Product Owner sign-off: pending

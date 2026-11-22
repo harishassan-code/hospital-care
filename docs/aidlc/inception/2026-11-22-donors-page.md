@@ -1,7 +1,7 @@
 # Inception Spec: Donors page
 
 **Date:** 2026-11-22
-**Author:** Claude, drafted for review
+**Author:** Kabir-Raj-01, drafted with Claude
 **Bolt:** [B11](../bolts/B11-donors-page.md)
 **Related backlog item:** #20, #21, #22 (backend done in Sprint 3)
 
@@ -38,4 +38,4 @@ Proposed answers; the Product Owner confirms them at sign-off:
 
 ## Approval
 
-- [x] Approved by: kabirraj0011 (for the Product Owner) on 2026-11-22
+- [x] Approved by: Kabir-Raj-01 (author) on 2026-11-22 · Product Owner sign-off: pending

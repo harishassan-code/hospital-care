@@ -6,7 +6,7 @@ points: 3
 priority: high
 sprint: 9
 depends_on: -
-owner: kabirraj0011
+owner: Kabir-Raj-01
 status: In Review
 ---
 

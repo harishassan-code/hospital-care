@@ -1,7 +1,7 @@
 # Inception Spec: Ambulance dispatch and trip tracking
 
 **Date:** 2026-11-22
-**Author:** Claude, drafted for review
+**Author:** Kabir-Raj-01, drafted with Claude
 **Bolt:** [B05](../bolts/B05-ambulance-dispatch.md)
 **Related backlog item:** #51 (builds on [B02 transfer tracking](2026-11-18-transfer-tracking.md) and
 [B04 ambulance registry](2026-11-22-ambulance-registry.md))
@@ -47,4 +47,4 @@ Proposed answers; the Product Owner confirms them at sign-off:
 
 ## Approval
 
-- [x] Approved by: kabirraj0011 (for the Product Owner) on 2026-11-22
+- [x] Approved by: Kabir-Raj-01 (author) on 2026-11-22 · Product Owner sign-off: pending

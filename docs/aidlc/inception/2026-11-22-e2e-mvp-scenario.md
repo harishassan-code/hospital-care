@@ -1,7 +1,7 @@
 # Inception Spec: End-to-end MVP scenario test and UAT checklist
 
 **Date:** 2026-11-22
-**Author:** Claude, drafted for review
+**Author:** Kabir-Raj-01, drafted with Claude
 **Bolt:** [B12](../bolts/B12-e2e-mvp-scenario.md)
 **Related backlog item:** #57
 
@@ -42,4 +42,4 @@ Proposed answers; the Product Owner confirms them at sign-off:
 
 ## Approval
 
-- [x] Approved by: kabirraj0011 (for the Product Owner) on 2026-11-22
+- [x] Approved by: Kabir-Raj-01 (author) on 2026-11-22 · Product Owner sign-off: pending

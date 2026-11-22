@@ -1,7 +1,7 @@
 # Inception Spec: Hospital dashboard: requests, transfers and live refresh
 
 **Date:** 2026-11-22
-**Author:** Claude, drafted for review
+**Author:** Kabir-Raj-01, drafted with Claude
 **Bolt:** [B08](../bolts/B08-hospital-dashboard.md)
 **Related backlog item:** #54
 
@@ -39,4 +39,4 @@ Proposed answers; the Product Owner confirms them at sign-off:
 
 ## Approval
 
-- [x] Approved by: kabirraj0011 (for the Product Owner) on 2026-11-22
+- [x] Approved by: Kabir-Raj-01 (author) on 2026-11-22 · Product Owner sign-off: pending

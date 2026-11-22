@@ -1,3 +1,6 @@
+> **Reference branch, not for merge.** Kabir Raj's own implementation of Sprint 8–9 bolts B04–B13, built on a copy of
+> `main` from before #104 and #107. The team's merged versions on `main` are the ones in use; see PR #113.
+
 # Hospital Care
 
 City-wide hospital emergency resource coordination platform (project codename **CityCare**).
