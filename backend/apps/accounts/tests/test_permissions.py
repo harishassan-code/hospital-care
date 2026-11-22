@@ -42,6 +42,7 @@ ENDPOINTS = [
     ("users", "get", "user-list", [], None),
     ("users", "patch", "user-role", [999], {"role": "doctor"}),
     ("commandCentre", "get", "command-centre", [], None),
+    ("reports", "get", "reports", [], None),
     ("alerts", "get", "notification-list", [], None),
 ]
 
