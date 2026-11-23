@@ -1028,6 +1028,17 @@ It never carries the patient reference, stock or holds.
   before and after, and `emergencyrequest.hospital_changed` with the hospital before and after. Arrival also writes
   `reservation.released` for each hold it releases and `transfer.cancelled` for each stock transfer.
 
+## Patient information (B23)
+
+Patient-level fields follow one rule ([privacy-review.md](../testing/privacy-review.md)): doctors, nurses and the admin
+of the record's own hospital see them; anyone else gets the record without them. `Bed.patient`, `admittedAt`,
+`expectedDischarge` and `isolation` are left out; `EmergencyCase.patientRef` is `null`, a case's timeline notes are
+empty and its `outcome` is `null`; `OrBooking.patientInitials` is empty; `PatientTransfer.patientRef` is shown to the
+two hospitals' clinical staff and `null` otherwise. Responses with patient details add an audit entry `phi.view`
+(at most once per person per page or record per 10 minutes). Audit entries about a case, a patient transfer or an
+emergency visit show their reason and values only to those who may see that patient; others read
+"(hidden: patient information)".
+
 ## Trend figures (B22)
 
 | Method | Path | Body → returns | Access |

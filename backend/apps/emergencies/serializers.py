@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 
+from apps.accounts.permissions import sees_case_patient
 from apps.blood.models import BloodGroup, Component
 from apps.equipment.models import EquipmentType
 from apps.hospitals.models import BedType, Hospital
@@ -100,7 +101,7 @@ class CaseSerializer(serializers.ModelSerializer):
     """Shape of `EmergencyCase` in frontend/src/api/emergencies.ts."""
 
     id = serializers.CharField(source="reference")
-    patientRef = serializers.CharField(source="patient_ref")
+    patientRef = serializers.SerializerMethodField()
     hospital = serializers.SerializerMethodField()
     createdBy = serializers.SerializerMethodField()
     createdAt = serializers.DateTimeField(source="created_at")
@@ -112,6 +113,11 @@ class CaseSerializer(serializers.ModelSerializer):
 
     def get_hospital(self, case):
         return {"id": case.hospital_id, "name": case.hospital.name} if case.hospital else None
+
+    def get_patientRef(self, case):
+        """The patient reference, for the clinical staff and admin of the case's hospital, and the receiving
+        hospital's once the patient's move there is requested; None for everyone else (B23)."""
+        return case.patient_ref if sees_case_patient(self.context.get("user"), case) else None
 
     def get_createdBy(self, case):
         user = case.created_by
@@ -399,6 +405,14 @@ class CaseDetailSerializer(CaseSerializer):
             .prefetch_related("resource")
         )
         data["allocations"] = AllocationSerializer(allocations, many=True).data
+        if not sees_case_patient(self.context.get("user"), case):
+            # Notes people type on the timeline, and the outcome, are clinical free text that can describe the
+            # patient (B23): only for those who may see the patient. The system's own notes ("Every need
+            # allocated") and allocation notes (the allocating blood bank's, about the stock) stay.
+            for entry in data["history"]:
+                if entry["actor"] is not None:
+                    entry["note"] = ""
+            data["outcome"] = None
         return data
 
     def get_actions(self, case):
@@ -413,12 +427,13 @@ class CaseDetailSerializer(CaseSerializer):
 class PatientTransferSerializer(serializers.Serializer):
     """One patient transfer (B17, stories #63 to #65): a case's move to another hospital, and its history.
     Shape of `PatientTransfer` in frontend/src/api/emergencies.ts. Use
-    `PatientTransfer.objects.with_details()`, and `self.context["user"]` decides `actions`. It never carries
-    the patient reference, stock or holds."""
+    `PatientTransfer.objects.with_details()`, and `self.context["user"]` decides `actions` and whether the
+    patient reference and the note are shown (B23: the two hospitals' clinical staff). No stock or holds."""
 
     def to_representation(self, transfer: PatientTransfer):
         case = transfer.request
         user = self.context.get("user")
+        sees = sees_case_patient(user, case)
         requested_by = transfer.requested_by
         arrived_by = transfer.arrived_by
         return {
@@ -436,8 +451,10 @@ class PatientTransferSerializer(serializers.Serializer):
             "arrivedAt": None
             if transfer.arrived_at is None
             else serializers.DateTimeField().to_representation(transfer.arrived_at),
-            "note": transfer.note,
+            "note": transfer.note if sees else "",
             "reason": transfer.reason,
+            # The receiving hospital needs to know who is coming (B23); nobody else outside the case's.
+            "patientRef": case.patient_ref if sees else None,
             "actions": patient_actions_for(user, transfer) if user is not None else [],
         }
 

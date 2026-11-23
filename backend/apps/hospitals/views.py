@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import changeable_by, module_permission
+from apps.audit.services import record_view
 from apps.resources.state_machine import TransitionNotAllowed
 
 from .models import Bed, Capability, Department, Hospital, StorageLocation, Ward
@@ -36,9 +37,12 @@ class BedBoardView(APIView):
         if request.user.hospital_id:
             wards = wards.filter(hospital_id=request.user.hospital_id)
             beds = beds.filter(ward__hospital_id=request.user.hospital_id)
-        return Response(
-            {"wards": WardSerializer(wards, many=True).data, "beds": BedSerializer(beds, many=True).data}
-        )
+        beds = list(beds)
+        shown = BedSerializer(beds, many=True, context={"user": request.user}).data
+        with_patient = sum(1 for bed in shown if "patient" in bed)
+        if with_patient:
+            record_view(request.user, "beds", hospital=request.user.hospital, count=with_patient)
+        return Response({"wards": WardSerializer(wards, many=True).data, "beds": shown})
 
 
 class BedActionView(APIView):
@@ -57,7 +61,7 @@ class BedActionView(APIView):
             bed = apply_bed_action(label, serializer.validated_data["action"], actor=request.user)
         except TransitionNotAllowed as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
-        return Response(BedSerializer(bed).data)
+        return Response(BedSerializer(bed, context={"user": request.user}).data)
 
 
 class HospitalListView(APIView):

@@ -21,6 +21,7 @@ pytestmark = pytest.mark.django_db
 
 ROW_KEYS = {
     "id",
+    "patientRef",  # B23: shown to the two hospitals' clinical staff, None for anyone else
     "reference",
     "severity",
     "status",
@@ -257,13 +258,15 @@ def test_incoming_is_the_receiving_hospitals_and_outgoing_the_sending_ones(s):
     assert sender_incoming == []
 
 
-def test_the_incoming_row_shows_the_patient_without_their_reference_stock_or_holds(s):
-    requested_transfer(s)
+def test_the_incoming_row_shows_who_is_coming_but_no_stock_or_holds(s):
+    """B23: once the move is requested, the receiving hospital's clinical staff see the patient reference
+    (they need to know who is coming). Still no stock or holds."""
+    transfer = requested_transfer(s)
 
     row = as_user(s.receiver).get(list_url(), {"direction": "incoming"}).json()[0]
 
     assert set(row) == ROW_KEYS
-    assert "patientRef" not in row
+    assert row["patientRef"] == transfer.request.patient_ref
     assert row["severity"] == "critical"
     assert row["needs"] == ["A+ red cells"]
     assert row["from"]["name"] == "CityCare General"
@@ -283,6 +286,7 @@ def test_an_admin_sees_every_transfer(make_user, s):
     rows = as_user(make_user(Role.ADMIN)).get(list_url()).json()
 
     assert [row["id"] for row in rows] == [transfer.pk]
+    assert rows[0]["patientRef"] is None and rows[0]["note"] == ""  # B23: the CityCare admin sees no patient
 
 
 def test_the_list_filters_by_status_and_is_newest_first(s):

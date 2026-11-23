@@ -7,7 +7,7 @@ priority: high
 sprint: 9
 depends_on: -
 owner: harishassan-code
-status: Backlog
+status: In Progress
 ---
 
 # B23 · Patient privacy safeguards (HIPAA principles)

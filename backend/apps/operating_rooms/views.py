@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission
+from apps.audit.services import record_view
 from apps.core import clock
 from apps.resources.state_machine import TransitionNotAllowed
 
@@ -76,7 +77,13 @@ class OperatingRoomScheduleView(APIView):
             day = date.fromisoformat(raw) if raw else clock.localdate()
         except ValueError:
             return Response({"date": ["Use a date like 2026-11-17."]}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(services.day_schedule(request.user, day))
+        schedule = services.day_schedule(request.user, day)
+        shown = sum(
+            1 for room in schedule["rooms"] for booking in room["bookings"] if booking["patientInitials"]
+        )
+        if shown:
+            record_view(request.user, "or-schedule", hospital=request.user.hospital, count=shown)
+        return Response(schedule)
 
 
 class OrBookingListView(APIView):

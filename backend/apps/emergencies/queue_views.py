@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import can_edit, module_permission
+from apps.audit.services import record_view
 from apps.core import clock
 from apps.hospitals.models import Bed, BedStatus, BedType
 from apps.resources.state_machine import TransitionNotAllowed
@@ -64,6 +65,9 @@ class QueueView(APIView):
             status=BedStatus.OUT_OF_SERVICE
         )
         current = department_status(hospital)
+        visits = list(visits)
+        if visits:
+            record_view(request.user, "er-queue", hospital=hospital, count=len(visits))
         return Response(
             {
                 "visits": [visit_data(v, now, can_act=can_act) for v in visits],

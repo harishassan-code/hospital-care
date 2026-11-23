@@ -64,7 +64,7 @@ class OrBookingSerializer(serializers.ModelSerializer):
     roomId = serializers.IntegerField(source="room_id", read_only=True)
     startsAt = serializers.DateTimeField(source="starts_at", read_only=True)
     endsAt = serializers.DateTimeField(source="ends_at", read_only=True)
-    patientInitials = serializers.CharField(source="patient_initials", read_only=True)
+    patientInitials = serializers.SerializerMethodField()
     bookedBy = serializers.CharField(source="booked_by.get_full_name", read_only=True)
     canCancel = serializers.SerializerMethodField()
 
@@ -82,6 +82,16 @@ class OrBookingSerializer(serializers.ModelSerializer):
             "bookedBy",
             "canCancel",
         ]
+
+    def get_patientInitials(self, booking) -> str:
+        """Only for the clinical staff and admin of the room's hospital (B23); empty for anyone else."""
+        from apps.accounts.permissions import sees_patients
+
+        return (
+            booking.patient_initials
+            if sees_patients(self.context.get("user"), booking.room.hospital_id)
+            else ""
+        )
 
     def get_canCancel(self, booking) -> bool:
         """Whether the requesting user (context["user"]) may cancel it, so the page only offers what works."""
