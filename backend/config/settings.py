@@ -55,14 +55,20 @@ def throttle_rate_env(name, default):
     return raw
 
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-# The development key is only for DEBUG. With DEBUG off the key must come from the environment (Render
-# generates it), so a host that forgets it refuses to start, not sign sessions with a key from the code (F8).
+# Staging runs on Vercel (B14). Vercel sets VERCEL=1 while it builds and runs the app, and that changes a few
+# defaults below (DEBUG off, its hosts, a shared cache, its proxy), so the project needs only
+# DJANGO_SECRET_KEY and a database. Each default can still be overridden with its own variable.
+ON_VERCEL = os.environ.get("VERCEL") == "1"
+
+DEBUG = os.environ.get("DJANGO_DEBUG", "false" if ON_VERCEL else "true").lower() == "true"
+# The development key is only for DEBUG. With DEBUG off the key must come from the environment (on Vercel, the
+# project's DJANGO_SECRET_KEY), so a host that forgets it refuses to start, not sign sessions with a key from
+# the code (F8).
 DEV_SECRET_KEY = "dev-only-insecure-key-change-me"
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or (DEV_SECRET_KEY if DEBUG else "")
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ".vercel.app" if ON_VERCEL else "localhost,127.0.0.1")
 # The Django admin at /admin/ (B13, F6). On under DEBUG; off otherwise unless DJANGO_ADMIN_ENABLED=true.
 ADMIN_ENABLED = os.environ.get("DJANGO_ADMIN_ENABLED", "true" if DEBUG else "false").lower() == "true"
 
@@ -125,13 +131,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Postgres via DATABASE_URL. SQLite fallback only so a fresh clone can run tests without Docker.
+# Postgres via DATABASE_URL. SQLite fallback only so a fresh clone can run tests without Docker. A connection
+# is kept between requests and checked before it's reused: on Vercel a copy of the app can sit idle long
+# enough for the database to close it.
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
+        conn_health_checks=True,
     )
 }
+# On Vercel the database (Neon) is reached through its connection pooler, which hands each transaction to
+# whichever server connection is free, so a database cursor can't outlive its transaction. Large results are
+# then read the ordinary way (the audit export is the one place that streams them, and it's capped).
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = ON_VERCEL
+
+# Sign-in limits (B13, F4) and the lockout after failed passwords count attempts in the cache. Vercel runs
+# several copies of the app at once, so there the count is kept in the database, where every copy sees it. One
+# server (local, Docker) can keep it in memory. `manage.py createcachetable` makes the table; the Vercel build
+# runs it.
+if os.environ.get("DJANGO_CACHE", "database" if ON_VERCEL else "memory") == "database":
+    CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.db.DatabaseCache", "LOCATION": "django_cache"}
+    }
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -169,15 +191,16 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
 
-# Session auth across domains (Vercel frontend → Render API), decided in the login story.
-# Locally (DEBUG) both run on localhost, so the default SameSite=Lax cookies work over plain http.
+# Session auth. On Vercel the site and the API share one domain; the SameSite=None cookies date from the login
+# story's two-domain plan and still work. Locally (DEBUG) both run on localhost, over plain http with Lax
+# cookies.
 if not DEBUG:
     SESSION_COOKIE_SAMESITE = "None"
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SAMESITE = "None"
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    # HTTPS only (B13). Render's health check reaches the app over plain HTTP, so that one path is exempt.
+    # HTTPS only (B13). A host's health check may reach the app over plain HTTP, so that one path is exempt.
     SECURE_SSL_REDIRECT = True
     SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
     # How long browsers keep to HTTPS for this host: 3600 for the first deploy, then 31536000 (one year) once
@@ -213,6 +236,7 @@ AUTH_THROTTLE_RATES = {
     "auth_login": throttle_rate_env("DJANGO_LOGIN_THROTTLE", "30/min"),
     "auth_signup": throttle_rate_env("DJANGO_SIGNUP_THROTTLE", "30/hour"),
 }
-# How many reverse proxies sit in front of the app, each appending to X-Forwarded-For (B13, F4). Render's one
-# proxy is 1. 0 (the default, and local development) means none: REMOTE_ADDR is the client's address.
-TRUSTED_PROXY_COUNT = non_negative_int_env("DJANGO_TRUSTED_PROXY_COUNT", 0)
+# How many reverse proxies sit in front of the app, each appending to X-Forwarded-For (B13, F4). On Vercel its
+# edge is the one proxy (1), and it writes the client's address there itself. 0 (local development) means
+# none: REMOTE_ADDR is the client's address.
+TRUSTED_PROXY_COUNT = non_negative_int_env("DJANGO_TRUSTED_PROXY_COUNT", 1 if ON_VERCEL else 0)

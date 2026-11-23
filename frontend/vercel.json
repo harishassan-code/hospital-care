@@ -1,8 +1,0 @@
-{
-  "routes": [
-    { "src": "/(.*)", "headers": { "Strict-Transport-Security": "max-age=3600; includeSubDomains" }, "continue": true },
-    { "src": "/api/(.*)", "dest": "https://hospital-care-api.onrender.com/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
-}

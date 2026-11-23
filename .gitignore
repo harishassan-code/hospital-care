@@ -17,6 +17,10 @@ frontend/dist/
 e2e/playwright-report/
 e2e/test-results/
 
+# Vercel CLI (`vercel build` / `vercel pull`): build output, the API's virtualenv and the lock file it writes
+.vercel/
+backend/uv.lock
+
 # Env / secrets
 .env
 .env.*

@@ -4,11 +4,12 @@ Is staging up? Run it a couple of minutes before every demo (bolt B14, #59/#69):
     python3 scripts/smoke_staging.py https://hospital-care.vercel.app
 
 It checks, in order:
-  1. the API through the Vercel proxy:  <site>/api/health/  →  {"status": "ok"}
+  1. the API through the site's /api:   <site>/api/health/  →  {"status": "ok"}
   2. the frontend:                      <site>/             →  200 with the app's HTML
 
-The free Render API sleeps after 15 minutes idle and takes 30–60 s to wake, so the first check waits up to
-90 s; running this also wakes it. Exit code 0 when everything passes, 1 otherwise. Standard library only.
+On Vercel the API starts on demand: the first request after a quiet spell takes a few seconds while the
+database wakes too, so the first check retries for up to 90 s; running this also warms both up. Exit code 0
+when everything passes, 1 otherwise. Standard library only.
 """
 
 import json
@@ -73,7 +74,7 @@ def main(argv: list[str]) -> int:
         return 1
     site = argv[1].rstrip("/")
     failed = False
-    checks = (("API health (through the site's /api proxy)", check_health), ("Home page", check_home))
+    checks = (("API health (through the site's /api)", check_health), ("Home page", check_home))
     for name, check in checks:
         problem = check(site)
         print(f"{'FAIL' if problem else 'ok  '}  {name}{': ' + problem if problem else ''}")

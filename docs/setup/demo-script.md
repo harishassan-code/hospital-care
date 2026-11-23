@@ -58,20 +58,24 @@ Check the PR is merged and staging has redeployed before rehearsing these. Add e
 
 | Problem | Fallback |
 |---|---|
-| The site loads but says **API status: down**, or sign-in spins | The API is waking up. Wait 30–60 s and reload. Talk through step 1 meanwhile. |
+| The site loads but says **API status: down**, or sign-in spins | The API and its database are waking up. Wait a few seconds and reload. Talk through step 1 meanwhile. |
 | Step 5 shows fewer than 2 available | Earlier rehearsals used them. Ask for 1 more than **Available here** in step 4, so there is still exactly one short. |
 | Step 7 shows no sources | The partner hospitals' ventilators were used up by a rehearsal. Reset (below), or show the ranking on a blood need instead (e.g. 10 units of O−). |
 | A hold disappeared | Holds expire after 30 minutes. Reserve again; holds that belong to an approved transfer never expire. |
-| **403** on a change | The CSRF origin on Render doesn't match the site URL. Fix `CSRF_TRUSTED_ORIGINS` (deployment guide) after the demo, and show the rest read-only. |
+| **403** on a change | The session ran out (30 minutes idle) or the site was opened on another address. Sign in again on the address in the README, and show the rest read-only if it persists. |
 | Staging is down completely | Run it locally (`docker compose up --build`, then `seed_demo`) and present from `localhost`. |
 
 ## Reset after a rehearsal
 
-From the Render dashboard, open the API service's **Shell** and run:
+Staging has no shell, so run the reset from your laptop against the staging database, with the project's Docker
+setup. Copy `DATABASE_URL_UNPOOLED` from the Vercel project (**Settings → Environment Variables**, or **Storage** → the
+database → **.env.local**), then:
 
 ```bash
-python manage.py seed_demo --reset
+docker compose run --rm --no-deps -e DATABASE_URL='<DATABASE_URL_UNPOOLED>' backend python manage.py seed_demo --reset
 ```
+
+Keep the quotes: the address contains `&` and `?`. Don't paste it into chat or commit it; it is the database password.
 
 This clears the rehearsal's emergency cases, holds, transfers, ambulance trips, patient transfers and alerts, then
 re-creates hospitals, stock and equipment, so the demo starts from the same data as a fresh seed. Case references

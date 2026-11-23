@@ -79,6 +79,31 @@ Proposed answers; the Product Owner confirms them at sign-off:
 4. **Which features go in the final demo?** *Proposed:* what is merged into `main` by the rehearsal. The script lists
    the optional steps for the open PRs (#104, #106–#110) and marks each one "include once merged".
 
+## Amendment, 23 Nov: staging on one Vercel project
+
+render.com didn't load from the team's network, so the Render half of this design couldn't be set up. The account
+owner asked for the API to move to Vercel too. What changes:
+
+- **One Vercel project** (framework preset *Services*, `vercel.json` at the repo root) serves the site (`frontend/`)
+  and the API (`backend/`, a Django function) on one domain. `/api/*` goes to the API. `render.yaml` and
+  `frontend/vercel.json` are removed.
+- **Database:** PostgreSQL from Neon, added from the project's Storage tab. It sets `DATABASE_URL` (pooled) and
+  `DATABASE_URL_UNPOOLED` (direct). Neon's free database doesn't expire, so the 30-day reminder goes.
+- **Build:** `backend/vercel_build.sh` (named in `backend/pyproject.toml`) runs `check --deploy`, then on production
+  deploys only the migrations (over the direct connection), `createcachetable` and `seed_demo`. Previews never
+  migrate the shared database.
+- **Settings:** with `VERCEL=1` (set by Vercel) the defaults are DEBUG off, hosts `.vercel.app`, sign-in counts in the
+  database cache (several copies of the API run at once), 1 trusted proxy, and no server-side cursors (Neon's pooler).
+  The project sets only `DJANGO_SECRET_KEY`. Same domain, so no CORS or CSRF origins to set.
+- **Acceptance criteria** above read with Vercel for Render: the project deploys from `main`, `/api/health/` answers
+  through the site, a signed-in change works, the README has the one URL. The smoke check and demo script are
+  unchanged; the demo reset runs from a laptop against the staging database (no shell on Vercel).
+- **Evidence before deploy:** the real Vercel CLI built the branch, and the whole MVP scenario passed against its output
+  run on Vercel's own Python runtime ([mvp-scenario.md](../../testing/mvp-scenario.md)).
+
+Requested and approved by Haris Hassan (`harishassan-code`, account owner) on 2026-11-23; B14's owner reviews it in
+the PR.
+
 ## Approval
 
 - [x] Approved by: Hassan Qureshi (Hassan27521) on 2026-11-20, all proposed answers accepted

@@ -184,6 +184,11 @@ With `DJANGO_DEBUG=false`, `check --deploy --fail-level WARNING` is clean with a
    real use through the site. **Check on staging** (in the operations notes): from one network, fail sign-in on 30
    different demo emails within a minute through the Vercel site; if a teammate on another network is then
    throttled too, the buckets are shared and the count should be 2.
+   **Update, 23 Nov:** staging moved to one Vercel project, so the site and the API share Vercel's edge and there is no
+   second proxy. The edge sets `X-Forwarded-For` to the visitor's address and the count is 1 there by default
+   (`backend/config/settings.py`), so each visitor has their own bucket. The sign-in counts are kept in the database
+   on Vercel, because several copies of the API run at once. The two-network check still stands for the operations
+   notes.
 3. **Throttle rates.** The defaults are 30 per minute for login and 30 per hour for signup, per address. A hospital's
    computers often share one address (the per-account lockout exists for that reason), so a stricter rate would lock out
    a ward.

@@ -23,7 +23,9 @@ Each sprint gets a folder `sprint-NN/` built from the [templates](templates/).
 ## Per-sprint artefacts
 
 Created during the Friday ceremonies. Sprints 1–7 were reconstructed from the GitHub record by bolt B00 (#2); each
-file marks what the team still has to confirm (attendance, Product Owner feedback, mood).
+file marks what the team still has to confirm (attendance, Product Owner feedback, mood). Sprint 8's planning was
+reconstructed the same way on 23 Nov, and its review and retrospective were prepared with the facts so far; the
+team fills in the rest at the 27 Nov ceremonies.
 
 | Sprint | Planning | Review | Retrospective | Burndown |
 |---|---|---|---|---|
@@ -34,7 +36,7 @@ file marks what the team still has to confirm (attendance, Product Owner feedbac
 | 5 | [✅](sprint-05/sprint-planning.md) | [✅](sprint-05/sprint-review.md) | [✅](sprint-05/retrospective.md) | not captured |
 | 6 | [✅](sprint-06/sprint-planning.md) | [✅](sprint-06/sprint-review.md) | [✅](sprint-06/retrospective.md) | not captured |
 | 7 | [✅](sprint-07/sprint-planning.md) | [✅](sprint-07/sprint-review.md) | [✅](sprint-07/retrospective.md) | not captured |
-| 8 | | | | |
+| 8 | [✅](sprint-08/sprint-planning.md) | [prepared](sprint-08/sprint-review.md) (fill in 27 Nov) | [prepared](sprint-08/retrospective.md) (fill in 27 Nov) | screenshot at the review |
 | 9 | | | | |
 
 ## Friday checklist (Scrum Master)

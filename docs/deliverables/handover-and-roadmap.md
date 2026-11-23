@@ -12,7 +12,7 @@ ambulances, so an emergency case can find, reserve and transfer what it needs.
 | Backend | `backend/` (Django 6, DRF) | One app per module in `backend/apps/`; business rules in each app's `services.py` |
 | Frontend | `frontend/` (React 19, TypeScript, Vite) | Pages in `src/pages/`, API calls only through `src/api/` |
 | End-to-end test | `e2e/` (Playwright) | The MVP acceptance scenario; runs in CI on pull requests |
-| Deployment | `render.yaml` (API + PostgreSQL), `frontend/vercel.json` | [Deployment guide](../setup/deployment.md), [demo script](../setup/demo-script.md) |
+| Deployment | `vercel.json` (one Vercel project: site + API), `backend/vercel_build.sh`; PostgreSQL on Neon | [Deployment guide](../setup/deployment.md), [demo script](../setup/demo-script.md) |
 | CI | `.github/workflows/ci.yml` | Lint, migrations check, backend and frontend tests, build, deploy-config check, e2e |
 | Demo data | `python manage.py seed_demo` | Synthetic only; one login per role, password `CityCare-demo-1` |
 
