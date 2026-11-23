@@ -5,6 +5,7 @@ import { Panel } from '../../components/ui/Panel'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { BloodRequestForm } from '../../features/emergencies/BloodRequestForm'
 import { CaseStatusLabel } from '../../features/emergencies/CaseStatusLabel'
+import { DepartmentStatusPanel } from '../../features/emergencies/DepartmentStatusPanel'
 import { describeNeed, SEVERITY_TONE } from '../../features/emergencies/emergencies'
 import styles from '../../features/emergencies/Emergencies.module.css'
 import { IncomingPatients, OutgoingPatients } from '../../features/emergencies/IncomingPatients'
@@ -17,8 +18,8 @@ import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
 
 /**
- * Emergency cases at the user's hospital, opening a new one (stories #30, #32), a quick blood request (#36), and
- * the network feed. The server orders the list (#31).
+ * Emergency cases at the user's hospital, opening a new one (stories #30, #32), a quick blood request (#36), the
+ * network feed, and our emergency department's public status (B19). The server orders the list (#31).
  */
 export default function EmergenciesPage() {
   const { role } = useStaff()
@@ -114,6 +115,7 @@ export default function EmergenciesPage() {
           </div>
         )}
       </Panel>
+      <DepartmentStatusPanel />
       {editable && <IncomingPatients />}
       <OutgoingPatients />
     </div>

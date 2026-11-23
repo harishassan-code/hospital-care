@@ -36,7 +36,7 @@ import type {
 import type { HospitalInput, StructureKind } from '../api/hospitals'
 import type { Notification } from '../api/notifications'
 import type { OnCallWindow, SpecialistChanges, SpecialistDetail, SpecialistInput, SpecialistSummary } from '../api/specialists'
-import type { PublicStatus } from '../api/publicStatus'
+import type { DepartmentStatus, DepartmentStatusInput } from '../api/emergencies'
 import type { Report } from '../api/reports'
 import { TRANSFER_STATUS_LABEL, type Transfer, type TransferAction, type TransferMove, type TransferRequestInput, type TransferResourceType, type TransferStatus } from '../api/transfers'
 import { TRIP_STATUS_LABEL, type Trip, type TripAction, type TripStatus } from '../api/trips'
@@ -57,7 +57,7 @@ import { sampleAppointments, sampleDonors, sampleDonorUnits } from './fixtures/d
 import { sampleCandidates, sampleCases, sampleLocalAvailable, sampleNetworkRequests } from './fixtures/emergencies'
 import { sampleCapabilities, sampleHospitals, sampleUsers } from './fixtures/hospitals'
 import { sampleMedicines } from './fixtures/pharmacy'
-import { samplePublicStatus } from './fixtures/publicStatus'
+import { sampleDepartment, samplePublicHospitalDetail, samplePublicHospitals, sampleNetwork } from './fixtures/publicNetwork'
 import { sampleReport } from './fixtures/reports'
 import { sampleSpecialists, type SpecialistRecord } from './fixtures/specialists'
 
@@ -192,12 +192,12 @@ export function userFor(role: Role | 'patient'): User {
  */
 type StaffApiOptions = {
   role: Role | 'patient' | null
-  /** Make GET /public/status/ fail. */
+  /** Make our emergency department's status (GET /emergencies/department/) fail. */
   erDown?: boolean
   /** Use this board instead of the sample one. */
   board?: BedBoard
-  /** Use this public status instead of the sample one. */
-  publicStatus?: PublicStatus
+  /** Our emergency department's status instead of the sample one (B19); all nulls means not reported yet. */
+  department?: DepartmentStatus
   /** Make every hospitals, users and emergencies call fail as if the server were down. */
   networkDown?: boolean
   /** Use these emergency cases instead of the sample ones. */
@@ -322,7 +322,7 @@ export function mockStaffApi({
   role,
   erDown = false,
   board: customBoard,
-  publicStatus,
+  department: customDepartment,
   networkDown = false,
   cases: customCases,
   histories: customHistories,
@@ -828,11 +828,26 @@ export function mockStaffApi({
 
   /** The signed-in user's notifications (story #52). Marking one read sets its `readAt` once, as the server does. */
   const notifications: Notification[] = seedNotifications.map((n) => ({ ...n }))
+  /** Our emergency department (B19); a PUT replaces it, as the server does. */
+  let department: DepartmentStatus = customDepartment ?? sampleDepartment(now)
   const fetchMock = mockApi({
     'GET /auth/me/': role ? ok(userFor(role)) : fail(403),
     'POST /auth/login/': role ? ok(userFor(role)) : fail(401, { detail: 'That email and password don’t match an account.' }),
     'POST /auth/logout/': { status: 204 },
-    'GET /public/status/': erDown ? fail(503) : ok(publicStatus ?? samplePublicStatus(now)),
+    'GET /public/network/': ok(sampleNetwork(now)),
+    'GET /public/hospitals/': ok(samplePublicHospitals(now)),
+    'GET /public/hospitals/:id/': ({ params }) =>
+      samplePublicHospitals(now).some((h) => String(h.id) === params.id)
+        ? ok(samplePublicHospitalDetail(now, Number(params.id), role !== null && role !== 'patient'))
+        : fail(404, { detail: 'Not found.' }),
+    'GET /emergencies/department/': gate('emergencies', () => (erDown ? fail(503) : ok(department))),
+    'PUT /emergencies/department/': edit('emergencies', ({ body }) => {
+      const input = body as DepartmentStatusInput
+      if (!['accepting', 'busy', 'diverting'].includes(input.status)) return fail(400, { status: ['Not a valid choice.'] })
+      if (input.waitMinutes < 0 || input.waitMinutes > 1440) return fail(400, { waitMinutes: ['Ensure this value is less than or equal to 1440.'] })
+      department = { ...input, updatedAt: new Date().toISOString() }
+      return ok(department)
+    }),
     'GET /beds/': gate('beds', () => ok(board)),
     'GET /blood/units/': gate('blood', () => ok(units)),
     'POST /blood/units/': edit('blood', ({ body }) => {

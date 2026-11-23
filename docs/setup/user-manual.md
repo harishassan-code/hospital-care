@@ -6,6 +6,17 @@ For running the system see the [README](../../README.md); for a scripted walkthr
 
 > Academic project. All data is synthetic and all clinical rules are simulated. Don't enter real patient data.
 
+## The public site (no sign-in)
+
+- **Home page** (`/`): what CityCare is, **the network right now** (how many emergency departments are accepting
+  patients, the shortest wait and where, ambulances free, and beds and blood across the city as levels: Available,
+  Limited or Full for beds; OK, Low or Critical for blood), and **the member hospitals**, shortest emergency wait first.
+  **Use my location** sorts them nearest first; your location stays on your device and is never sent anywhere.
+- **A hospital's page** (`/hospitals/<id>`): its emergency department (status, estimated wait, people waiting), who is
+  on duty now by specialty, its beds as levels, and its services and departments. Doctors' names are shown only to
+  signed-in hospital staff. Exact stock and anything about patients are never shown here.
+- In an emergency, call **1122**; the number is on every public page.
+
 ## 1. Signing in
 
 1. Open the site and choose **Log in**. On a local install that is `http://localhost:5173/login`.
@@ -55,6 +66,12 @@ Shows your hospital at a glance: bed occupancy, red-cell stock by blood group ag
 open emergencies and pending transfers. It refreshes on its own; you don't need to reload.
 
 ## 4. Emergencies
+
+### Our emergency department (admin, doctor, nurse)
+The **Our emergency department** panel on **Emergencies** sets what the public sees for your hospital: the status
+(accepting patients, very busy, not accepting ambulances), how many people are waiting and the estimated wait. Change
+the figures and choose **Update status**; the public pages show it at once, and the change is recorded in the audit
+log. Other roles see the panel without the form. The **Emergency** tile on the overview shows the same figures.
 
 ### Open a case (doctor, nurse, admin)
 1. **Emergencies → New case.**

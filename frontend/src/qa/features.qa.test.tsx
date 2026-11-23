@@ -11,7 +11,7 @@ import LandingPage from '../pages/LandingPage'
 import LoginPage from '../pages/LoginPage'
 import SignupPage from '../pages/SignupPage'
 import { at } from '../test/clock'
-import { samplePublicStatus } from '../test/fixtures/publicStatus'
+import { sampleNetwork, samplePublicHospitals } from '../test/fixtures/publicNetwork'
 import { sampleIncomingPatient } from '../test/fixtures/patientTransfers'
 import { mockApi, mockStaffApi, ok, fail, userFor } from '../test/mockApi'
 import { renderStaff } from '../test/renderStaff'
@@ -48,17 +48,20 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('QA · public home', () => {
-  it('shows hospital, wayfinding, log in link, live ER status', async () => {
-    mockApi({ 'GET /public/status/': ok(samplePublicStatus(new Date())) })
+  it('presents the CityCare network: live snapshot, member hospitals, sign-in, emergency number', async () => {
+    const now = new Date()
+    mockApi({ 'GET /public/network/': ok(sampleNetwork(now)), 'GET /public/hospitals/': ok(samplePublicHospitals(now)) })
     render(
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('heading', { name: 'Where do you need to go?' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Every hospital in the city, working as one.' })).toBeInTheDocument()
     expect(screen.getAllByText(hospital.name).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Log in' })[0]).toHaveAttribute('href', '/login')
-    expect((await screen.findAllByText(/min wait/)).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('list', { name: 'The network right now' })).toBeInTheDocument()
+    const links = (await screen.findAllByRole('link')).map((a) => a.getAttribute('href'))
+    expect(links).toEqual(expect.arrayContaining(['/hospitals/1', '/hospitals/2', '#hospitals', `tel:${hospital.emergencyNumber}`]))
   })
 
   it('shows clear message when live status fails', async () => {

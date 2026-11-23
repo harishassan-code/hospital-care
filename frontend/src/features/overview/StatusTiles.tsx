@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BLOOD_GROUPS, MINIMUM_STOCK } from '../../api/blood'
-import { ER_STATUS_LABEL } from '../../api/publicStatus'
+import { ER_STATUS_LABEL } from '../../api/public'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { useCountUp } from '../../lib/useCountUp'
 import { summarize } from '../beds/beds'
@@ -85,25 +85,28 @@ function PharmacyTile({ data, now }: { data: StaffData; now: Date }) {
   )
 }
 
+/** Where staff update our emergency department's status (B19). */
+export const DEPARTMENT_LINK = '/staff/emergencies#department'
+
 function EmergencyTile({ emergency }: { emergency: StaffData['emergency'] }) {
-  if (!emergency) {
+  if (!emergency || emergency.status === null) {
     return (
       <li>
-        <Link to="/#emergency" className={styles.tile}>
+        <Link to={DEPARTMENT_LINK} className={styles.tile}>
           <span className={styles.tileLabel}>Emergency</span>
-          <span className={styles.tileDetail}>Live status unavailable</span>
-          <StatusBadge tone="neutral">Check with the ER desk</StatusBadge>
+          <span className={styles.tileDetail}>{emergency ? 'Status not reported yet' : 'Live status unavailable'}</span>
+          <StatusBadge tone="neutral">{emergency ? 'Report it' : 'Check with the ER desk'}</StatusBadge>
         </Link>
       </li>
     )
   }
   return (
     <Tile
-      to="/#emergency"
+      to={DEPARTMENT_LINK}
       label="Emergency"
-      value={emergency.waitingCount}
+      value={emergency.waitingCount ?? 0}
       unit="waiting"
-      detail={`About ${emergency.waitMinutes} min wait`}
+      detail={`About ${emergency.waitMinutes ?? 0} min wait`}
       note={
         <StatusBadge tone={emergency.status === 'accepting' ? 'ok' : 'warning'}>
           {ER_STATUS_LABEL[emergency.status]}

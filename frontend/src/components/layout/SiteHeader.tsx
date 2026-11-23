@@ -37,6 +37,9 @@ export function SiteHeader() {
               <span className={styles.number}>{hospital.emergencyNumber}</span>
             </span>
           </a>
+          <Link className={styles.navLink} to="/#hospitals">
+            Hospitals
+          </Link>
           <ThemeToggle />
           {user ? (
             <>

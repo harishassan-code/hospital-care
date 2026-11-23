@@ -22,7 +22,7 @@ describe('OverviewPage', () => {
     mockStaffApi({ role: 'admin' })
     renderStaff('/staff')
     const tiles = await screen.findByRole('list', { name: 'Status summary' })
-    expect(tileLinks(tiles)).toEqual(['/staff/beds', '/#emergency', '/staff/emergencies', '/staff/transfers', '/staff/blood', '/staff/pharmacy'])
+    expect(tileLinks(tiles)).toEqual(['/staff/beds', '/staff/emergencies#department', '/staff/emergencies', '/staff/transfers', '/staff/blood', '/staff/pharmacy'])
     expect(within(tiles).getByText(/of 106 beds/)).toBeInTheDocument()
     expect(within(tiles).getByText('7')).toBeInTheDocument()
     expect(within(tiles).getByText('About 24 min wait')).toBeInTheDocument()
@@ -65,11 +65,11 @@ describe('OverviewPage', () => {
   })
 
   it.each([
-    ['admin', ['/staff/beds', '/#emergency', '/staff/emergencies', '/staff/transfers', '/staff/blood', '/staff/pharmacy']],
-    ['doctor', ['/staff/beds', '/#emergency', '/staff/emergencies', '/staff/transfers', '/staff/blood', '/staff/pharmacy']],
-    ['nurse', ['/staff/beds', '/#emergency', '/staff/emergencies', '/staff/transfers', '/staff/pharmacy']],
-    ['bloodBank', ['/#emergency', '/staff/emergencies', '/staff/transfers', '/staff/blood']],
-    ['pharmacist', ['/#emergency', '/staff/emergencies', '/staff/pharmacy']],
+    ['admin', ['/staff/beds', '/staff/emergencies#department', '/staff/emergencies', '/staff/transfers', '/staff/blood', '/staff/pharmacy']],
+    ['doctor', ['/staff/beds', '/staff/emergencies#department', '/staff/emergencies', '/staff/transfers', '/staff/blood', '/staff/pharmacy']],
+    ['nurse', ['/staff/beds', '/staff/emergencies#department', '/staff/emergencies', '/staff/transfers', '/staff/pharmacy']],
+    ['bloodBank', ['/staff/emergencies#department', '/staff/emergencies', '/staff/transfers', '/staff/blood']],
+    ['pharmacist', ['/staff/emergencies#department', '/staff/emergencies', '/staff/pharmacy']],
   ] as const)('shows the tiles the %s role may see, with the two request tiles in place', async (role, links) => {
     mockStaffApi({ role })
     renderStaff('/staff')

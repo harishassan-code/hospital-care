@@ -1,8 +1,9 @@
 import type { BedType } from './beds'
 import type { BloodGroup, Component } from './blood'
-import { apiGet, apiPost } from './client'
+import { apiGet, apiPost, apiPut } from './client'
 import type { EquipmentType } from './equipment'
 import type { OrCapability } from './operatingRooms'
+import type { ErStatus } from './public'
 import type { Transfer } from './transfers'
 
 /** Most severe first. Lists come from the server in this order: severity, then the oldest case first (story #31). */
@@ -411,4 +412,30 @@ export function allocateReservation(id: number, note = ''): Promise<CaseAllocati
  */
 export function allocateReservations(ids: number[]): Promise<CaseAllocation[]> {
   return apiPost<CaseAllocation[]>('/reservations/allocate/', { ids })
+}
+
+// ── Our emergency department (B19) ─────────────────────────────────────────────────────────────────────
+
+/** The signed-in user's own hospital's emergency department. All null until the hospital first reports it. */
+export interface DepartmentStatus {
+  status: ErStatus | null
+  waitMinutes: number | null
+  waitingCount: number | null
+  updatedAt: string | null
+}
+
+export interface DepartmentStatusInput {
+  status: ErStatus
+  waitMinutes: number
+  waitingCount: number
+}
+
+/** GET /api/emergencies/department/ (staff with a hospital). */
+export function getDepartmentStatus(): Promise<DepartmentStatus> {
+  return apiGet<DepartmentStatus>('/emergencies/department/')
+}
+
+/** PUT /api/emergencies/department/: admin, doctor and nurse at that hospital. Audit-logged. */
+export function updateDepartmentStatus(input: DepartmentStatusInput): Promise<DepartmentStatus> {
+  return apiPut<DepartmentStatus>('/emergencies/department/', input)
 }

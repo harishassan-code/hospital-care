@@ -30,7 +30,10 @@ reading needs *view*, changing needs *edit*. No access → 403.
 
 | Method | Path | Returns | Access |
 |---|---|---|---|
-| GET | `/public/status/` | `PublicStatus` (ER status + today's doctors; `name` is null and `namesShown` false unless the caller is signed-in staff, #122) | anyone, no sign-in |
+| GET | `/public/network/` | `NetworkSnapshot`: member hospitals, emergency departments by status, the shortest wait, beds by type and red cells by group as levels, ambulances free (B19) | anyone, no sign-in |
+| GET | `/public/hospitals/` | `PublicHospital[]`: active hospitals with services and emergency status (B19) | anyone, no sign-in |
+| GET | `/public/hospitals/<id>/` | `PublicHospitalDetail`: departments, beds as levels, specialists on call by specialty; `names` null and `namesShown` false unless the caller is signed-in staff (#122). Inactive or unknown: 404 | anyone, no sign-in |
+| GET, PUT | `/emergencies/department/` | `DepartmentStatus` `{status, waitMinutes, waitingCount, updatedAt}` of the user's own hospital (all null until first reported); PUT is audit-logged as `er_status.updated`. No hospital: 404 (B19) | emergencies: view to read, edit to change |
 | GET | `/beds/` | `BedBoard` = `{wards, beds}` | beds: view |
 | POST | `/beds/<bed id>/actions/` | `{action}` → updated `Bed` | beds: edit |
 | GET | `/blood/units/` | `BloodUnit[]` | blood: view |

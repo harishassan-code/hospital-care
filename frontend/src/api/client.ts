@@ -49,8 +49,8 @@ export async function apiDownload(path: string): Promise<{ blob: Blob; filename:
   return { blob: await res.blob(), filename }
 }
 
-/** A write: sends the CSRF token Django checks on every signed-in POST, PATCH and DELETE. */
-function send<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: unknown): Promise<T> {
+/** A write: sends the CSRF token Django checks on every signed-in POST, PUT, PATCH and DELETE. */
+function send<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, data?: unknown): Promise<T> {
   const headers = new Headers({ 'Content-Type': 'application/json' })
   const token = csrfToken()
   if (token) headers.set('X-CSRFToken', token)
@@ -59,6 +59,10 @@ function send<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: unkno
 
 export function apiPost<T>(path: string, data: unknown): Promise<T> {
   return send<T>('POST', path, data)
+}
+
+export function apiPut<T>(path: string, data: unknown): Promise<T> {
+  return send<T>('PUT', path, data)
 }
 
 export function apiPatch<T>(path: string, data: unknown): Promise<T> {

@@ -1,0 +1,385 @@
+/* The public network pages (B19): the city snapshot, the hospital directory, how it works, one hospital. */
+
+.muted {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Emergency status line ─────────────────────────────── */
+
+.erLine {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.wait {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Snapshot ──────────────────────────────────────────── */
+
+.snapshot {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  animation: rise var(--duration) var(--ease-out) both;
+}
+
+.stat:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.stat:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.stat:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.statIcon {
+  width: 22px;
+  height: 22px;
+  margin-bottom: var(--space-2);
+  color: var(--accent);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.statOf {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0;
+}
+
+.statLabel {
+  color: var(--ink-muted);
+}
+
+.statNote {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.levelGroup {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.levelTitle {
+  font-size: var(--text-lg);
+}
+
+.levelList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.levelList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+  border-bottom: 1px solid var(--rule);
+}
+
+.levelList li:last-child {
+  border-bottom: 0;
+}
+
+.bloodList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* Each group is a small tile; four to a row where there's room. */
+.bloodList li,
+.bloodList li:last-child {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+
+@media (min-width: 30rem) {
+  .bloodList {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.group {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.updated {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Directory ─────────────────────────────────────────── */
+
+.directory {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.directoryBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.locate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.locate:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.locate:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--duration) var(--ease-out),
+    box-shadow var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out);
+}
+
+.card:hover,
+.card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--rule));
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cardTitle {
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+/* The whole card is the link's target; the name stays the accessible link text. */
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.cardLink:focus-visible {
+  outline: none;
+}
+
+.card:has(.cardLink:focus-visible) {
+  outline: 3px solid var(--focus, var(--accent));
+  outline-offset: 2px;
+}
+
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-critical) 10%, transparent);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.area {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.distance {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.cardMore {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.card:hover .cardMore svg {
+  transform: translateX(3px);
+}
+
+.cardMore svg {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+/* ── How it works ──────────────────────────────────────── */
+
+.audiences {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audience {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.audienceIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.audienceTitle {
+  font-size: var(--text-xl);
+}
+
+.points {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.1em;
+  color: var(--ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat {
+    animation: none;
+  }
+
+  .card:hover,
+  .card:focus-within {
+    transform: none;
+  }
+}

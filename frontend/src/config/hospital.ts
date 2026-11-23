@@ -1,7 +1,8 @@
 /**
  * The site's name, branding and front-door contact details. CityCare is a network that hospitals join, so the brand is
  * the network's, not any one hospital's; each hospital's own name comes from the API. A deployment for another network
- * edits this file. The contact details below are the fictional demo front door that `seed_demo` creates.
+ * edits this file. The contact details below are the network's own (fictional) help desk and office; each hospital's
+ * own contacts come from the API (B19).
  */
 export const hospital = {
   name: 'CityCare',
@@ -9,7 +10,6 @@ export const hospital = {
   emergencyNumber: '1122',
   mainPhone: '(021) 3400 0000',
   address: 'Plot 14, Shahrah-e-Faisal, Karachi',
-  visitingHours: '11:00–13:00 and 17:00–20:00 daily',
   /** Wards and bed types at or above this occupancy (%) are flagged on the bed board and overview. */
   occupancyAlertPercent: 90,
   /** Brand colour: the logo, primary buttons and the active line. White text sits on it, so keep it dark enough
