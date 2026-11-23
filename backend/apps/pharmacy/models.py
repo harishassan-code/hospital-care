@@ -24,7 +24,13 @@ class Medicine(models.Model):
 
 
 class Batch(models.Model):
+    """Stock of one medicine at one hospital (#123). The medicine list (the formulary) is shared by the
+    network; each hospital holds its own batches."""
+
     medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE, related_name="batches")
+    hospital = models.ForeignKey(
+        "hospitals.Hospital", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
     number = models.CharField(max_length=40)
     expires_on = models.DateField()
     quantity = models.PositiveIntegerField()
@@ -33,7 +39,10 @@ class Batch(models.Model):
         ordering = ["expires_on"]
         verbose_name_plural = "batches"
         constraints = [
-            models.UniqueConstraint(fields=["medicine", "number"], name="pharmacy_batch_unique_per_medicine")
+            # A lot can be at two hospitals: a batch number is unique per medicine per hospital.
+            models.UniqueConstraint(
+                fields=["hospital", "medicine", "number"], name="pharmacy_batch_unique_per_hospital"
+            )
         ]
 
     def __str__(self):

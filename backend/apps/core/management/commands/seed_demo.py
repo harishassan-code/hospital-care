@@ -650,7 +650,8 @@ class Command(BaseCommand):
             # Own random stream, so adding donors doesn't change any of the data seeded before Sprint 3.
             self.seed_donors(random.Random(seed * 1000), now, main)
         if not Medicine.objects.exists():
-            self.seed_pharmacy(now)
+            self.seed_pharmacy(now, hospitals)
+        Batch.objects.filter(hospital=None).update(hospital=main)  # stock seeded before #123
         if not DoctorShift.objects.exists():
             DoctorShift.objects.bulk_create(
                 DoctorShift(name=n, department=d, start=time.fromisoformat(s), end=time.fromisoformat(e))
@@ -1020,8 +1021,11 @@ class Command(BaseCommand):
             for room, days, start, end, procedure, surgeon, initials in OR_BOOKINGS
         )
 
-    def seed_pharmacy(self, now):
+    def seed_pharmacy(self, now, hospitals):
+        """The shared formulary, and each hospital's own stock of it (#123): the first hospital gets the
+        batches as listed; each partner gets the same medicines in its own lots, amounts and expiry dates."""
         today: date = timezone.localdate(now)
+        main, partners = hospitals[0], hospitals[1:]
         for (
             code,
             name,
@@ -1050,6 +1054,23 @@ class Command(BaseCommand):
                 controlled=cd,
             )
             Batch.objects.bulk_create(
-                Batch(medicine=medicine, number=n, expires_on=today + timedelta(days=d), quantity=q)
+                Batch(
+                    medicine=medicine,
+                    hospital=main,
+                    number=n,
+                    expires_on=today + timedelta(days=d),
+                    quantity=q,
+                )
+                for n, d, q in batches
+            )
+            Batch.objects.bulk_create(
+                Batch(
+                    medicine=medicine,
+                    hospital=partner,
+                    number=f"{n}-H{index}",
+                    expires_on=today + timedelta(days=d + 9 * index),
+                    quantity=max(1, round(q * (0.5 + 0.2 * (index % 3)))),
+                )
+                for index, partner in enumerate(partners, start=1)
                 for n, d, q in batches
             )

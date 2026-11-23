@@ -80,7 +80,7 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 | OperatingRoomScheduleView | GET `/api/operating-rooms/schedule/` | table: operatingRooms | own hospital, in service | OK | OK |
 | OrBookingListView | POST `/api/operating-rooms/bookings/` | table: orBookings (edit) | service may_change on the room (404) | OK | OK |
 | OrBookingCancelView | POST `/api/operating-rooms/bookings/<id>/cancel/` | table: orBookings (edit) | service may_change (404); surgeons cancel only their own (403) | OK | OK |
-| StockView | GET `/api/pharmacy/stock/` | table: pharmacy | none; `Medicine` and `Batch` have no hospital field | F7 | Open: decision Q9, follow-up [#123](https://github.com/harishassan-code/hospital-care/issues/123) |
+| StockView | GET `/api/pharmacy/stock/` | table: pharmacy | own_hospital on batches; the formulary is shared | F7 | Fixed (#123): batches per hospital |
 | TransferListView | GET/POST `/api/transfers/` | table: transfers | GET visible_to; POST own_hospital and service may_change | OK | OK |
 | TransferDetailView | GET `/api/transfers/<id>/` | table: transfers | visible_to (404) | OK | OK |
 | TransferActionView | POST `/api/transfers/<id>/actions/` | table: transfers (edit) | visible_to (404); may_act per move (403) | OK | OK |
@@ -131,9 +131,11 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 - **F6 (decision Q7), fixed.** The Django admin at `/admin/` was routed on staging, and the demo `admin@` superuser's
   password is public in `docs/setup/deployment.md`. Now `/admin/` is routed only when `DJANGO_ADMIN_ENABLED=true`, which
   defaults to on under DEBUG and off otherwise. Render sets it to `false`. Tests: `apps/core/tests/test_admin_route.py`.
-- **F7 (info), open: follow-up.** Pharmacy stock has no hospital scope, because `Medicine` and `Batch` have no hospital
-  field. The catalogue is network-wide for anyone who can view pharmacy. Left unchanged, pending confirmation that this
-  is intended (Q9). Follow-up: [#123](https://github.com/harishassan-code/hospital-care/issues/123).
+- **F7 (info), fixed (23 Nov, #123).** Pharmacy stock had no hospital scope, because `Medicine` and `Batch` had no
+  hospital field, so anyone who could view pharmacy saw the whole network's batches. Now each `Batch` belongs to a
+  hospital and the stock view filters batches with `own_hospital`; the medicine list (the formulary) stays shared.
+  Migration `pharmacy/0002` gives batches from before the change to the first hospital registered (the one the
+  system then served), and `seed_demo` gives every hospital its own stock. Tests in `apps/pharmacy/tests/test_stock.py`.
 - **F8 (low), fixed.** With DEBUG off and no `DJANGO_SECRET_KEY`, the app started with the key from the code. Now it
   refuses to start, and the error names the variable. Tests: `apps/core/tests/test_deploy_settings.py`.
 - **F9 (info), not changed.** Some GET requests write: the case list, detail and candidates, the reservation and
