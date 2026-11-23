@@ -32,7 +32,7 @@ until the receiving hospital confirms delivery.
 | Release plan, Sprints 1–9 | 233 of 250 story points closed by 22 Nov; the 17 left are hardening, staging and this report | [burndown](charts/burndown.csv) |
 | Stretch goals | All 22 points delivered: specialists (#61, #62), patient transfer (#63–#65), reports (#66, #67) | [velocity table](../../scrum/timeline.md#velocity-check) |
 | MVP acceptance criteria (proposal §23) | All 11 covered by the end-to-end browser test; criteria 2 and 4 partly, with the rest in unit tests | [MVP scenario](../../testing/mvp-scenario.md) |
-| Automated tests | 1,863 backend tests (10 more run only on PostgreSQL, in CI), 741 frontend tests, 1 end-to-end scenario | section 4 |
+| Automated tests | 1,871 backend tests (10 more run only on PostgreSQL, in CI), 747 frontend tests, 1 end-to-end scenario | section 4 |
 | Candidate search speed | p95 about 26 ms on PostgreSQL, 50-hospital network | [load test](../../testing/search-load-test.md) |
 | Security | All 66 API routes reviewed; 11 of 12 findings fixed, 1 kept by design | [security review](../../testing/security-review.md) |
 | Staging | Configured, not yet deployed (#69). Rehearsed locally with its production settings: the full scenario passes | [rehearsal](../../testing/mvp-scenario.md#against-production-settings-staging-rehearsal-22-nov) |
@@ -185,9 +185,9 @@ Other differences, from the repository's history:
 
 | Suite | What it covers | Size |
 |---|---|---|
-| Backend (pytest) | Services, API, permissions for every route, state machines, seed data | 1,863 tests on SQLite; 10 more need PostgreSQL and run in CI |
+| Backend (pytest) | Services, API, permissions for every route, state machines, seed data | 1,871 tests on SQLite; 10 more need PostgreSQL and run in CI |
 | Concurrency (pytest, PostgreSQL) | Two reservations, allocations or transfers racing for the same unit | In the 10 above |
-| Frontend (Vitest) | Pages, components, the API client and the access table, against a mock of the real API shape | 741 tests |
+| Frontend (Vitest) | Pages, components, the API client and the access table, against a mock of the real API shape | 747 tests |
 | End-to-end (Playwright) | The MVP acceptance scenario: three hospitals, a critical blood request, local holds, ranked sources, a transfer through delivery, allocation, closure, and the history in the audit log | 1 scenario, 12 steps |
 
 The end-to-end scenario maps each step to the proposal's §23 criteria, in
