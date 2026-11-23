@@ -38,6 +38,8 @@ The bolt's two criteria are kept and refined below.
 - [x] `/api/health/` is exempt from the SSL redirect, so Render's health check still passes.
 - [x] CI runs the same `check --deploy` command with a dummy key, so a regression fails the build.
 - [ ] On staging, `check --deploy` shows no issues. The output is recorded in the operations notes.
+      *(23 Nov: Render's build now runs it on every staging deploy (`render.yaml`), so the first deploy shows the result;
+      copy it into the operations notes, then tick this.)*
 
 ### Permission review (bolt: permission review notes)
 

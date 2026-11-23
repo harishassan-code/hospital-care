@@ -99,6 +99,11 @@ DJANGO_DEBUG=false DJANGO_SECRET_KEY=$(python -c "import secrets; print(secrets.
 It should print `System check identified no issues`. CI runs the same command on every push, and
 `apps/core/tests/test_deploy_settings.py` checks the settings too.
 
+**On staging the build runs it too** (`render.yaml`, first step after installing packages), with staging's real
+settings: a deploy that would be unsafe fails with the reason in the build log instead of going live. For the record
+(B13, #58), copy the line `System check identified no issues (1 silenced).` from the first successful deploy's build
+log into the operations notes.
+
 ### Sign-in and sign-up limits (B13)
 Sign-in and sign-up each allow a number of requests per client address per period. The defaults are 30 per minute for
 sign-in (`DJANGO_LOGIN_THROTTLE`) and 30 per hour for sign-up (`DJANGO_SIGNUP_THROTTLE`). Write a rate as `<count>/<period>`
