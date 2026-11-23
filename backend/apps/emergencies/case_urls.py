@@ -3,11 +3,14 @@ from django.urls import path
 from . import views
 from .department_views import DepartmentStatusView
 from .patient_transfer_views import CasePatientTransferView
+from .queue_views import QueueActionView, QueueView
 
 urlpatterns = [
     path("", views.CaseListView.as_view(), name="emergency-cases"),
     path("feed/", views.EmergencyFeedView.as_view(), name="emergency-feed"),
     path("department/", DepartmentStatusView.as_view(), name="emergency-department"),
+    path("queue/", QueueView.as_view(), name="emergency-queue"),
+    path("queue/<int:pk>/actions/", QueueActionView.as_view(), name="emergency-queue-action"),
     path("<str:reference>/", views.CaseDetailView.as_view(), name="emergency-case"),
     path("<str:reference>/actions/", views.CaseActionView.as_view(), name="emergency-case-action"),
     path("<str:reference>/candidates/", views.CaseCandidatesView.as_view(), name="emergency-case-candidates"),

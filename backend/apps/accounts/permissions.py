@@ -30,6 +30,9 @@ ACCESS: dict[str, dict[str, str]] = {
         "audit": VIEW,
         "reports": VIEW,  # operational reports and their export (B18, #66, #67); "management" is the admin
         "simulation": EDIT,  # the city clock and scenarios (B21): only the admin without a hospital, below
+        "metrics": VIEW,  # the hourly figures behind the trend charts (B22)
+        "emergencyDepartment": EDIT,  # the queue and its actions (B22)
+        "staffing": EDIT,  # who is on duty, against the rota (B22)
     },
     Role.DOCTOR: {
         "overview": VIEW,
@@ -45,6 +48,9 @@ ACCESS: dict[str, dict[str, str]] = {
         "orBookings": EDIT,  # surgeons book their own slots; the room registry stays admin/nurse
         "transfers": EDIT,  # who may approve or receive is narrowed per move in apps.transfers.services
         "ambulances": VIEW,
+        "metrics": VIEW,
+        "emergencyDepartment": EDIT,
+        "staffing": VIEW,
     },
     Role.NURSE: {
         "overview": VIEW,
@@ -59,6 +65,9 @@ ACCESS: dict[str, dict[str, str]] = {
         "orBookings": EDIT,
         "transfers": EDIT,
         "ambulances": EDIT,
+        "metrics": VIEW,
+        "emergencyDepartment": EDIT,
+        "staffing": EDIT,  # the nurse in charge covers gaps
     },
     Role.BLOOD_BANK: {
         "overview": VIEW,
@@ -69,6 +78,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "hospitals": VIEW,
         "specialists": VIEW,
         "transfers": EDIT,
+        "metrics": VIEW,
     },
     Role.PHARMACIST: {
         "overview": VIEW,
@@ -77,6 +87,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "pharmacy": EDIT,
         "hospitals": VIEW,
         "specialists": VIEW,
+        "metrics": VIEW,
     },
     Role.PATIENT: {},
 }

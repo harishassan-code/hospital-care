@@ -25,6 +25,7 @@ import { useStaff } from '../../features/staff/staffContext'
 import { useLoad } from '../../lib/useLoad'
 import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
+import { OperatingRoomsCharts } from '../../features/charts/PageCharts'
 
 type CapabilityFilter = 'all' | OrCapability
 type StatusFilter = 'all' | OrStatus
@@ -162,6 +163,7 @@ export default function OperatingRoomsPage() {
           </div>
         )}
       </Panel>
+      <OperatingRoomsCharts />
     </div>
   )
 }

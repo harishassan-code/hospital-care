@@ -27,6 +27,8 @@ import PharmacyPage from './pages/staff/PharmacyPage'
 import PlannedPage from './pages/staff/PlannedPage'
 import ReportsPage from './pages/staff/ReportsPage'
 import SimulationPage from './pages/staff/SimulationPage'
+import EmergencyDepartmentPage from './pages/staff/EmergencyDepartmentPage'
+import StaffingPage from './pages/staff/StaffingPage'
 import { CityTicker } from './features/simulation/CityTicker'
 import SpecialistDetailPage from './pages/staff/SpecialistDetailPage'
 import SpecialistFormPage from './pages/staff/SpecialistFormPage'
@@ -45,6 +47,7 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="command-centre" element={<CommandCentrePage />} />
+        <Route path="emergency-department" element={<EmergencyDepartmentPage />} />
         <Route path="emergencies" element={<EmergenciesPage />} />
         <Route path="emergencies/feed" element={<EmergencyFeedPage />} />
         <Route path="emergencies/:reference" element={<EmergencyCasePage />} />
@@ -57,6 +60,7 @@ export function AppRoutes() {
         <Route path="ambulances" element={<AmbulancesPage />} />
         <Route path="operating-rooms" element={<OperatingRoomsPage />} />
         <Route path="operating-rooms/schedule" element={<OperatingRoomSchedulePage />} />
+        <Route path="staffing" element={<StaffingPage />} />
         <Route path="hospitals" element={<HospitalsPage />} />
         <Route path="hospitals/new" element={<HospitalFormPage />} />
         <Route path="hospitals/:id" element={<HospitalDetailPage />} />

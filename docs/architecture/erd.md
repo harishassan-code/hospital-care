@@ -148,6 +148,7 @@ erDiagram
         datetime left_at
         bigint bed_id FK "emergency bed"
         bigint ward_bed_id FK "if admitted"
+        bigint handled_by_id FK "a person acted on it (B22)"
     }
     SimulationState {
         int id PK "always 1"
@@ -184,6 +185,7 @@ erDiagram
         datetime ends_at
         datetime clocked_in_at "empty until it starts"
         datetime clocked_out_at
+        bool absent "marked by the nurse in charge (B22)"
     }
     MetricSnapshot {
         bigint id PK

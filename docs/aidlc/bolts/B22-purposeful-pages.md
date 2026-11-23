@@ -7,7 +7,7 @@ priority: high
 sprint: 9
 depends_on: B20, B21
 owner: harishassan-code
-status: Backlog
+status: In Progress
 ---
 
 # B22 · Every page with a purpose, an action and charts

@@ -18,12 +18,12 @@ from apps.emergencies.visits import TAG_LETTERS
 from apps.emergencies.wait import MEAN_TREATMENT_HOURS, capacity_per_hour, er_status_for, er_wait_minutes
 from apps.hospitals.models import BED_LIFECYCLE, Bed, BedStatus, BedType
 from apps.operating_rooms.models import OR_LIFECYCLE, OperatingRoom, OrBooking, OrBookingStatus, OrStatus
+from apps.resources.services import held_ids
 
 from . import blood, cases, staff
 from .ed import STAY_DAYS, inputs_for
 from .profiles import pick
 from .wards import ADMISSION_HOURS, _discharge_chance
-from .world import held_ids
 
 
 def _walk(machine, status, *actions):

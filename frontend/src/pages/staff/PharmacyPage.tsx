@@ -7,6 +7,7 @@ import pharmacyStyles from '../../features/pharmacy/Pharmacy.module.css'
 import { useStaff } from '../../features/staff/staffContext'
 import { StaffDataState } from './StaffDataState'
 import styles from './StaffPages.module.css'
+import { PharmacyCharts } from '../../features/charts/PageCharts'
 
 const FILTERS: { value: PharmacyFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -43,6 +44,7 @@ export default function PharmacyPage() {
           kept in the CD cabinet, every movement checked and signed by two people.
         </p>
       </Panel>
+      <PharmacyCharts medicines={data.medicines} />
     </div>
   )
 }

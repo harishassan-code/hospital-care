@@ -34,6 +34,19 @@ def clock_out(shift: Shift, *, at, actor) -> Shift:
     return shift
 
 
+@transaction.atomic
+def mark_absent(shift: Shift, *, actor) -> Shift:
+    """Nobody came for this shift (B22). Only before anyone clocked in."""
+    shift = Shift.objects.select_for_update().get(pk=shift.pk)
+    if shift.clocked_in_at is not None:
+        raise ValueError("This shift has started: they clocked in.")
+    if not shift.absent:
+        shift.absent = True
+        shift.save(update_fields=["absent"])
+        record(actor, "shift.marked_absent", shift, after={"absent": True})
+    return shift
+
+
 def on_duty(hospital, at=None, *, department: str | None = None) -> Counter:
     """How many doctors and nurses are clocked in at `hospital` now: {"doctor": n, "nurse": n}."""
     at = at or clock.now()

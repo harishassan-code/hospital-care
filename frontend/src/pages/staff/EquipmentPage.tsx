@@ -22,6 +22,7 @@ import { useStaff } from '../../features/staff/staffContext'
 import { useLoad } from '../../lib/useLoad'
 import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
+import { EquipmentCharts } from '../../features/charts/PageCharts'
 
 type TypeFilter = 'all' | EquipmentType
 type StatusFilter = 'all' | EquipmentStatus
@@ -145,6 +146,7 @@ export default function EquipmentPage() {
           </div>
         )}
       </Panel>
+      <EquipmentCharts />
     </div>
   )
 }

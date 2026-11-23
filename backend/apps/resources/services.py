@@ -20,6 +20,17 @@ def active_hold(resource: Resource):
     )
 
 
+def held_ids(model) -> set[int]:
+    """Ids of `model` rows held or allocated for a case: nobody but the reservation code moves them (B21)."""
+    from apps.matching.models import ACTIVE, Reservation
+
+    return set(
+        Reservation.objects.filter(
+            content_type=ContentType.objects.get_for_model(model), status__in=ACTIVE
+        ).values_list("object_id", flat=True)
+    )
+
+
 def change_status(
     resource: Resource, action: str, *, actor, reason: str = "", held_ok: bool = False
 ) -> Resource:

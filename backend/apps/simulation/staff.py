@@ -14,6 +14,8 @@ LOOK_BACK = timedelta(hours=2)  # a shift more than two hours past its start wit
 
 def clock_in_time(shift: Shift, tick):
     """When this shift's person clocks in, or None if they don't come."""
+    if shift.absent:  # marked absent by a person
+        return None
     rand = stable("shift", shift.pk, tick.state.seed)
     roll = rand.random()
     if roll < tick.absent:

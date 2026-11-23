@@ -19,6 +19,8 @@ import styles from '../../features/transfers/Transfers.module.css'
 import { useLoad } from '../../lib/useLoad'
 import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
+import { TransfersCharts } from '../../features/charts/PageCharts'
+import { useStaff } from '../../features/staff/staffContext'
 
 type StatusFilter = 'all' | TransferStatus
 
@@ -43,6 +45,7 @@ export default function TransfersPage() {
   const [params] = useSearchParams()
   const direction: TransferDirection = params.get('direction') === 'outgoing' ? 'outgoing' : 'incoming'
   const [status, setStatus] = useState<StatusFilter>('all')
+  const { data } = useStaff()
 
   return (
     <div className={pageStyles.stack}>
@@ -78,6 +81,7 @@ export default function TransfersPage() {
         </div>
         <TransferList key={`${direction}:${status}`} direction={direction} status={status} />
       </Panel>
+      {data?.transfers && <TransfersCharts incoming={data.transfers.incoming} outgoing={data.transfers.outgoing} />}
     </div>
   )
 }

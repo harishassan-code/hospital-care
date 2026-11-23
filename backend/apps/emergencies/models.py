@@ -364,6 +364,10 @@ class ErVisit(models.Model):
     ward_bed = models.ForeignKey(
         "hospitals.Bed", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # The person who last acted on the visit from the queue page (B22): the simulation leaves it to them.
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
 
     machine = VISIT_LIFECYCLE
 

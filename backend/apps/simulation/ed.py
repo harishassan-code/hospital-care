@@ -168,7 +168,7 @@ def step(site: Site, tick, start, end, held_beds: set[int]) -> None:
 
     # Treatment that has run its course ends: home, a ward, or another hospital.
     for visit in ErVisit.objects.filter(
-        hospital=hospital, status=VisitStatus.TREATING, due_at__lte=end
+        hospital=hospital, status=VisitStatus.TREATING, due_at__lte=end, handled_by=None
     ).select_related("bed"):
         roll = rand.random()
         admit = tick.admit.get(visit.triage, 0.1)
@@ -181,7 +181,9 @@ def step(site: Site, tick, start, end, held_beds: set[int]) -> None:
         tick.count(hospital, "er.departures")
 
     # Admitted patients still in the department go up when a ward bed frees.
-    for visit in ErVisit.objects.filter(hospital=hospital, status=VisitStatus.BOARDING).select_related("bed"):
+    for visit in ErVisit.objects.filter(
+        hospital=hospital, status=VisitStatus.BOARDING, handled_by=None
+    ).select_related("bed"):
         if _admit_or_board(site, visit, tick, held_beds, rand) != "admit":
             break
 

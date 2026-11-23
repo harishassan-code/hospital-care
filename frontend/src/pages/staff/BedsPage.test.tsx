@@ -79,7 +79,7 @@ describe('BedsPage', () => {
     const summary = screen.getByRole('region', { name: 'Occupancy by bed type' })
     const tiles = within(screen.getByRole('main'))
       .getAllByRole('listitem')
-      .filter((li) => !summary.contains(li))
+      .filter((li) => !summary.contains(li) && !li.closest('figure')) // not the summary or the charts (B22)
     expect(tiles.length).toBeGreaterThan(0)
     for (const tile of tiles) expect(within(tile).getByText('Free')).toBeInTheDocument()
   })
