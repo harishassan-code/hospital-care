@@ -254,7 +254,7 @@ From the record of Sprints 7 and 8, for the team to confirm at the Sprint 8 retr
 | 5 | 31 Oct – 6 Nov | [planning](../sprint-05/sprint-planning.md) | [review](../sprint-05/sprint-review.md) | [retro](../sprint-05/retrospective.md) |
 | 6 | 7–13 Nov | [planning](../sprint-06/sprint-planning.md) | [review](../sprint-06/sprint-review.md) | [retro](../sprint-06/retrospective.md) |
 | 7 | 14–20 Nov | [planning](../sprint-07/sprint-planning.md) | [review](../sprint-07/sprint-review.md) | [retro](../sprint-07/retrospective.md) |
-| 8 | 21–27 Nov | to add | to add after 27 Nov | to add after 27 Nov |
+| 8 | 21–27 Nov | [planning](../sprint-08/sprint-planning.md) | [review](../sprint-08/sprint-review.md) (prepared; filled in on 27 Nov) | [retro](../sprint-08/retrospective.md) (prepared; filled in on 27 Nov) |
 | 9 | 28 Nov – 4 Dec | to add | to add after 4 Dec | to add after 4 Dec |
 
 The Sprint 1–7 records were reconstructed from GitHub; fields GitHub doesn't hold (attendance, Product Owner
