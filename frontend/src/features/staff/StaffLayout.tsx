@@ -2,6 +2,7 @@ import { LogOut, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Logo } from '../../components/brand/Logo'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { hospital } from '../../config/hospital'
 import { CriticalBanners } from '../notifications/CriticalBanners'
 import { NotificationBell } from '../notifications/NotificationBell'
@@ -116,6 +117,7 @@ function TopBar({ title }: { title: string }) {
         <p className={styles.shift}>
           {`${shift.name} shift · ${shift.start}–${shift.end} · ${formatDuration(shift.minutesLeft)} left`}
         </p>
+        <ThemeToggle />
         <NotificationBell />
       </div>
     </header>

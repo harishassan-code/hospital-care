@@ -1,3 +1,4 @@
+import { ThemeToggle } from '../ui/ThemeToggle'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { hospital } from '../../config/hospital'
@@ -12,8 +13,8 @@ type AuthLayoutProps = {
 }
 
 /**
- * Dark sign band with a teal sign row; the teal floor line runs from the sign down the
- * left edge of the form card, so the eye "follows the line" into the form.
+ * A light band with the title on a brand-coloured line; the line runs from the title down the left edge of the
+ * form card, so the eye follows it into the form. The theme toggle sits beside the way back.
  */
 export function AuthLayout({ title, children, footer }: AuthLayoutProps) {
   return (
@@ -23,9 +24,12 @@ export function AuthLayout({ title, children, footer }: AuthLayoutProps) {
       </a>
       <header className={styles.band}>
         <div className={styles.column}>
-          <Link className={styles.back} to="/">
-            <span aria-hidden="true">←</span> {hospital.name}
-          </Link>
+          <div className={styles.topRow}>
+            <Link className={styles.back} to="/">
+              <span aria-hidden="true">←</span> {hospital.name}
+            </Link>
+            <ThemeToggle />
+          </div>
           <div className={styles.signRow}>
             <h1 className={styles.title}>{title}</h1>
           </div>

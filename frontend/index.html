@@ -8,6 +8,14 @@
     <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="CityCare: hospitals across the city sharing blood, beds, equipment and ambulances for emergencies." />
     <title>CityCare</title>
+    <script>
+      // The theme before first paint, by the rule in src/lib/theme.ts: the saved choice, else the device's setting.
+      try {
+        var saved = localStorage.getItem('citycare-theme')
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
