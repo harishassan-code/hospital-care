@@ -3,11 +3,12 @@
  * Components read colours, type, shape, depth and motion only from here.
  * --sign is the hospital's brand colour, set at runtime from src/config/hospital.ts: the logo, primary buttons and
  * the active line. --chrome is the sidebar and header: light, so the brand colour stays the one accent.
- * Dark mode follows the system setting: the colour tokens are redefined at the end of this file. Every text pairing
+ * Dark mode: the colour tokens are redefined at the end of this file for <html data-theme="dark">. The theme is the
+ * device's setting until the user picks one with the toggle (src/lib/theme.ts; index.html sets it before first paint). Every text pairing
  * meets WCAG AA (4.5:1), and field borders and focus rings meet 3:1, in both modes.
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Colour */
   --wall: #f4f6f9;
@@ -48,20 +49,21 @@
   --bed-out: #8d9a95;
 
   /* Type
-     Atkinson Hyperlegible Next, drawn by the Braille Institute for the most legible letters possible: I, l and 1, or
-     O and 0, can't be mistaken for each other, which matters where a misread unit number or dose is a clinical risk.
-     Headings and text use it; Atkinson Hyperlegible Mono sets unit numbers, bed labels and times. */
-  --font-display: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
-  --font-body: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
-  --font-mono: 'Atkinson Hyperlegible Mono Variable', 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+     Text: Inter, drawn for screens, with its alternate lowercase l (with a tail, cv05) and uppercase I (with serifs,
+     cv08) switched on in global.css, so I, l and 1 can't be mistaken for each other where a misread unit number or
+     dose is a clinical risk, without slashing the zero. Headings: Plus Jakarta Sans. Figures use Inter's tabular
+     digits, so columns of numbers line up without a monospace face. */
+  --font-display: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'InterVariable', system-ui, sans-serif;
+  --font-body: 'InterVariable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'InterVariable', 'Inter', system-ui, sans-serif;
 
-  --text-xs: 0.8125rem;
-  --text-sm: 0.9375rem;
-  --text-base: 1.0625rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.625rem;
-  --text-2xl: clamp(1.875rem, 3vw, 2.375rem);
-  --text-display: clamp(2.375rem, 5vw, 3.75rem);
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: clamp(1.375rem, 2vw, 1.625rem);
+  --text-display: clamp(2.125rem, 4vw, 3rem);
 
   /* Space */
   --space-1: 0.25rem;
@@ -89,47 +91,46 @@
   --gutter: 96px;
   --content-max: 1120px;
   --page-width: min(100% - 2 * var(--space-4), calc(var(--content-max) + var(--gutter)));
-  --tap: 44px;
+  --tap: 40px;
 }
 
 /*
  * Dark mode: navy surfaces with the same teal brand. Coloured fills get lighter, so text on them uses --surface.
  * The brand colour (--sign) is set inline at runtime and stays as it is; white text on it still meets AA.
  */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --wall: #0b1220;
-    --surface: #111a2b;
-    --surface-raised: #152036;
-    --ink: #e6edf7;
-    --ink-muted: #9aa8bf;
-    --rule: #22304a;
-    --field-border: #55698c;
-    --sign-muted: #93a3bc;
-    --accent: #5eead4;
-    --accent-soft: rgb(45 212 191 / 0.12);
-    --chrome: #0e1626;
-    --chrome-text: #e6edf7;
-    --chrome-muted: #93a3bc;
-    --chrome-border: #22304a;
-    --footer: #070c16;
-    --line-emergency: #ff8a8f;
-    --line-clinics: #8fb6ff;
-    --line-portal: #5eead4;
-    --focus: #8fb6ff;
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --wall: #0b1220;
+  --surface: #111a2b;
+  --surface-raised: #152036;
+  --ink: #e6edf7;
+  --ink-muted: #9aa8bf;
+  --rule: #22304a;
+  --field-border: #55698c;
+  --sign-muted: #93a3bc;
+  --accent: #5eead4;
+  --accent-soft: rgb(45 212 191 / 0.12);
+  --chrome: #0e1626;
+  --chrome-text: #e6edf7;
+  --chrome-muted: #93a3bc;
+  --chrome-border: #22304a;
+  --footer: #070c16;
+  --line-emergency: #ff8a8f;
+  --line-clinics: #8fb6ff;
+  --line-portal: #5eead4;
+  --focus: #8fb6ff;
 
-    --status-critical: #ff8a8f;
-    --status-warning: #f2c14e;
-    --status-ok: #6fd391;
+  --status-critical: #ff8a8f;
+  --status-warning: #f2c14e;
+  --status-ok: #6fd391;
 
-    --bed-occupied: #6f9ee8;
-    --bed-reserved: #de86bb;
-    --bed-cleaning: #e0a93a;
-    --bed-free: #5cbf80;
-    --bed-out: #8d9a95;
+  --bed-occupied: #6f9ee8;
+  --bed-reserved: #de86bb;
+  --bed-cleaning: #e0a93a;
+  --bed-free: #5cbf80;
+  --bed-out: #8d9a95;
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -18px rgb(0 0 0 / 0.8);
-    --shadow-lg: 0 24px 48px -24px rgb(0 0 0 / 0.8);
-  }
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -18px rgb(0 0 0 / 0.8);
+  --shadow-lg: 0 24px 48px -24px rgb(0 0 0 / 0.8);
 }

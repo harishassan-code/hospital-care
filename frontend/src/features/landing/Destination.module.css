@@ -12,7 +12,7 @@
   gap: var(--space-3);
   min-height: 3.5rem;
   font-size: var(--text-2xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* The line's terminus: a square plate the floor line runs into. */

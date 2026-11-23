@@ -16,8 +16,11 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.55;
+  line-height: 1.5;
   overflow-x: hidden;
+  /* Inter: l with a tail, I with serifs (tell I, l and 1 apart), tabular figures (numbers line up). */
+  font-feature-settings: 'cv05', 'cv08', 'tnum';
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -28,9 +31,9 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 p {
@@ -90,6 +93,19 @@ input {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Switching theme: colours cross-fade for a moment (lib/theme.ts adds the class), unless motion is reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-transition,
+  .theme-transition * {
+    transition:
+      background-color 300ms ease,
+      color 300ms ease,
+      border-color 300ms ease,
+      fill 300ms ease,
+      stroke 300ms ease !important;
+  }
 }
 
 /* Shared motion. Each is switched off below when the device asks for reduced motion. */

@@ -15,6 +15,13 @@
   padding-top: var(--space-4);
 }
 
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .back {
   display: inline-flex;
   align-items: center;
@@ -49,7 +56,7 @@
 
 .title {
   font-size: var(--text-2xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* ── Form track ────────────────────────────────────────── */
