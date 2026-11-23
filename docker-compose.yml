@@ -35,9 +35,14 @@ services:
       VITE_API_URL: http://localhost:8000/api
     ports:
       - "5173:5173"
+    # Only the source is mounted (for live reload). node_modules stays in the image, so `docker compose up --build`
+    # always brings in new packages. Mounting the whole folder needed an anonymous node_modules volume, which Docker
+    # keeps across rebuilds: after a dependency change the app couldn't find the new packages until it was removed.
+    # A change to package.json, tsconfig or vite.config.ts needs `--build`.
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
     depends_on:
       - backend
 

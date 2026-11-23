@@ -63,6 +63,9 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 docker compose up --build
 ```
 
+Keep `--build` after every `git pull`: it installs any new packages into the images. Your code under
+`frontend/src` and `backend/` is mounted, so edits reload live without a rebuild.
+
 - Frontend: http://localhost:5173
 - API: http://localhost:8000/api/health/
 - Django admin: http://localhost:8000/admin/ (create a user with
