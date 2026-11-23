@@ -13,6 +13,22 @@ def stock_to_first_hospital(apps, schema_editor):
         Batch.objects.filter(hospital__isnull=True).update(hospital=first)
 
 
+# The demo formulary was saved with an en dash and a degree sign mis-encoded (#81), so seeded databases show
+# "Amoxicillinâ€“clavulanate" and "2â€“8 Â°C". The seed is fixed; this repairs rows already seeded.
+MOJIBAKE = {"â€“": "–", "Â°": "°"}
+
+
+def repair_seeded_text(apps, schema_editor):
+    Medicine = apps.get_model("pharmacy", "Medicine")
+    for medicine in Medicine.objects.all():
+        name, location = medicine.name, medicine.location
+        for bad, good in MOJIBAKE.items():
+            name, location = name.replace(bad, good), location.replace(bad, good)
+        if (name, location) != (medicine.name, medicine.location):
+            medicine.name, medicine.location = name, location
+            medicine.save(update_fields=["name", "location"])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -37,6 +53,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.RunPython(stock_to_first_hospital, migrations.RunPython.noop),
+        migrations.RunPython(repair_seeded_text, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name="batch",
             constraint=models.UniqueConstraint(
