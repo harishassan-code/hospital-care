@@ -110,6 +110,36 @@ Proposed answers; the account owner confirms them at sign-off:
    free database small.
 5. **Alerts?** *Proposed:* only the three kinds above, rate-limited, so staff alerts stay meaningful.
 
+## Amendment at sign-off, 23 Nov
+
+The account owner approved this spec with two changes, which replace Q2 and add to the criteria above:
+
+1. **Scenarios, not scripts.** Nothing happens on a fixed schedule or with fixed numbers. Each rate (arrivals, triage
+   mix, length of stay, discharges, blood use and donation, theatre cancellations, staff absence, new emergencies)
+   comes from the active **scenario profile**, which gives it a range: the engine draws a fresh random value inside
+   that range on every tick. The bounds are the buffers: values never leave them, and capacity (beds, rooms, staff,
+   stock) caps what can happen, so a full department diverts ambulances the way a real one does. Profiles:
+   - **Regular day**: the everyday rhythm.
+   - **Flu season**: more arrivals, many respiratory, longer stays, more intensive care, more staff off sick.
+   - **Mass-casualty event**: switched on by the admin; for 1 to 3 hours, waves of trauma patients (mostly triage 1
+     and 2) arrive at the hospitals nearest a random incident site, with a surge in O-negative and O-positive blood use
+     and emergency theatre cases, then the city settles back to its season.
+   - **Slow day**: fewer arrivals and planned cases, like a public holiday.
+   Profiles and their ranges live in one settings module and `docs/product/simulation.md`.
+2. **City clock and time controls.** The app runs on a **city clock**: the real clock plus an offset, at a speed.
+   The **CityCare admin** (the admin with no hospital) gets a **Simulation** panel on the demo site to play in real
+   time, pause, slow down or speed up (½×, 1×, 2×, 5×, 10×, 60×), fast-forward by an hour, a day, a week or two weeks,
+   pick the scenario, set off a mass-casualty event, and see the latest events. Everything the app records and shows
+   (cases, beds, blood expiry, waits, rosters, "today", charts) uses the city clock, and the frontend reads the city
+   time from the API so screens agree. Sign-in sessions, sign-in limits and security headers keep the real clock, so
+   a fast-forward never signs anyone out. Audit entries keep the real time beside the city time, so the trail stays
+   truthful. While the clock isn't at real time, every signed-in page shows an indicator (for example "Simulated
+   time, 10×").
+   - A fast-forward simulates the last few hours event by event and earlier time hour by hour (stock, counts and the
+     history snapshots), in steps driven by the panel's polling, with a progress bar, so it fits Vercel's request
+     time limit.
+   - Only the CityCare admin can change the clock. Hospital admins and staff can't.
+
 ## Approval
 
-- [ ] Approved by: <name> on <date>
+- [x] Approved by: Haris Hassan (`harishassan-code`, account owner) on 2026-11-23, with the amendment above

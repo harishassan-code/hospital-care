@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Bed, Capability, Department, DoctorShift, Hospital, StorageLocation, Ward
+from .models import Bed, Capability, Department, Hospital, StorageLocation, Ward
 
 
 @admin.register(Capability)
@@ -49,9 +49,3 @@ class BedAdmin(admin.ModelAdmin):
     ]
     list_filter = ["hospital", "ward", "bed_type", "status", "isolation"]
     search_fields = ["label"]
-
-
-@admin.register(DoctorShift)
-class DoctorShiftAdmin(admin.ModelAdmin):
-    list_display = ["name", "department", "start", "end", "is_active"]
-    list_filter = ["department", "is_active"]

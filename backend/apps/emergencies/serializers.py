@@ -13,11 +13,13 @@ from apps.matching.scoring import FACTOR_LABELS, rank, strategy_for
 from apps.operating_rooms.models import OrCapability
 
 from .availability import local_availability
+from .department import MAX_WAIT_MINUTES, MAX_WAITING
 from .labels import hospital_match_data, need_label
 from .models import (
     PATIENT_TRANSFER_LIFECYCLE,
     REQUEST_LIFECYCLE,
     EmergencyRequest,
+    ErStatus,
     PatientTransfer,
     PatientTransferStatus,
     RequestItem,
@@ -536,3 +538,15 @@ class HospitalMatchSerializer(serializers.Serializer):
 
     def to_representation(self, match: HospitalMatch):
         return hospital_match_data(match)
+
+
+# ── Emergency department status (B19) ─────────────────────────────────────────────────────────────
+
+
+class DepartmentStatusSerializer(serializers.Serializer):
+    """Shape of `DepartmentStatus` in frontend/src/api/emergencies.ts, read and write."""
+
+    status = serializers.ChoiceField(choices=ErStatus.choices)
+    waitMinutes = serializers.IntegerField(source="wait_minutes", min_value=0, max_value=MAX_WAIT_MINUTES)
+    waitingCount = serializers.IntegerField(source="waiting_count", min_value=0, max_value=MAX_WAITING)
+    updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)

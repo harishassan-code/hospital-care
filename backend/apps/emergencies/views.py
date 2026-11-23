@@ -1,14 +1,10 @@
 from django.db.models import Exists, OuterRef, Prefetch
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission, own_hospital
-from apps.hospitals.models import DoctorShift
-from apps.hospitals.serializers import DoctorSerializer
 from apps.matching.candidates import candidates_for_case
 from apps.matching.models import Reservation
 from apps.matching.multi import match_hospitals
@@ -21,7 +17,7 @@ from apps.matching.reservations import (
 )
 from apps.resources.state_machine import TransitionNotAllowed
 
-from .models import EmergencyRequest, EmergencyStatus, RequestItem, RequestStatus, RequestStatusChange
+from .models import EmergencyRequest, RequestItem, RequestStatus, RequestStatusChange
 from .serializers import (
     CandidateItemSerializer,
     CaseActionSerializer,
@@ -51,37 +47,6 @@ def case_detail_queryset():
     """The list's queryset plus the timeline. Only the detail uses it, so the list stays light."""
     timeline = Prefetch("history", queryset=RequestStatusChange.objects.select_related("actor"))
     return case_queryset().prefetch_related(timeline)
-
-
-class PublicStatusView(APIView):
-    """GET /api/public/status/, no sign-in needed. Shape of `PublicStatus` in api/publicStatus.ts.
-
-    Doctors' names go only to signed-in hospital staff (#122, B13 finding F5): staff names on a public page
-    need the staff's consent, so the public sees each shift's department and hours with `name: null`. The
-    session is read (never required) to tell the two apart; a GET needs no CSRF token."""
-
-    permission_classes = [AllowAny]
-    authentication_classes = [SessionAuthentication]
-
-    def get(self, request):
-        er = EmergencyStatus.current()
-        doctors = DoctorShift.objects.filter(is_active=True)
-        staff = request.user.is_authenticated and request.user.is_hospital_staff
-        rows = DoctorSerializer(doctors, many=True).data
-        if not staff:
-            rows = [{**row, "name": None} for row in rows]
-        return Response(
-            {
-                "updatedAt": er.updated_at.isoformat(),
-                "emergency": {
-                    "status": er.status,
-                    "waitMinutes": er.wait_minutes,
-                    "waitingCount": er.waiting_count,
-                },
-                "namesShown": staff,
-                "doctors": rows,
-            }
-        )
 
 
 class CaseListView(APIView):

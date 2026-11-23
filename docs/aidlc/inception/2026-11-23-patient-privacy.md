@@ -77,6 +77,16 @@ Proposed answers; the account owner confirms them at sign-off:
    patient-level details only at a hospital they belong to. Today such an admin sees everything; this narrows it,
    and the command centre keeps working because it uses counts.
 
+## Decisions at sign-off, 23 Nov
+
+- **Q1 (wording):** the account owner decided that the app states it is HIPAA compliant, and that the practices are
+  built in regardless. The privacy page lists each HIPAA safeguard and where the app implements it, so the statement
+  can be checked. (A formal compliance claim for real patients would also need a documented risk analysis and business
+  associate agreements with the hosting providers; that is outside a student project and noted in the privacy review.)
+- **Q3 (admins):** confirmed and widened by the account owner. An admin who runs one hospital (an owner or manager)
+  sees patient information only for that hospital, never another hospital's. The CityCare admin (no hospital) sees
+  counts and statuses across the network, and no patient-level details.
+
 ## Approval
 
-- [ ] Approved by: <name> on <date>
+- [x] Approved by: Haris Hassan (`harishassan-code`, account owner) on 2026-11-23, with the decisions above

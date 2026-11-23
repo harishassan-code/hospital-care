@@ -16,9 +16,19 @@ from apps.specialists.models import Specialist
 pytestmark = pytest.mark.django_db
 
 
-# The only endpoints anyone may call without signing in (B13, F5 and F10): the CSRF cookie, sign-in, sign-out,
-# sign-up, Render's health check and the public status board. A new AllowAny route is added here on purpose.
-PUBLIC_ENDPOINTS = {"auth-csrf", "auth-login", "auth-logout", "auth-signup", "public-status", "health"}
+# The only endpoints anyone may call without signing in (B13, F5 and F10; B19): the CSRF cookie, sign-in,
+# sign-out, sign-up, the health check and the public network pages. A new AllowAny route is added here on
+# purpose.
+PUBLIC_ENDPOINTS = {
+    "auth-csrf",
+    "auth-login",
+    "auth-logout",
+    "auth-signup",
+    "health",
+    "public-network",
+    "public-hospitals",
+    "public-hospital",
+}
 
 
 def api_views(patterns=None, prefix=""):

@@ -398,9 +398,9 @@ class TestOnCallWindows:
         assert res.status_code == 404
 
 
-def test_the_public_page_does_not_list_staff_specialists(api, make_hospital):
+def test_the_public_hospital_page_shows_specialties_but_not_names(api, make_hospital):
     seaview = make_hospital("Seaview")
     window(make(seaview, "Dr. Staff Only"), hours(-1), hours(2))
-    res = api.get(reverse("public-status"))
+    res = api.get(reverse("public-hospital", args=[seaview.pk]))
     assert res.status_code == 200
     assert "Staff Only" not in res.content.decode()

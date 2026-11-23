@@ -32,7 +32,7 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 | [B10](B10-audit-search-export.md) | Audit search and export | [#56](https://github.com/harishassan-code/hospital-care/issues/56) | 3 | medium | – | codewithalphadotcom | ✅ Done |
 | [B11](B11-donors-page.md) | Donors page for the existing donor API | [#20](https://github.com/harishassan-code/hospital-care/issues/20), [#21](https://github.com/harishassan-code/hospital-care/issues/21), [#22](https://github.com/harishassan-code/hospital-care/issues/22) | 5 | medium | – | codewithalphadotcom | ✅ Done |
 
-## Sprint 9 (41 pts)
+## Sprint 9 (46 pts)
 
 | Bolt | Title | Issues | Pts | Priority | Depends on | Owner | Status |
 |---|---|---|---|---|---|---|---|
@@ -42,7 +42,7 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 | [B15](B15-final-report.md) | Final report and demo presentation | [#60](https://github.com/harishassan-code/hospital-care/issues/60) | 3 | highest | B00 | harishassan-code | 🔵 In Review |
 | [B19](B19-network-home.md) | CityCare network home and public hospital pages | – | 5 | highest | – | harishassan-code | 🟡 In Progress |
 | [B20](B20-realistic-data.md) | Realistic city network data with history | – | 3 | high | B19 | harishassan-code | 🟡 In Progress |
-| [B21](B21-live-simulation.md) | Live city simulation on staging | – | 8 | high | B20 | harishassan-code | ⚪ Backlog |
+| [B21](B21-live-simulation.md) | Live city simulation with time controls | – | 13 | high | B20 | harishassan-code | ⚪ Backlog |
 | [B22](B22-purposeful-pages.md) | Every page with a purpose, an action and charts | – | 8 | high | B20, B21 | harishassan-code | ⚪ Backlog |
 | [B23](B23-patient-privacy.md) | Patient privacy safeguards (HIPAA principles) | – | 3 | high | – | harishassan-code | ⚪ Backlog |
 

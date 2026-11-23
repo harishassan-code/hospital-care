@@ -1,8 +1,8 @@
 ---
 id: B21
-title: Live city simulation on staging
+title: Live city simulation with time controls
 issues: -
-points: 8
+points: 13
 priority: high
 sprint: 9
 depends_on: B20
@@ -10,7 +10,7 @@ owner: harishassan-code
 status: Backlog
 ---
 
-# B21 · Live city simulation on staging
+# B21 · Live city simulation with time controls
 
 **Goal:** On staging the network changes by itself the way a real city would: patients arrive and leave, beds turn
 over, blood is used and donated, operating rooms cycle, staff clock in and out, emergencies and delays happen, and
