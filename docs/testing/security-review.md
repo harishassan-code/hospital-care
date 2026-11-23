@@ -202,9 +202,10 @@ With `DJANGO_DEBUG=false`, `check --deploy --fail-level WARNING` is clean with a
   each user its own sign-in bucket (decision 2).
 - **Postgres run of the load test: done (22 Nov).** `docs/testing/search-load-test.md` records PostgreSQL 16: p95 about
   26 ms at concurrency 1 and 108 to 139 ms at concurrency 5, with a same-machine SQLite comparison.
-- **Follow-up issues: filed (22 Nov).** F5 is [#122](https://github.com/harishassan-code/hospital-care/issues/122) and F7
-  is [#123](https://github.com/harishassan-code/hospital-care/issues/123), each with the options for the Product Owner.
-  The frontend copy for a throttled sign-in (decision 4) is fixed instead.
+- **Follow-up issues: filed (22 Nov), fixed (23 Nov).** F5 was [#122](https://github.com/harishassan-code/hospital-care/issues/122)
+  (names now only for signed-in staff) and F7 [#123](https://github.com/harishassan-code/hospital-care/issues/123)
+  (stock now per hospital); the Product Owner can still ask for another option. The frontend copy for a throttled
+  sign-in (decision 4) was fixed on 22 Nov.
 - **Decisions for the Product Owner:** decision 1 (the Vercel `includeSubDomains` header, which the spec's non-goals
   do not allow for hosts other than the API); decision 3 (the throttle rates); and when to raise HSTS to one year
   (spec Q6 says after a week of HTTPS-only staging).

@@ -33,11 +33,20 @@ WCAG formula when the palette was chosen). White on the brand teal is 5.96:1.
 
 ## Type
 
-**Atkinson Hyperlegible Next** for headings and text, and **Atkinson Hyperlegible Mono** for unit numbers, bed labels and
-times (both SIL Open Font License, self-hosted through `@fontsource-variable`). The Braille Institute drew them so that
-letters that are easily confused are not: I, l and 1; O and 0 (the zero has a slash); rn and m. In a hospital a
-misread blood-unit number, bed label or dose is a clinical risk, so legibility comes first. Headings are weight 800 with
-slightly tight tracking; nothing is set in capitals.
+**Inter** for text and **Plus Jakarta Sans** for headings (both SIL Open Font License, self-hosted: Inter from
+`inter-ui`, whose files keep Inter's optional letters, and Plus Jakarta Sans from `@fontsource-variable`). In a hospital
+a misread blood-unit number, bed label or dose is a clinical risk, so `global.css` switches on Inter's lowercase l with
+a tail (`cv05`) and serifed capital I (`cv08`): I, l and 1 can't be confused, and the zero stays a plain oval. Figures
+are tabular (`tnum`), so columns of numbers line up without a monospace face. Text is 15 px, headings weight 700 with
+slightly tight tracking, and nothing is set in capitals. (22 to 23 Nov the app used Atkinson Hyperlegible; its slashed
+zeros and wide letters read as heavy, so it was replaced.)
+
+## Light and dark
+
+The theme follows the device's setting until the user picks one with the sun/moon toggle (staff top bar, public
+header, sign-in pages); the choice is then kept in that browser ([`lib/theme.ts`](../../frontend/src/lib/theme.ts)).
+`index.html` applies the same rule before first paint, so there is no flash of the wrong theme, and colours cross-fade
+for 300 ms on a switch. Dark tokens apply to `<html data-theme="dark">`.
 
 ## Logo and imagery
 
@@ -59,7 +68,12 @@ Small and quick, and all of it is off when the device asks for reduced motion (`
 - overview tiles lift under the pointer, and their numbers count up the first time they show
   ([`lib/useCountUp.ts`](../../frontend/src/lib/useCountUp.ts); tabular digits, so nothing jitters);
 - on the home page the city-network routes draw themselves in and the receiving hospital pulses; the coloured lines
-  from the sign to each section draw down, as before.
+  from the sign to each section draw down, as before; the sign's rows come in one after another, and where the browser
+  supports scroll-driven animation each section fades up as it comes into view;
+- page sections, overview tiles and bed tiles rise in one after another; critical banners slide down; the unread
+  count pops; the bell's panel grows from the bell; error messages slide in; the active menu item's line grows;
+- ranked hospitals and bed tiles lift under the pointer, table rows are tinted under it, and loading shows shimmering
+  bars.
 
 ## What stayed
 

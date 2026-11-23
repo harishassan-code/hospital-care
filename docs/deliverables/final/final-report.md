@@ -34,7 +34,7 @@ until the receiving hospital confirms delivery.
 | MVP acceptance criteria (proposal §23) | All 11 covered by the end-to-end browser test; criteria 2 and 4 partly, with the rest in unit tests | [MVP scenario](../../testing/mvp-scenario.md) |
 | Automated tests | 1,863 backend tests (10 more run only on PostgreSQL, in CI), 741 frontend tests, 1 end-to-end scenario | section 4 |
 | Candidate search speed | p95 about 26 ms on PostgreSQL, 50-hospital network | [load test](../../testing/search-load-test.md) |
-| Security | All 66 API routes reviewed; 9 of 12 findings fixed, 1 kept by design, 2 for the Product Owner (#122, #123) | [security review](../../testing/security-review.md) |
+| Security | All 66 API routes reviewed; 11 of 12 findings fixed, 1 kept by design | [security review](../../testing/security-review.md) |
 | Staging | Configured, not yet deployed (#69). Rehearsed locally with its production settings: the full scenario passes | [rehearsal](../../testing/mvp-scenario.md#against-production-settings-staging-rehearsal-22-nov) |
 
 ## 2. Product
@@ -92,7 +92,8 @@ change follows are in [AGENTS.md](../../../AGENTS.md). The ones that shaped the 
 ### 2.5 Screenshots
 
 Taken from a local run of the seeded app after the full MVP scenario, at 1366 × 820, in the "Clinical Calm" design
-adopted on 22 Nov (light surfaces, one teal brand colour, Atkinson Hyperlegible type chosen for legibility;
+adopted on 22 Nov and refined on 23 Nov (light surfaces, one teal brand colour, Inter and Plus Jakarta Sans, a
+light/dark toggle;
 [design system](../../architecture/design-system.md)). Staging screenshots replace
 them once staging is deployed (#69).
 
@@ -109,8 +110,8 @@ All stretch stories in the backlog were built. What wasn't built is what the WBS
 but the backlog never scheduled: a password reset flow, email notifications, required-by times on requests, a city
 map, ambulance crews and auto-dispatch, OR rescheduling and others. They are listed in priority order, with today's
 state of each, in the [handover note and roadmap](../handover-and-roadmap.md#4-future-roadmap-wbsfbs-items-not-built).
-Two security findings need a Product Owner decision before any real hospital joins: doctors' names on the public
-page (#122) and pharmacy stock without a hospital scope (#123).
+The two security findings left for the Product Owner were closed on 23 Nov: the public page no longer shows doctors'
+names to anyone signed out (#122), and pharmacy stock is per hospital (#123).
 
 ## 3. Process
 
@@ -205,12 +206,13 @@ Every push and pull request runs four jobs ([ci.yml](../../../.github/workflows/
 ### 4.3 Security
 
 The review in [security-review.md](../../testing/security-review.md) lists every one of the 66 API routes with its
-permission and hospital scope, and two tests walk every route to keep it that way. Nine of its twelve findings are
+permission and hospital scope, and two tests walk every route to keep it that way. Eleven of its twelve findings are
 fixed: donors and records at other hospitals now answer 404 rather than leaking their existence, sign-in and sign-up
 are rate-limited per address, the server refuses to start without a secret key, HTTPS and HSTS are on in production,
 the Django admin is off on staging, and staff without a hospital no longer see every hospital's records (with a way
 to give them one; found by the [functional sweep](../../testing/functional-sweep.md)). One finding is kept by design
-(some reads also run housekeeping), and two need a Product Owner decision (#122, #123). The deploy check on staging
+(some reads also run housekeeping). Doctors' names are shown only to signed-in staff (#122) and pharmacy
+stock is per hospital (#123). The deploy check on staging
 waits for #69.
 
 ### 4.4 Performance
