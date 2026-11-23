@@ -25,13 +25,13 @@ hospital.
 
 | # | Who | Do | The audience sees | Say |
 |---|---|---|---|---|
-| 1 | *(anyone)* | Open the site, signed out | The public home page with **API status: up** and the emergency department status | "Anyone can see whether the ER is accepting patients, without an account." |
+| 1 | *(anyone)* | Open the site, signed out. Choose **CityCare General Hospital** in the list | The network right now (departments accepting, the shortest wait, beds and blood as levels) and the ten member hospitals; then the hospital's own page with its emergency department and who is on duty | "Anyone can see which emergency departments are open and how long the wait is, across the city, without an account." |
 | 2 | `patient@` | Sign in, try `/staff` in the address bar | Sent back: patients never see the staff area | "Each role sees only its own modules; the server enforces it, not just the menu." |
 | 3 | `doctor@` | Sign out, sign in as the doctor. Open **Overview** | The staff workspace with the doctor's modules only | Point out what a doctor doesn't get: Users and roles, and edit rights on the blood bank. |
 | 4 | `doctor@` | **Emergencies → New case**: severity **Critical**, any patient reference (e.g. `DEMO-001`), one need: **Equipment · Ventilator · 3**. Create | The case page opens: status **Open**, critical at the top of the list | "Critical cases always sort first, and escalate on their own if nobody fulfils them in 30 minutes." |
 | 5 | `doctor@` | Look at the need | **Available here: 2 · Short: 1** | "It checks our own stock first, counting what's already held for other cases." |
 | 6 | `doctor@` | **Reserve 2 here** | Two holds in the Reservations panel (VENT-003, VENT-005), held for 30 minutes | "Reserving is atomic: two doctors clicking at once can't get the same ventilator." |
-| 7 | `doctor@` | Scroll to **Sources in the network** | Seaview Hospital and Northside Children's Hospital, ranked, each with a score and the reason (distance, stock) | "The ranking is configurable per resource type: nearest for equipment, earliest expiry for blood." |
+| 7 | `doctor@` | Scroll to **Sources in the network** | The hospitals with a free ventilator, nearest first, each with a score and the reason (distance, stock) | "The ranking is configurable per resource type: nearest for equipment, earliest expiry for blood." |
 | 8 | `doctor@` | On the top hospital: quantity **1**, **Request transfer** | A transfer in the case's Transfers panel, status **Requested**. Nothing is reserved at the supplier yet | "The supplier stays in control of its stock until it says yes." |
 | 9 | `admin@` *(private window)* | **Transfers** → the incoming request → **Approve** | Status **Approved**; the supplier's ventilator is now held for the case | "Approval reserves the unit at the supplier, in one transaction." |
 | 10 | `admin@` | **Dispatch**, then **Start transit** | Status **Dispatched → In transit**, each step in the transfer's history with who and when | |

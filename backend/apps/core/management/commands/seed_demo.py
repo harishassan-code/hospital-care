@@ -1,12 +1,14 @@
 """
-Fill the database with synthetic demo data: 3 hospitals with departments, wards, storage locations and beds,
-blood units, medicines, doctors, specialists with on-call windows, and one login per role. Every name,
-patient and unit is made up.
+Fill the database with synthetic demo data: the ten-hospital CityCare network (B20) with departments,
+wards, storage locations and beds, blood units and donors, equipment, operating rooms and their lists,
+ambulances, medicines, staff rosters with shifts, specialists with on-call windows, two weeks of hourly
+history, and one login per role. Every name, patient and unit is made up. docs/product/demo-data.md says
+what's in it and why.
 
     python manage.py seed_demo            # safe to re-run: adds only what's missing, never duplicates
     python manage.py seed_demo --reset    # wipes the demo hospitals, beds, blood, pharmacy, doctors first,
                                           # and the cases, holds, transfers, trips and alerts that use them
-    python manage.py seed_demo --hospitals 50   # the 3 named hospitals plus 47 synthetic (load tests)
+    python manage.py seed_demo --hospitals 50   # the 10 named hospitals plus 40 synthetic (load tests)
 
 Also links data from before Sprint 2 (wards, beds, units and staff with no hospital) to the first hospital.
 Demo data only: never run against a database with real patients.
@@ -33,7 +35,10 @@ from apps.blood.models import (
     UnitStatus,
 )
 from apps.blood.services import usable_units
-from apps.emergencies.models import EmergencyRequest, EmergencyStatus, ErStatus, PatientTransfer
+from apps.core.seed import history, resources, staffing
+from apps.core.seed.profiles import EXTRA_DEPARTMENTS, EXTRA_WARDS, NEW_HOSPITALS, PROFILES
+from apps.core.seed.profiles import WARD_BED_TYPES as NETWORK_BED_TYPES
+from apps.emergencies.models import EmergencyRequest, EmergencyStatus, PatientTransfer
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
@@ -42,14 +47,17 @@ from apps.hospitals.models import (
     Capability,
     Department,
     Hospital,
+    HospitalType,
     StorageLocation,
     Ward,
 )
 from apps.matching.models import Allocation, Reservation
+from apps.metrics.models import MetricSnapshot
 from apps.notifications.models import Notification
 from apps.operating_rooms.models import OperatingRoom, OrBooking, OrStatus
 from apps.pharmacy.models import Batch, Medicine
 from apps.specialists.models import OnCallWindow, Specialist
+from apps.staffing.models import Shift, StaffMember
 from apps.transfers.models import Transfer
 
 DEMO_PASSWORD = "CityCare-demo-1"
@@ -81,6 +89,7 @@ WARD_BED_TYPES = {
     "sv-er": BedType.EMERGENCY,
     "sv-ccu": BedType.ICU,
     "ns-nicu": BedType.NICU,
+    **NETWORK_BED_TYPES,
 }
 
 # Synthetic hospitals; addresses are real Karachi areas, the hospitals are made up.
@@ -137,9 +146,13 @@ HOSPITALS = [
         ],
     ),
 ]
+# The demo scenario and the end-to-end test (B12) were written for these three; the rest of the network
+# follows (B20, apps/core/seed/profiles.py).
+SCENARIO_HOSPITALS = len(HOSPITALS)
+HOSPITALS = [*HOSPITALS, *NEW_HOSPITALS]
 
-# Synthetic hospitals for `--hospitals N` (B13, load tests). Each takes the number after the three named ones,
-# so its ward codes and bed labels carry that number and never collide with another hospital's.
+# Synthetic hospitals for `--hospitals N` (B13, load tests). Each takes the number after the named ones, so
+# its ward codes and bed labels carry that number and never collide with another hospital's.
 CITY_CENTRE = (24.8607, 67.0011)  # latitude, longitude; made-up hospitals sit in a box around it
 SYNTHETIC_CAPABILITIES = ["icu", "bloodBank"]
 SYNTHETIC_DEPARTMENTS = ["Emergency medicine", "General medicine", "Surgery", "Paediatrics", "Obstetrics"]
@@ -573,16 +586,16 @@ class Command(BaseCommand):
             "--hospitals",
             type=int,
             default=len(HOSPITALS),
-            help="How many hospitals to seed: 3 or more. The three named demo hospitals come first; the rest "
-            "are synthetic.",
+            help="How many hospitals to seed: 3 or more. The ten named hospitals come first (the scenario's "
+            "three at the front); any beyond them are synthetic.",
         )
 
     @transaction.atomic
     def handle(self, *args, reset=False, seed=7, **options):
         count = options["hospitals"]
-        if count < len(HOSPITALS):  # refused before anything is written or reset
+        if count < SCENARIO_HOSPITALS:  # refused before anything is written or reset
             raise CommandError(
-                f"--hospitals must be {len(HOSPITALS)} or more; the named demo hospitals come first."
+                f"--hospitals must be {SCENARIO_HOSPITALS} or more; the named demo hospitals come first."
             )
         rand = random.Random(seed)
         now = timezone.now()
@@ -598,6 +611,9 @@ class Command(BaseCommand):
                 EmergencyRequest,  # its needs and timeline go with it
                 Notification,  # alerts about the cases above; references restart at 0001 after a reset
                 Ambulance,
+                Shift,  # before the staff and hospitals (PROTECT)
+                StaffMember,
+                MetricSnapshot,
                 Equipment,
                 OrBooking,  # before the rooms: a booking holds its room (PROTECT)
                 OperatingRoom,
@@ -627,6 +643,9 @@ class Command(BaseCommand):
                 spec = synthetic_hospital(index + 1, hospital_rand)
             hospitals.append(self.seed_hospital(spec, hospital_rand, now))
         main = hospitals[0]
+        for index, hospital in enumerate(hospitals[:SCENARIO_HOSPITALS]):
+            # Their own stream, so the wards they gain (B20) leave every earlier draw as it was.
+            self.seed_extra_wards(hospital, random.Random(seed * 31 + index), now)
 
         self.seed_users(main)
         if not BloodUnit.objects.exists():
@@ -636,13 +655,20 @@ class Command(BaseCommand):
         if not Equipment.objects.exists():
             self.seed_equipment(main)
         self.seed_ambulances(hospitals)
-        for index, partner in enumerate(hospitals[1:], start=1):
+        # The scenario's partners and the synthetic hospitals get the small fixed stock the scenario and the
+        # load tests rely on; the rest of the named network is stocked by its profile (seed_network).
+        scenario_shaped = [
+            (index, h)
+            for index, h in enumerate(hospitals)
+            if index < SCENARIO_HOSPITALS or index >= len(HOSPITALS)
+        ]
+        for index, partner in scenario_shaped[1:]:
             if not BloodUnit.objects.filter(hospital=partner).exists():
                 self.seed_partner_stock(partner, index, now)
-        for hospital in hospitals:
+        for _, hospital in scenario_shaped:
             if not OperatingRoom.objects.filter(hospital=hospital).exists():
                 self.seed_operating_rooms(hospital)
-        for hospital in hospitals:
+        for _, hospital in scenario_shaped:
             self.seed_or_bookings(hospital, now)
         if not Donor.objects.exists():
             # Own random stream, so adding donors doesn't change any of the data seeded before Sprint 3.
@@ -651,7 +677,7 @@ class Command(BaseCommand):
             self.seed_pharmacy(now, hospitals)
         Batch.objects.filter(hospital=None).update(hospital=main)  # stock seeded before #123
         self.seed_specialists({h.name: h for h in hospitals}, now)
-        self.seed_emergency_statuses(hospitals, rand)
+        self.seed_network(hospitals[: len(HOSPITALS)], seed, now)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         for hospital in hospitals:
@@ -686,22 +712,73 @@ class Command(BaseCommand):
                     missing.append(OnCallWindow(specialist=specialist, starts_at=starts, ends_at=ends))
         OnCallWindow.objects.bulk_create(missing)
 
-    def seed_emergency_statuses(self, hospitals: list[Hospital], rand: random.Random):
-        """Each hospital's emergency department, as the public sees it (B19). The main hospital keeps the
-        figures the demo script shows; the others get their own. Only hospitals without one get one."""
-        reported = set(EmergencyStatus.objects.values_list("hospital_id", flat=True))
+    def seed_extra_wards(self, hospital: Hospital, rand: random.Random, now):
+        """The wards (and departments) a hospital of the scenario's kind would also have (B20)."""
+        for name in EXTRA_DEPARTMENTS.get(hospital.name, []):
+            Department.objects.get_or_create(hospital=hospital, name=name)
+        first = Ward.objects.filter(hospital=hospital).count()
+        self.seed_wards(hospital, EXTRA_WARDS.get(hospital.name, []), rand, now, first_order=first)
+
+    def seed_network(self, hospitals: list[Hospital], seed: int, now):
+        """B20: each named hospital's equipment, rooms, ambulances, blood and donors by its profile; rosters
+        and on-call specialists; theatre lists; two weeks of history; and each emergency department's status,
+        read from the end of its history. Each hospital and each part has its own random stream."""
         for index, hospital in enumerate(hospitals):
-            if hospital.pk in reported:
-                continue
-            if index == 0:
-                status, wait, waiting = ErStatus.ACCEPTING, 24, 7
-            else:
-                waiting = rand.randint(2, 18)
-                wait = 10 + waiting * rand.randint(3, 6)
-                status = ErStatus.BUSY if wait >= 60 else ErStatus.ACCEPTING
-            EmergencyStatus.objects.create(
-                hospital=hospital, status=status, wait_minutes=wait, waiting_count=waiting
+            profile = PROFILES[hospital.name]
+            rand = random.Random(seed * 1013 + index)
+            resources.seed_equipment(hospital, profile, rand, main=index == 0)
+            resources.seed_rooms(hospital, profile, rand)
+            resources.seed_fleet(hospital, profile, rand)
+            if profile.blood_units:
+                base = 300_000 + index * 10_000
+                if not BloodUnit.objects.filter(donation_number=f"G7731 26 {base:06d}").exists():
+                    resources.seed_bank_stock(
+                        hospital,
+                        profile.blood_units,
+                        base,
+                        rand,
+                        now,
+                        GROUP_SHARE,
+                        no_o_neg_red_cells=index < SCENARIO_HOSPITALS,
+                    )
+            if profile.donors and not Donor.objects.filter(hospital=hospital).exists():
+                resources.seed_donors(hospital, profile.donors, 1000 + index * 500, rand, GROUP_SHARE)
+
+        for index, hospital in enumerate(hospitals):
+            members = staffing.seed_roster(hospital, random.Random(seed * 1009 + index), now) or list(
+                StaffMember.objects.filter(hospital=hospital)
             )
+            if index >= SCENARIO_HOSPITALS:  # the scenario's three list the demo doctors (seed_specialists)
+                staffing.seed_consultants(hospital, members, now, SPECIALIST_DAYS)
+            surgeons = [
+                m.name for m in members if m.role == "doctor" and m.department != "Emergency medicine"
+            ]
+            resources.seed_room_lists(hospital, random.Random(seed * 1021 + index), now, surgeons)
+
+        for index, hospital in enumerate(hospitals):
+            last = history.seed_history(
+                hospital,
+                random.Random(seed * 1019 + index),
+                now,
+                er_per_day=PROFILES[hospital.name].er_arrivals_per_day,
+                # The main hospital ends where the demo script expects it: accepting, 7 waiting, about 24 min.
+                final_er=(7, 24) if index == 0 else None,
+            )
+            self.seed_emergency_status(hospital, last)
+
+    def seed_emergency_status(self, hospital: Hospital, last):
+        """The emergency department's public status (B19), from the last hour of its history. A hospital with
+        no emergency beds (a blood bank) reports none; an existing status is left alone."""
+        if last is None or EmergencyStatus.objects.filter(hospital=hospital).exists():
+            return
+        waiting, wait = last
+        er_beds = Bed.objects.filter(hospital=hospital, bed_type=BedType.EMERGENCY).count()
+        EmergencyStatus.objects.create(
+            hospital=hospital,
+            status=history.er_status_for(waiting, wait, er_beds),
+            wait_minutes=wait,
+            waiting_count=waiting,
+        )
 
     def seed_users(self, hospital: Hospital):
         """One login per role; staff work at `hospital`."""
@@ -732,7 +809,14 @@ class Command(BaseCommand):
         for location in locations:
             StorageLocation.objects.get_or_create(hospital=hospital, name=location)
 
-        for order, (code, ward_name, kind, prefix, size, occupancy, ages, department) in enumerate(wards):
+        self.seed_wards(hospital, wards, rand, now)
+        return hospital
+
+    def seed_wards(self, hospital: Hospital, wards, rand: random.Random, now, first_order: int = 0):
+        """Each ward and, the first time, its beds. Reuses existing rows, never duplicates."""
+        for order, (code, ward_name, kind, prefix, size, occupancy, ages, department) in enumerate(
+            wards, start=first_order
+        ):
             dept = Department.objects.get(hospital=hospital, name=department)
             ward, ward_created = Ward.objects.get_or_create(
                 code=code,
@@ -750,7 +834,6 @@ class Command(BaseCommand):
             Bed.objects.filter(ward=ward, hospital=None).update(hospital=hospital)
             if ward_created:
                 self.seed_beds(ward, hospital, prefix, size, occupancy, ages, rand, now)
-        return hospital
 
     def seed_beds(self, ward, hospital, prefix, size, occupancy, ages, rand: random.Random, now):
         code, (lo, hi) = ward.code, ages
@@ -965,6 +1048,9 @@ class Command(BaseCommand):
         available. `index` keeps donation numbers and identifiers apart from the main hospital's."""
         fridge = StorageLocation.objects.get(hospital=hospital, name="Blood fridge")
         groups = [group for group in GROUP_SHARE for _ in range(2)]
+        # Seaview's O- red cells are the oldest in the network (six days left), so it ranks first as the
+        # scenario's source for them, however many hospitals hold O- (B20; the e2e test asks Seaview, B12).
+        oldest = index == 1
         BloodUnit.objects.bulk_create(
             BloodUnit(
                 hospital=hospital,
@@ -972,8 +1058,8 @@ class Command(BaseCommand):
                 donation_number=f"G7731 26 {900_000 + index * 1000 + i:06d}",
                 group=group,
                 component=Component.RED_CELLS,
-                collected_at=now - timedelta(days=5),
-                expires_at=now + timedelta(days=37),
+                collected_at=now - timedelta(days=36 if oldest and group == BloodGroup.O_NEG else 5),
+                expires_at=now + timedelta(days=6 if oldest and group == BloodGroup.O_NEG else 37),
                 status=UnitStatus.AVAILABLE,
                 location=fridge.name,
             )
@@ -1079,5 +1165,6 @@ class Command(BaseCommand):
                     quantity=max(1, round(q * (0.5 + 0.2 * (index % 3)))),
                 )
                 for index, partner in enumerate(partners, start=1)
+                if partner.type != HospitalType.BLOOD_BANK
                 for n, d, q in batches
             )

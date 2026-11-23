@@ -23,6 +23,10 @@ erDiagram
     StorageLocation |o--o{ BloodUnit : "stored at"
     Medicine ||--o{ Batch : "stocked as"
     Hospital |o--o{ Batch : "holds (#123)"
+    Hospital ||--o| EmergencyStatus : "reports (B19)"
+    Hospital ||--o{ StaffMember : "rosters (B20)"
+    StaffMember ||--o{ Shift : works
+    Hospital ||--o{ MetricSnapshot : "hourly figures (B20)"
     User |o--o{ AuditLog : "acted in"
 
     User {
@@ -121,6 +125,30 @@ erDiagram
         string status
         int wait_minutes
         int waiting_count
+    }
+    StaffMember {
+        bigint id PK
+        bigint hospital_id FK
+        string name "synthetic on staging"
+        string role "doctor or nurse"
+        string department
+        bool is_active
+    }
+    Shift {
+        bigint id PK
+        bigint staff_id FK
+        bigint hospital_id FK
+        datetime starts_at
+        datetime ends_at
+        datetime clocked_in_at "empty until it starts"
+        datetime clocked_out_at
+    }
+    MetricSnapshot {
+        bigint id PK
+        bigint hospital_id FK
+        string metric "catalog.py"
+        datetime at "start of the hour"
+        float value
     }
     AuditLog {
         bigint id PK

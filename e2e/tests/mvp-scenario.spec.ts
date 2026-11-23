@@ -12,7 +12,7 @@ import { signIn, type Session } from './support/signIn'
 // case's holds, allocations and close by its reference, less what was already filed under that reference (a reset
 // starts references again at EC-<year>-0001 and keeps the audit log).
 
-/** Seeded hospitals, in the order the hospitals list shows them (S1). */
+/** The scenario's hospitals among the seeded network (S1). The network has more (B20); these three are the scenario's. */
 const HOSPITALS = ['CityCare General Hospital', 'Seaview Hospital', "Northside Children's Hospital"]
 /** Units of O− red cells the nurse asks for at CityCare General (S3). */
 const NEED = 3
@@ -53,15 +53,16 @@ test('MVP acceptance scenario: request, match, reserve, transfer, receipt, histo
   const before = { holds: 0, allocations: 0, closes: 0 }
 
   try {
-    await test.step('§23.1 · S1 · Admin sees the three hospitals, all active', async () => {
+    await test.step('§23.1 · S1 · Admin sees the network’s hospitals, all active', async () => {
       const page = await as('admin')
       await page.goto('/staff/hospitals')
       const table = page.getByRole('table', { name: 'Hospitals in the network' })
-      await expect(table.locator('tbody tr'), 'Precondition: seed_demo creates three hospitals').toHaveCount(3)
       for (const name of HOSPITALS) {
-        await expect(table.getByRole('link', { name, exact: true })).toBeVisible()
+        await expect(table.getByRole('link', { name, exact: true }), `Precondition: seed_demo creates ${name}`).toBeVisible()
       }
-      await expect(table.getByText('Active', { exact: true }), 'Precondition: all three hospitals are active').toHaveCount(3)
+      const rows = await table.locator('tbody tr').count()
+      expect(rows, 'Precondition: seed_demo creates the scenario’s three hospitals and the rest of the network').toBeGreaterThanOrEqual(3)
+      await expect(table.getByText('Active', { exact: true }), 'Precondition: every hospital is active').toHaveCount(rows)
     })
 
     await test.step('§23.2 · S2 · Blood bank sees CityCare’s stock and each unit’s status (partial, see docs)', async () => {
@@ -121,13 +122,12 @@ test('MVP acceptance scenario: request, match, reserve, transfer, receipt, histo
       await expect(sources.getByRole('heading', { name: `O− red cells: short ${short}`, exact: true })).toBeVisible()
       await expect(sources.getByText('Ordered by earliest expiry first', { exact: true })).toBeVisible()
       const ranked = sources.locator('li').filter({ hasText: /Rank \d+/ })
-      await expect(ranked, 'Precondition: two partner hospitals hold O− red cells').toHaveCount(2)
-      await expect(ranked.nth(0)).toContainText('Seaview Hospital')
-      await expect(ranked.nth(1)).toContainText("Northside Children's Hospital")
-      for (const row of [ranked.nth(0), ranked.nth(1)]) {
-        await expect(row, 'Precondition: each partner has two available O− red-cell units').toContainText('2 available')
-        await expect(row).toContainText('covers it')
-      }
+      expect(await ranked.count(), 'Precondition: other hospitals hold O− red cells').toBeGreaterThanOrEqual(2)
+      // Seaview's two units expire first in the network (seed_demo, B20), so earliest-expiry ranks it first.
+      await expect(ranked.nth(0), 'Precondition: Seaview ranks first for O− red cells').toContainText('Seaview Hospital')
+      await expect(ranked.nth(0), 'Precondition: Seaview has two available O− red-cell units').toContainText('2 available')
+      await expect(ranked.nth(0)).toContainText('covers it')
+      await expect(sources.getByText("Northside Children's Hospital", { exact: true }), 'Precondition: Northside also holds O− red cells').toBeVisible()
       await ranked.nth(0).getByText('Why this score?', { exact: true }).click()
       await expect(ranked.nth(0)).toContainText('Expiry')
       await expect(ranked.nth(0)).toContainText('Distance')

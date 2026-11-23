@@ -41,7 +41,7 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 | [B14](B14-staging-and-demo.md) | Staging deployment, demo data and demo script | [#59](https://github.com/harishassan-code/hospital-care/issues/59), [#69](https://github.com/harishassan-code/hospital-care/issues/69) | 3 | highest | – | Hassan27521 | 🟡 In Progress |
 | [B15](B15-final-report.md) | Final report and demo presentation | [#60](https://github.com/harishassan-code/hospital-care/issues/60) | 3 | highest | B00 | harishassan-code | 🔵 In Review |
 | [B19](B19-network-home.md) | CityCare network home and public hospital pages | – | 5 | highest | – | harishassan-code | 🔵 In Review |
-| [B20](B20-realistic-data.md) | Realistic city network data with history | – | 3 | high | B19 | harishassan-code | 🟡 In Progress |
+| [B20](B20-realistic-data.md) | Realistic city network data with history | – | 3 | high | B19 | harishassan-code | 🔵 In Review |
 | [B21](B21-live-simulation.md) | Live city simulation with time controls | – | 13 | high | B20 | harishassan-code | ⚪ Backlog |
 | [B22](B22-purposeful-pages.md) | Every page with a purpose, an action and charts | – | 8 | high | B20, B21 | harishassan-code | ⚪ Backlog |
 | [B23](B23-patient-privacy.md) | Patient privacy safeguards (HIPAA principles) | – | 3 | high | – | harishassan-code | ⚪ Backlog |
@@ -56,4 +56,4 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 ## Progress
 
-⚪ Backlog: 3 · 🟢 Ready: 0 · 🟡 In Progress: 2 · 🔵 In Review: 4 · ✅ Done: 15
+⚪ Backlog: 3 · 🟢 Ready: 0 · 🟡 In Progress: 1 · 🔵 In Review: 5 · ✅ Done: 15
