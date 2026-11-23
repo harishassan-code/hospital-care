@@ -1,0 +1,93 @@
+# Inception Spec: Realistic city network data with history
+
+**Date:** 2026-11-23
+**Author:** Haris Hassan (Claude, drafted for review)
+**Bolt:** [B20](../bolts/B20-realistic-data.md)
+**Related backlog item:** the account owner's request of 23 Nov (a GitHub issue is opened when this is approved)
+
+## Problem
+
+Staging shows three hospitals, and most of the stock sits in the first one, because `seed_demo` was written for the
+demo scenario, not for a picture of a city. There are no staff rosters (so no one can clock in), and no history (so
+a chart would start empty). Staging has no real data and never will, so the synthetic data has to be as close to a
+real city network as we can make it, and say where its numbers come from.
+
+For: the Product Owner and anyone watching a demo (it should look real), the team (charts and the simulation need it).
+
+## User stories
+
+- As a presenter, I want staging to look like a real city's hospitals, so that the demo is believable.
+- As a hospital manager in the demo, I want my hospital's beds, blood, rooms, equipment and staff in realistic
+  numbers, so that the pages and charts mean something.
+- As a developer, I want two weeks of history, so that trend charts (B22) have data from the first deploy.
+
+## Acceptance criteria
+
+- [ ] **Ten made-up hospitals** in real Karachi areas, spread across the city, each with a profile that fits its
+      kind (Q1). The three current names stay, with the demo scenario's stock unchanged (Q2).
+- [ ] **Capacities and occupancy** per the proportions table below, by kind of hospital: wards and bed types,
+      emergency beds, operating rooms, equipment (ventilators, monitors, dialysis, imaging), ambulances across the
+      network, blood stock by group and component, donors, medicines.
+- [ ] **Staff rosters:** doctors and nurses per hospital and department, with shifts for the last 14 days and the next
+      7, and clock-in and clock-out times for past shifts (a few late, a few missed). New `apps/staffing`:
+      `StaffMember` (hospital, name, role, department) and `Shift` (starts, ends, clocked in, clocked out). The doctors
+      are also the specialists (B16), so the directory and the rota agree.
+- [ ] **History:** hourly snapshots for the last 14 days per hospital: beds occupied and free by type, emergency
+      department waiting and wait, blood units available by group, operating rooms in use, staff on duty. New
+      `apps/metrics`: `MetricSnapshot` (hospital, metric, at, value). Daily rhythms in the numbers (arrivals peak
+      late morning and evening, discharges around midday), ending at the current state.
+- [ ] **Synthetic only:** people's names are generated from common first and last names, hospital names are made up
+      and checked against a list of real Karachi hospitals, addresses are areas, not buildings; patients carry no
+      names (as today).
+- [ ] `seed_demo` still fills empty tables only, `--reset` rebuilds everything, `--hospitals N` still adds synthetic
+      hospitals for load tests, and a fixed `--seed` gives the same data every time.
+- [ ] The demo script's data checks still hold and the e2e scenario stays green; seed tests updated.
+- [ ] `docs/product/demo-data.md`: each proportion, its value and its source (a published figure where one exists,
+      otherwise marked as our assumption).
+
+### Proposed proportions (to be sourced in `demo-data.md` during construction)
+
+| Item | Proposed |
+|---|---|
+| Hospital sizes | 1 teaching hospital ~300 beds; 2 specialist hospitals (cardiac, children's) ~120–150; 1 trauma centre ~180; 1 women's and maternity ~120; 3 district/general hospitals 90–150; 1 private multi-specialty ~100; 1 regional blood centre (no beds) |
+| Occupancy | public hospitals 85–95%, private 70–80%; intensive care 90–95% |
+| Intensive care beds | about 5–8% of a general hospital's beds |
+| Emergency beds | 15–40 per hospital with an emergency department |
+| Operating rooms | 4–14 per hospital, by size |
+| Ventilators | about one per intensive care bed, plus a few spare |
+| Blood groups | Pakistan donor shares (already in `seed_demo`): B+ 33%, O+ 28%, A+ 22%, AB+ 7%, negatives about 10% |
+| Blood stock | about 3–7 days of use per group; platelets kept 5 days, red cells 42, plasma a year |
+| Nurse to patient | intensive care 1:2, wards about 1:8 |
+| Shifts | nurses 08–14, 14–20, 20–08; doctors 08–20 and 20–08, with consultants on call |
+| Ambulances | about 30 across the network, mostly basic, some advanced and neonatal |
+
+## Design
+
+- `seed_demo.py` is split into modules under `apps/core/seed/` (`network.py`, `stock.py`, `staffing.py`,
+  `history.py`) so it stays readable; the command keeps its name and options.
+- New apps with migrations: `apps/staffing` (`StaffMember`, `Shift`), `apps/metrics` (`MetricSnapshot`, indexed by
+  hospital, metric and time). Read endpoints come in B21/B22; this bolt only creates and fills them.
+- History is generated by a small model per metric (a daily curve plus noise from the seeded random stream), scaled
+  to each hospital's capacity and finishing at the values the current data shows.
+
+## Non-goals
+
+- Data changing by itself (B21). Pages and charts (B22).
+- Real-world data feeds.
+
+## Open questions
+
+Proposed answers; the account owner confirms them at sign-off:
+
+1. **How many hospitals, and which kinds?** *Proposed:* ten, as in the table: enough to look like a city and to make
+   ranking and transfers interesting, few enough to read on one screen. Load tests keep `--hospitals 50`.
+2. **Keep the three current names?** *Proposed:* yes. The demo script, the e2e scenario and the screenshots use them,
+   and their scenario stock stays as it is.
+3. **How much history?** *Proposed:* 14 days, hourly (about 40,000 rows for ten hospitals), well within the free
+   database. The simulation (B21) keeps adding to it and prunes beyond 14 days.
+4. **Real hospital names?** *Proposed:* no. Made-up names in real areas, so nothing on staging can be mistaken for a
+   real hospital's figures.
+
+## Approval
+
+- [ ] Approved by: <name> on <date>
