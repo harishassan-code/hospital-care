@@ -16,8 +16,11 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.55;
+  line-height: 1.5;
   overflow-x: hidden;
+  /* Inter: l with a tail, I with serifs (tell I, l and 1 apart), tabular figures (numbers line up). */
+  font-feature-settings: 'cv05', 'cv08', 'tnum';
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -28,9 +31,9 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 p {
@@ -92,6 +95,19 @@ input {
   white-space: nowrap;
 }
 
+/* Switching theme: colours cross-fade for a moment (lib/theme.ts adds the class), unless motion is reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-transition,
+  .theme-transition * {
+    transition:
+      background-color 300ms ease,
+      color 300ms ease,
+      border-color 300ms ease,
+      fill 300ms ease,
+      stroke 300ms ease !important;
+  }
+}
+
 /* Shared motion. Each is switched off below when the device asks for reduced motion. */
 @keyframes page-enter {
   from {
@@ -110,6 +126,51 @@ input {
   }
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
   }
 }
 
@@ -137,4 +198,18 @@ input {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Tables: the row under the pointer is lightly tinted, to help the eye along a row. */
+tbody tr {
+  transition: background-color var(--duration-fast) ease;
+}
+
+tbody tr:hover {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+/* Error messages slide in, so a refused action is noticed. */
+[role='alert']:not(:empty) {
+  animation: slide-down var(--duration) var(--ease-out) both;
 }

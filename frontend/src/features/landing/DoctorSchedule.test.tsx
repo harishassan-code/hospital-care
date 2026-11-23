@@ -32,3 +32,18 @@ it('says so when nothing is published', () => {
   render(<DoctorSchedule doctors={[]} now={now} />)
   expect(screen.getByText('No doctor schedules are published for today.')).toBeInTheDocument()
 })
+
+it('without names (the public view, #122), lists each shift by department and says names are for staff', () => {
+  const anonymous = doctors.map((d) => ({ ...d, name: null }))
+  render(<DoctorSchedule doctors={anonymous} now={now} />)
+  const cardiology = screen.getByRole('listitem', { name: 'Cardiology' })
+  expect(within(cardiology).getByText('09:00–13:00')).toBeInTheDocument()
+  expect(within(cardiology).getByText('In now')).toBeInTheDocument()
+  expect(screen.queryByText(/Ayesha Khan/)).toBeNull()
+  expect(screen.getByText('Doctors’ names are shown to signed-in hospital staff.')).toBeInTheDocument()
+})
+
+it('with names (signed-in staff), shows no privacy note', () => {
+  render(<DoctorSchedule doctors={doctors} now={now} />)
+  expect(screen.queryByText(/names are shown to signed-in/)).toBeNull()
+})

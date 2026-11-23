@@ -40,7 +40,7 @@
 .brandName {
   font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.15;
 }
 
@@ -131,7 +131,7 @@
 .footerName {
   font-family: var(--font-display);
   font-size: var(--text-xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .facts {

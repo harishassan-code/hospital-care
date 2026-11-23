@@ -22,6 +22,7 @@ erDiagram
     StorageLocation |o--o{ Bed : "stored at"
     StorageLocation |o--o{ BloodUnit : "stored at"
     Medicine ||--o{ Batch : "stocked as"
+    Hospital |o--o{ Batch : "holds (#123)"
     User |o--o{ AuditLog : "acted in"
 
     User {
@@ -109,7 +110,8 @@ erDiagram
     Batch {
         bigint id PK
         bigint medicine_id FK
-        string number "unique per medicine"
+        bigint hospital_id FK "null for old data"
+        string number "unique per medicine per hospital"
         date expires_on
         int quantity
     }

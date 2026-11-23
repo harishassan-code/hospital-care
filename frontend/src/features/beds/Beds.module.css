@@ -22,7 +22,7 @@
 
 .wardName {
   font-size: var(--text-xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .wardKind {
@@ -198,4 +198,17 @@
 
 .typeName {
   font-weight: 700;
+}
+
+/* Bed tiles lift a little under the pointer, and rise in as the board opens. */
+.tile {
+  transition:
+    transform var(--duration) var(--ease-out),
+    box-shadow var(--duration) var(--ease-out);
+  animation: rise 360ms var(--ease-out) both;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }

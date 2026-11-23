@@ -1,5 +1,5 @@
 .shell {
-  --sidebar: 16rem;
+  --sidebar: 15rem;
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar) minmax(0, 1fr);
@@ -54,8 +54,8 @@
 
 .brandName {
   font-family: var(--font-display);
-  font-size: 1.0625rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.01em;
 }
@@ -89,11 +89,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 2.625rem;
+  min-height: 2.25rem;
   padding: 0 var(--space-3);
   color: var(--chrome-muted);
-  font-weight: 600;
-  font-size: var(--text-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
   text-decoration: none;
   border-radius: var(--radius-sm);
   transition:
@@ -116,13 +116,21 @@
 }
 
 .navLink[aria-current='page'] {
+  animation: nav-in var(--duration) var(--ease-out);
   color: var(--accent);
   background: var(--accent-soft);
-  font-weight: 700;
+  font-weight: 600;
+}
+
+@keyframes nav-in {
+  from {
+    background-color: transparent;
+  }
 }
 
 .navLink[aria-current='page']::before {
   content: '';
+  animation: grow var(--duration) var(--ease-out);
   position: absolute;
   left: calc(-1 * var(--space-3));
   top: 22%;
@@ -195,7 +203,7 @@
 
 .title {
   font-size: var(--text-2xl);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -286,5 +294,11 @@
   .topBar,
   .main {
     padding-inline: var(--space-4);
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleY(0);
   }
 }

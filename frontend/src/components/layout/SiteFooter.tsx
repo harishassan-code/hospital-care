@@ -28,7 +28,7 @@ export function SiteFooter() {
             <dd>{hospital.visitingHours}</dd>
           </div>
         </dl>
-        <p className={styles.poweredBy}>Powered by Hospital Care</p>
+        <p className={styles.poweredBy}>CityCare connects hospitals to share blood, beds, equipment and ambulances in an emergency.</p>
       </div>
     </footer>
   )

@@ -1,4 +1,5 @@
 import { Logo } from "../brand/Logo";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { Link } from "react-router-dom";
 import { hospital } from "../../config/hospital";
 import { useCurrentUser } from "../../features/auth/useCurrentUser";
@@ -36,6 +37,7 @@ export function SiteHeader() {
               <span className={styles.number}>{hospital.emergencyNumber}</span>
             </span>
           </a>
+          <ThemeToggle />
           {user ? (
             <>
               <span className={styles.navLink} role="status">

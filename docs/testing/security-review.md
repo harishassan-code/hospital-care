@@ -55,7 +55,7 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 | AppointmentListView | GET/POST `/api/blood/appointments/` | table: donors | GET own_hospital; POST: donor scoped to the actor (F1) | F1 | Fixed: another hospital's donor is 404 |
 | AppointmentCancelView | POST `/api/blood/appointments/<id>/cancel/` | table: donors (edit) | changeable_by, 404; then service | F3 | Fixed: 404 |
 | health | GET `/api/health/` | AllowAny (decorator) | none | Public, Render health check | Allowlisted; exempt from the HTTPS redirect |
-| PublicStatusView | GET `/api/public/status/` | AllowAny, no auth classes | none | F5 | Open: decision Q8, follow-up [#122](https://github.com/harishassan-code/hospital-care/issues/122) |
+| PublicStatusView | GET `/api/public/status/` | AllowAny, session read but not required | none | F5 | Fixed (#122): names only for signed-in staff |
 | CaseListView | GET/POST `/api/emergencies/` | table: emergencies | own_hospital; POST uses actor's hospital | F9 | Not changed (F9) |
 | CaseDetailView | GET `/api/emergencies/<ref>/` | table: emergencies | own_hospital | F9 | Not changed (F9) |
 | EmergencyFeedView | GET `/api/emergencies/feed/` | table: emergencies (view) | network-wide by design (#36); no patient field | F9 | Not changed (F9) |
@@ -80,7 +80,7 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 | OperatingRoomScheduleView | GET `/api/operating-rooms/schedule/` | table: operatingRooms | own hospital, in service | OK | OK |
 | OrBookingListView | POST `/api/operating-rooms/bookings/` | table: orBookings (edit) | service may_change on the room (404) | OK | OK |
 | OrBookingCancelView | POST `/api/operating-rooms/bookings/<id>/cancel/` | table: orBookings (edit) | service may_change (404); surgeons cancel only their own (403) | OK | OK |
-| StockView | GET `/api/pharmacy/stock/` | table: pharmacy | none; `Medicine` and `Batch` have no hospital field | F7 | Open: decision Q9, follow-up [#123](https://github.com/harishassan-code/hospital-care/issues/123) |
+| StockView | GET `/api/pharmacy/stock/` | table: pharmacy | own_hospital on batches; the formulary is shared | F7 | Fixed (#123): batches per hospital |
 | TransferListView | GET/POST `/api/transfers/` | table: transfers | GET visible_to; POST own_hospital and service may_change | OK | OK |
 | TransferDetailView | GET `/api/transfers/<id>/` | table: transfers | visible_to (404) | OK | OK |
 | TransferActionView | POST `/api/transfers/<id>/actions/` | table: transfers (edit) | visible_to (404); may_act per move (403) | OK | OK |
@@ -123,16 +123,19 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
   (`DJANGO_TRUSTED_PROXY_COUNT`) recorded it, and otherwise from `REMOTE_ADDR`. Defaults: login 30 per minute, signup 30
   per hour, both set in the environment. The per-account lockout is unchanged. Tests:
   `apps/accounts/tests/test_throttle.py`.
-- **F5 (low), open: decision Q8.** `/api/public/status/` needs no sign-in and returns the on-shift doctors' names,
-  departments and shift times. The demo data is synthetic, so the names stay for now. A follow-up is needed before any
-  real hospital joins, because staff names on a public page need the staff's consent. Follow-up:
-  [#122](https://github.com/harishassan-code/hospital-care/issues/122), with the options for the Product Owner.
+- **F5 (low), fixed (23 Nov, #122).** `/api/public/status/` needs no sign-in and returned the on-shift doctors' names,
+  departments and shift times. Staff names on a public page need the staff's consent, and CityCare is meant for any
+  hospital that joins. Now the public sees each shift's department and hours with `name: null`; signed-in hospital
+  staff (who can already see the staff directory) see the names. The view reads the session to tell them apart and
+  still requires nothing. Tests in `apps/emergencies/tests/test_public_status.py`.
 - **F6 (decision Q7), fixed.** The Django admin at `/admin/` was routed on staging, and the demo `admin@` superuser's
   password is public in `docs/setup/deployment.md`. Now `/admin/` is routed only when `DJANGO_ADMIN_ENABLED=true`, which
   defaults to on under DEBUG and off otherwise. Render sets it to `false`. Tests: `apps/core/tests/test_admin_route.py`.
-- **F7 (info), open: follow-up.** Pharmacy stock has no hospital scope, because `Medicine` and `Batch` have no hospital
-  field. The catalogue is network-wide for anyone who can view pharmacy. Left unchanged, pending confirmation that this
-  is intended (Q9). Follow-up: [#123](https://github.com/harishassan-code/hospital-care/issues/123).
+- **F7 (info), fixed (23 Nov, #123).** Pharmacy stock had no hospital scope, because `Medicine` and `Batch` had no
+  hospital field, so anyone who could view pharmacy saw the whole network's batches. Now each `Batch` belongs to a
+  hospital and the stock view filters batches with `own_hospital`; the medicine list (the formulary) stays shared.
+  Migration `pharmacy/0002` gives batches from before the change to the first hospital registered (the one the
+  system then served), and `seed_demo` gives every hospital its own stock. Tests in `apps/pharmacy/tests/test_stock.py`.
 - **F8 (low), fixed.** With DEBUG off and no `DJANGO_SECRET_KEY`, the app started with the key from the code. Now it
   refuses to start, and the error names the variable. Tests: `apps/core/tests/test_deploy_settings.py`.
 - **F9 (info), not changed.** Some GET requests write: the case list, detail and candidates, the reservation and
@@ -199,9 +202,10 @@ With `DJANGO_DEBUG=false`, `check --deploy --fail-level WARNING` is clean with a
   each user its own sign-in bucket (decision 2).
 - **Postgres run of the load test: done (22 Nov).** `docs/testing/search-load-test.md` records PostgreSQL 16: p95 about
   26 ms at concurrency 1 and 108 to 139 ms at concurrency 5, with a same-machine SQLite comparison.
-- **Follow-up issues: filed (22 Nov).** F5 is [#122](https://github.com/harishassan-code/hospital-care/issues/122) and F7
-  is [#123](https://github.com/harishassan-code/hospital-care/issues/123), each with the options for the Product Owner.
-  The frontend copy for a throttled sign-in (decision 4) is fixed instead.
+- **Follow-up issues: filed (22 Nov), fixed (23 Nov).** F5 was [#122](https://github.com/harishassan-code/hospital-care/issues/122)
+  (names now only for signed-in staff) and F7 [#123](https://github.com/harishassan-code/hospital-care/issues/123)
+  (stock now per hospital); the Product Owner can still ask for another option. The frontend copy for a throttled
+  sign-in (decision 4) was fixed on 22 Nov.
 - **Decisions for the Product Owner:** decision 1 (the Vercel `includeSubDomains` header, which the spec's non-goals
   do not allow for hosts other than the API); decision 3 (the throttle rates); and when to raise HSTS to one year
   (spec Q6 says after a week of HTTPS-only staging).

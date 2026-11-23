@@ -30,11 +30,11 @@ reading needs *view*, changing needs *edit*. No access → 403.
 
 | Method | Path | Returns | Access |
 |---|---|---|---|
-| GET | `/public/status/` | `PublicStatus` (ER status + today's doctors) | anyone, no sign-in |
+| GET | `/public/status/` | `PublicStatus` (ER status + today's doctors; `name` is null and `namesShown` false unless the caller is signed-in staff, #122) | anyone, no sign-in |
 | GET | `/beds/` | `BedBoard` = `{wards, beds}` | beds: view |
 | POST | `/beds/<bed id>/actions/` | `{action}` → updated `Bed` | beds: edit |
 | GET | `/blood/units/` | `BloodUnit[]` | blood: view |
-| GET | `/pharmacy/stock/` | `Medicine[]` with `batches` | pharmacy: view |
+| GET | `/pharmacy/stock/` | `Medicine[]` (the shared formulary) with the `batches` the user's hospital holds; admins without a hospital see all (#123) | pharmacy: view |
 
 Bed actions: `discharge`, `markReady`, `reserve`, `cancelReservation`, `outOfService`, `returnToService`.
 A move the bed lifecycle doesn't allow (e.g. reserving an occupied bed) returns **409** and changes nothing.
