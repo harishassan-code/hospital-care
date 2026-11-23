@@ -1,60 +1,107 @@
 """
-Keeps render.yaml and frontend/vercel.json pointing at the same Render service.
+Checks the staging deploy config that nothing else checks before a deploy (bolt B14, #59/#69).
 
-The browser only talks to the Vercel domain; vercel.json forwards /api/* to the Render API by its
-full onrender.com URL. If render.yaml's service name and that hardcoded URL ever drift (someone
-renames the service, or copies this config to a new project), login still works but every signed-in
-action starts failing with 403 CSRF, and nothing else makes that obvious. This catches it in CI.
+Staging is one Vercel project (vercel.json, framework preset "Services"): the React site and the Django API
+share one domain, and /api/* goes to the API. If that drifts, the site loads but every API call fails, and the
+first sign of it is a broken demo. This script runs in CI (the deploy-config job) and checks:
 
-If there's no /api rewrite yet, there's nothing to check: exits clean.
+  1. vercel.json has a `web` service in frontend/ and a Django `api` service in backend/;
+  2. /api/* is routed to `api` before the catch-all route to `web`;
+  3. the frontend is built with VITE_API_URL=/api, so the browser calls the API on the same domain;
+  4. backend/pyproject.toml (read by Vercel) lists the same dependencies as backend/requirements.txt (Docker,
+     CI);
+  5. the build script named in pyproject.toml exists.
+
+Exit code 0 when everything matches, 1 otherwise. Standard library only.
 """
 
 import json
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+BACKEND = ROOT / "backend"
 
 
-def render_service_name() -> str | None:
-    render_yaml = (ROOT / "render.yaml").read_text()
-    match = re.search(r"type:\s*web\b.*?name:\s*(\S+)", render_yaml, re.DOTALL)
-    return match.group(1) if match else None
+def requirement_lines(path: Path) -> list[str]:
+    lines = (line.split("#", 1)[0].strip() for line in path.read_text().splitlines())
+    return [line for line in lines if line]
 
 
-def vercel_api_destination() -> str | None:
-    config = json.loads((ROOT / "frontend" / "vercel.json").read_text())
-    # `routes` (checked before the app's files, so /api always reaches Render) or the older `rewrites`.
-    for rule in config.get("routes", []):
-        if rule.get("src", "").startswith("/api"):
-            return rule.get("dest", "")
-    for rule in config.get("rewrites", []):
-        if rule.get("source", "").startswith("/api"):
-            return rule.get("destination", "")
-    return None
+def normalised(requirement: str) -> str:
+    """Compare package names the way pip does (case, - and _ alike), and ignore spaces."""
+    match = re.match(r"([A-Za-z0-9._-]+)(.*)", requirement.replace(" ", ""))
+    name, rest = match.groups() if match else (requirement, "")
+    return re.sub(r"[-_.]+", "-", name).lower() + rest
+
+
+def check_services(config: dict) -> list[str]:
+    problems = []
+    services = config.get("services") or {}
+    web, api = services.get("web"), services.get("api")
+    if not web or web.get("root") != "frontend":
+        problems.append('vercel.json needs a "web" service with "root": "frontend".')
+    if not api or api.get("root") != "backend" or api.get("framework") != "django":
+        problems.append('vercel.json needs an "api" service with "root": "backend", "framework": "django".')
+    if web and "VITE_API_URL=/api" not in (web.get("buildCommand") or ""):
+        problems.append(
+            'The "web" service must build with VITE_API_URL=/api (its "buildCommand"), or the site calls '
+            "http://localhost:8000 instead of its own /api."
+        )
+
+    order = [
+        (rule.get("source"), (rule.get("destination") or {}).get("service"))
+        for rule in config.get("rewrites", [])
+        if isinstance(rule.get("destination"), dict)
+    ]
+    api_at = next((i for i, rule in enumerate(order) if rule == ("/api/(.*)", "api")), None)
+    web_at = next((i for i, rule in enumerate(order) if rule == ("/(.*)", "web")), None)
+    if api_at is None:
+        problems.append('vercel.json must rewrite "/api/(.*)" to the "api" service.')
+    if web_at is None:
+        problems.append('vercel.json must rewrite "/(.*)" to the "web" service.')
+    if api_at is not None and web_at is not None and api_at > web_at:
+        problems.append('The "/api/(.*)" rewrite must come before the catch-all "/(.*)".')
+    return problems
+
+
+def check_backend() -> list[str]:
+    problems = []
+    pyproject = tomllib.loads((BACKEND / "pyproject.toml").read_text())
+    declared = sorted(normalised(d) for d in pyproject.get("project", {}).get("dependencies", []))
+    required = sorted(normalised(r) for r in requirement_lines(BACKEND / "requirements.txt"))
+    if declared != required:
+        only_pyproject = sorted(set(declared) - set(required))
+        only_requirements = sorted(set(required) - set(declared))
+        problems.append(
+            "backend/pyproject.toml and backend/requirements.txt list different dependencies "
+            f"(only in pyproject.toml: {only_pyproject or 'none'}; only in requirements.txt: "
+            f"{only_requirements or 'none'}). Vercel installs from pyproject.toml, Docker and CI from "
+            "requirements.txt, so change both."
+        )
+
+    build = pyproject.get("tool", {}).get("vercel", {}).get("scripts", {}).get("build", "")
+    script = re.search(r"([\w./-]+\.sh)\b", build)
+    if not script or not (BACKEND / script.group(1)).is_file():
+        problems.append(
+            f"backend/pyproject.toml's [tool.vercel.scripts] build ({build!r}) must run a script in backend/."
+        )
+    return problems
 
 
 def main() -> int:
-    destination = vercel_api_destination()
-    if destination is None:
-        print("No /api rewrite in frontend/vercel.json yet; nothing to check.")
-        return 0
-
-    name = render_service_name()
-    if name is None:
-        print("render.yaml has no web service with a name; can't check frontend/vercel.json against it.")
+    config_path = ROOT / "vercel.json"
+    if not config_path.is_file():
+        print("vercel.json is missing: staging can't deploy.")
         return 1
-
-    expected_host = f"https://{name}.onrender.com"
-    if expected_host not in destination:
-        print(
-            f"frontend/vercel.json's /api rewrite points at {destination!r}, "
-            f"but render.yaml's web service is named {name!r} (expected {expected_host!r} in the destination)."
-        )
+    problems = check_services(json.loads(config_path.read_text())) + check_backend()
+    for problem in problems:
+        print(problem)
+    if problems:
         return 1
-
-    print(f"frontend/vercel.json's /api rewrite matches render.yaml's service ({expected_host}).")
+    print("vercel.json routes /api to the Django service; backend dependencies match. Staging config OK.")
     return 0
 
 

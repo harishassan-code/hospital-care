@@ -200,7 +200,8 @@ Every push and pull request runs four jobs ([ci.yml](../../../.github/workflows/
 
 - **backend:** lint, migration check, the test suite on PostgreSQL 17, and Django's deployment check with DEBUG off.
 - **frontend:** lint, tests and a type-checked build.
-- **deploy-config:** the Render and Vercel settings agree, and the bolt board is up to date.
+- **deploy-config:** the Vercel config routes `/api` to the API and the backend's two dependency lists match (Render
+  until 23 Nov), and the bolt board is up to date.
 - **e2e:** the full browser scenario against PostgreSQL, run on pull requests and on `main`.
 
 ### 4.3 Security

@@ -45,7 +45,7 @@ separate process is added here.
 
 ## 3. Operations
 
-After a PR merges, CI and the staging pipeline (Render + Vercel, see
+After a PR merges, CI and the staging pipeline (one Vercel project, see
 [docs/setup/deployment.md](../setup/deployment.md)) take over. Once the feature is live on staging,
 record the outcome using the [template](templates/operations-notes-template.md) under
 `docs/aidlc/operations/`: what shipped, any monitoring notes, and follow-up items.

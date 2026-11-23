@@ -8,7 +8,7 @@ from .models import AuditLog
 class AuditEntrySerializer(serializers.ModelSerializer):
     """Shape of an audit entry in frontend/src/api/audit.ts. Times are ISO 8601 in UTC."""
 
-    at = serializers.DateTimeField(read_only=True, default_timezone=dt.timezone.utc)
+    at = serializers.DateTimeField(read_only=True, default_timezone=dt.UTC)
     actorEmail = serializers.CharField(source="actor_email", read_only=True)
     targetType = serializers.CharField(source="target_type", read_only=True)
     targetId = serializers.CharField(source="target_id", read_only=True)

@@ -1,3 +1,24 @@
+# The API's dependencies are listed twice: here, where Vercel reads them, and in requirements.txt (Docker, CI).
+# scripts/check_deploy_config.py fails CI if the two lists differ.
+[project]
+name = "citycare-api"
+version = "1.0.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "Django>=6.0,<6.1",
+    "djangorestframework==3.18.1",
+    "django-cors-headers==4.9.0",
+    "dj-database-url==3.1.2",
+    "psycopg[binary]==3.3.6",
+    "gunicorn==26.2.0",
+    "whitenoise==6.12.0",
+    "fpdf2==2.9.0",
+]
+
+# Vercel runs this after installing the dependencies (B14). See vercel_build.sh.
+[tool.vercel.scripts]
+build = "sh vercel_build.sh"
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]

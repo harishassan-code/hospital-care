@@ -113,7 +113,7 @@ def _text(params, key: str) -> str:
 
 def _midnight_utc(day: dt.date) -> dt.datetime:
     """The start of a Karachi calendar day (TIME_ZONE), in UTC, because times are stored in UTC."""
-    return dt.datetime.combine(day, dt.time.min, tzinfo=ZONE).astimezone(dt.timezone.utc)
+    return dt.datetime.combine(day, dt.time.min, tzinfo=ZONE).astimezone(dt.UTC)
 
 
 def _day(params, key: str) -> dt.date | None:
@@ -237,7 +237,7 @@ def export_chunks(queryset: QuerySet, actor, filters: AuditFilters) -> Iterator[
     yield writer.writerow(EXPORT_COLUMNS)
     rows = 0
     entries = queryset[: MAX_EXPORT_ROWS + 1].iterator(chunk_size=EXPORT_CHUNK)
-    for batch in itertools.batched(entries, EXPORT_CHUNK):
+    for batch in itertools.batched(entries, EXPORT_CHUNK, strict=False):
         rows += len(batch)
         if rows > MAX_EXPORT_ROWS:
             raise ExportGrewPastCap(f"Audit export passed {MAX_EXPORT_ROWS} rows while it was being written.")

@@ -18,16 +18,16 @@ status: In Progress
 
 [#69](https://github.com/harishassan-code/hospital-care/issues/69) and [#59](https://github.com/harishassan-code/hospital-care/issues/59):
 
-- [ ] Render blueprint deployed; `/api/health/` returns `{"status": "ok"}`
-- [ ] Vercel deployed from `frontend/` with `VITE_API_URL`; CORS/CSRF origins set to the Vercel URL
-- [ ] Both URLs in the README and pinned in Discord `#links`
+- [ ] Vercel project deployed from `main` (site + API, `vercel.json`); `<site>/api/health/` returns `{"status": "ok"}`
+- [ ] Neon database connected from the Storage tab; a signed-in change works on staging
+- [ ] The URL in the README and pinned in Discord `#links`
 - [ ] Staging seeded with the demo scenario (`seed_demo`)
 - [ ] Demo script written (`docs/setup/demo-script.md`) and rehearsed end to end
 
 ## Build on
 
-- [docs/setup/deployment.md](../../setup/deployment.md), `render.yaml`, `frontend/vercel.json`;
-  `scripts/check_deploy_config.py` already guards the API proxy.
+- [docs/setup/deployment.md](../../setup/deployment.md), `vercel.json`, `backend/vercel_build.sh`;
+  `scripts/check_deploy_config.py` guards the routing. (Render was dropped on 23 Nov: see the spec's amendment.)
 - The walkthrough in [docs/testing/authentication-test-report.md](../../testing/authentication-test-report.md) is a good start for the demo script.
 
 ## Scope
@@ -37,7 +37,7 @@ status: In Progress
 
 ## Open questions for Inception
 
-- Who owns the Render/Vercel accounts, so the URLs survive after the course?
+- Who owns the Vercel account, so the URL survives after the course?
 
 ## Exit checklist
 

@@ -131,6 +131,27 @@ CSRF cookies came back `Secure; SameSite=None`; plain HTTP straight to the API w
 whole scenario passed** (314 API requests, none answered 4xx or 5xx). What this can't check is Render and Vercel
 themselves: the real hostnames, TLS, and the proxy count behind Render's edge (security review, decision 2).
 
+## Against Vercel's build output (staging rehearsal, 23 Nov)
+
+Staging moved to one Vercel project (deployment guide). Before anyone deploys it, the scenario ran against what
+Vercel itself would deploy:
+
+- **Build:** the real Vercel CLI (`vercel build --prod`, CLI 66.6) on a clean copy of the branch, with only
+  `DJANGO_SECRET_KEY` and a database set, as on the real project. Both services built: the site (with
+  `VITE_API_URL=/api`) and the API, whose build step ran `check --deploy` (*System check identified no issues (1
+  silenced).*), the migrations over `DATABASE_URL_UNPOOLED` (the pooled `DATABASE_URL` was deliberately unreachable,
+  to prove the direct one is used), `createcachetable` and `seed_demo`, then Vercel's own `collectstatic`.
+- **API:** the built function, run with Vercel's own Python runtime (`vercel_runtime`, the code that turns a request
+  into WSGI on Vercel) on Python 3.13, against PostgreSQL 16, with `VERCEL=1` and nothing else but the key and the
+  database.
+- **Site and routing:** a small HTTPS stand-in for Vercel's edge that follows the routes `vercel build` wrote
+  (`/api/*` to the API, files, then `index.html`), on a `*.vercel.app` hostname with TLS, setting `X-Forwarded-For` to
+  the visitor's address as Vercel does.
+
+Results: `scripts/smoke_staging.py` passed; deep links such as `/staff/beds` got the app; **the whole scenario passed**
+(12.1 s, 292 API requests, none answered 4xx or 5xx); and the sign-in limit was counted in the database
+(`django_cache`), where every copy of the API sees it. What this can't check is Vercel's own edge and Neon.
+
 ## Limits
 
 - Desktop Chromium only. No mobile layouts, no visual comparisons.

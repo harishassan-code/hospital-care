@@ -26,19 +26,20 @@ Built for the **Agile Software Project Management** course using Scrum, with 1-w
 - **Database:** PostgreSQL 17
 - **Dev environment:** Docker Compose
 - **CI:** GitHub Actions (lint + tests + build on every PR)
-- **Staging:** Render (API + Postgres), Vercel (frontend); see [deployment guide](docs/setup/deployment.md)
+- **Staging:** one Vercel project (site + API), PostgreSQL on Neon; see [deployment guide](docs/setup/deployment.md)
 
 ## Staging
 
 | | |
 |---|---|
 | **Site** | _set by the account owner after the one-time set-up (B14, #69)_ |
-| **API health** | _the Render URL_ + `/api/health/` → `{"status": "ok"}` |
+| **API health** | _the site_ + `/api/health/` → `{"status": "ok"}` |
 | **Demo logins** | `admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@demo.citycare.pk`, password `CityCare-demo-1` (public test accounts: never enter real patient data) |
-| **Database created** | _date_: the free Render database expires 30 days later, so recreate it before the final demo |
+| **Database** | Neon PostgreSQL (free), connected from the Vercel project's Storage tab; it doesn't expire |
 
-The free API sleeps after 15 minutes idle. Before a demo run `python3 scripts/smoke_staging.py <site>`, then follow the
-[demo script](docs/setup/demo-script.md). Set-up and settings: [deployment guide](docs/setup/deployment.md).
+The API and database start on demand, so the first request after a quiet spell is slow. Before a demo run
+`python3 scripts/smoke_staging.py <site>`, then follow the [demo script](docs/setup/demo-script.md). Set-up and
+settings: [deployment guide](docs/setup/deployment.md).
 
 ## Repository layout
 

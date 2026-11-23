@@ -1,5 +1,5 @@
 """B13 deploy hardening. With DEBUG off the app refuses to start without a key, sends HSTS, redirects to HTTPS
-(except Render's health check), and passes `check --deploy`. Those settings are read at import time, so each
+(except the health check), and passes `check --deploy`. Those settings are read at import time, so each
 case runs in a child process (see django_subprocess.py)."""
 
 import json
@@ -83,3 +83,69 @@ def test_hsts_and_the_https_redirect_are_off_under_the_test_suite(settings):
     """Local development and the tests run with DEBUG on, so they see no change."""
     assert settings.SECURE_HSTS_SECONDS == 0
     assert settings.SECURE_SSL_REDIRECT is False
+
+
+# Staging on Vercel (B14). Vercel sets VERCEL=1 while it builds and runs the app; the project sets only the
+# key and the database, so the defaults below have to be right on their own.
+VERCEL_SETTINGS = """
+import json
+from django.conf import settings
+print(json.dumps({
+    "debug": settings.DEBUG,
+    "hosts": settings.ALLOWED_HOSTS,
+    "cache": settings.CACHES["default"]["BACKEND"],
+    "proxies": settings.TRUSTED_PROXY_COUNT,
+    "server_side_cursors_off": settings.DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"],
+}))
+"""
+
+ON_VERCEL = {"VERCEL": "1", "DJANGO_DEBUG": None}
+
+
+def test_on_vercel_debug_is_off_and_the_rest_defaults_to_vercel():
+    result = python(VERCEL_SETTINGS, env=ON_VERCEL)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {
+        "debug": False,
+        "hosts": [".vercel.app"],
+        # Several copies of the app run at once, so sign-in limits and lockouts are counted in the database.
+        "cache": "django.core.cache.backends.db.DatabaseCache",
+        "proxies": 1,
+        "server_side_cursors_off": True,
+    }
+
+
+def test_on_vercel_the_deploy_check_passes_with_only_a_key_set():
+    result = manage("check", "--deploy", "--fail-level", "WARNING", env=ON_VERCEL)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_on_vercel_a_missing_key_still_stops_the_app():
+    result = manage("check", env={**ON_VERCEL, "DJANGO_SECRET_KEY": None})
+    assert result.returncode != 0
+    assert "DJANGO_SECRET_KEY must be set" in result.stderr
+
+
+def test_on_vercel_each_default_can_be_overridden():
+    overrides = {
+        **ON_VERCEL,
+        "DJANGO_ALLOWED_HOSTS": "citycare.example.org",
+        "DJANGO_CACHE": "memory",
+        "DJANGO_TRUSTED_PROXY_COUNT": "2",
+    }
+    result = python(VERCEL_SETTINGS, env=overrides)
+    assert result.returncode == 0, result.stderr
+    seen = json.loads(result.stdout)
+    assert seen["hosts"] == ["citycare.example.org"]
+    assert seen["cache"] == "django.core.cache.backends.locmem.LocMemCache"
+    assert seen["proxies"] == 2
+
+
+def test_off_vercel_nothing_changes():
+    result = python(VERCEL_SETTINGS, env={"DJANGO_ALLOWED_HOSTS": None})
+    assert result.returncode == 0, result.stderr
+    seen = json.loads(result.stdout)
+    assert seen["hosts"] == ["localhost", "127.0.0.1"]
+    assert seen["cache"] == "django.core.cache.backends.locmem.LocMemCache"
+    assert seen["proxies"] == 0
+    assert seen["server_side_cursors_off"] is False
