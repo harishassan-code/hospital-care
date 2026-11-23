@@ -535,3 +535,15 @@
 .needsLine {
   margin: 0;
 }
+
+/* Ranked hospitals: each card lifts a little under the pointer. */
+.candidate {
+  transition:
+    transform var(--duration) var(--ease-out),
+    box-shadow var(--duration) var(--ease-out);
+}
+
+.candidate:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}

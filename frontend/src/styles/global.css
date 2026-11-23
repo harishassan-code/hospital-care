@@ -129,6 +129,51 @@ input {
   }
 }
 
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
 @keyframes pulse-ring {
   0% {
     transform: scale(0.85);
@@ -153,4 +198,18 @@ input {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Tables: the row under the pointer is lightly tinted, to help the eye along a row. */
+tbody tr {
+  transition: background-color var(--duration-fast) ease;
+}
+
+tbody tr:hover {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+/* Error messages slide in, so a refused action is noticed. */
+[role='alert']:not(:empty) {
+  animation: slide-down var(--duration) var(--ease-out) both;
 }

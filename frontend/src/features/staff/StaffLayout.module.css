@@ -116,13 +116,21 @@
 }
 
 .navLink[aria-current='page'] {
+  animation: nav-in var(--duration) var(--ease-out);
   color: var(--accent);
   background: var(--accent-soft);
   font-weight: 600;
 }
 
+@keyframes nav-in {
+  from {
+    background-color: transparent;
+  }
+}
+
 .navLink[aria-current='page']::before {
   content: '';
+  animation: grow var(--duration) var(--ease-out);
   position: absolute;
   left: calc(-1 * var(--space-3));
   top: 22%;
@@ -286,5 +294,11 @@
   .topBar,
   .main {
     padding-inline: var(--space-4);
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleY(0);
   }
 }

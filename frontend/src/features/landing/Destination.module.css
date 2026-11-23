@@ -49,3 +49,12 @@
     display: none;
   }
 }
+
+/* Where the browser can tie animation to scrolling, each section fades up as it comes into view. */
+@supports (animation-timeline: view()) {
+  .destination {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+}
