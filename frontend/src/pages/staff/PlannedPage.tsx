@@ -11,7 +11,7 @@ export default function PlannedPage() {
   return (
     <Panel title={`${planned.label}: coming in Sprint ${planned.sprint}`}>
       <p>
-        This part of Hospital Care isn’t built yet. It’s planned for Sprint {planned.sprint} (backlog {planned.issues}).
+        This part of CityCare isn’t built yet. It’s planned for Sprint {planned.sprint} (backlog {planned.issues}).
       </p>
       <p className={pageStyles.note}>
         <Link to="/staff">Go to Overview</Link>

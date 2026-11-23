@@ -1,11 +1,11 @@
 /**
- * Per-hospital branding and contact details. This is the file a hospital edits when it installs
- * Hospital Care. The values below are the fictional demo hospital that `seed_demo` creates, so the public
- * site and the staff workspace name the same hospital the demo accounts belong to.
+ * The site's name, branding and front-door contact details. CityCare is a network that hospitals join, so the brand is
+ * the network's, not any one hospital's; each hospital's own name comes from the API. A deployment for another network
+ * edits this file. The contact details below are the fictional demo front door that `seed_demo` creates.
  */
 export const hospital = {
-  name: 'CityCare General Hospital',
-  shortName: 'CityCare General',
+  name: 'CityCare',
+  shortName: 'CityCare',
   emergencyNumber: '1122',
   mainPhone: '(021) 3400 0000',
   address: 'Plot 14, Shahrah-e-Faisal, Karachi',
