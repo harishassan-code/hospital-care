@@ -1,3 +1,4 @@
+import { cityNow } from '../../lib/cityClock'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getMe, logout, type User } from '../../api/auth'
@@ -127,7 +128,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     try {
       const result = await loadStaffData(role, hasHospital)
       if (!mounted.current) return
-      const at = new Date()
+      const at = cityNow()
       setLoad((current) => {
         if (!result) return current.data ? { ...current, refreshFailed: true } : { ...current, failed: true }
         if (!result.complete && current.data) return { ...current, refreshFailed: true }

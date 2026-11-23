@@ -4,6 +4,7 @@ import {
   BedDouble,
   Bell,
   ChartColumn,
+  Clock3,
   Droplet,
   HeartHandshake,
   HeartPulse,
@@ -39,4 +40,5 @@ export const MODULE_ICONS: Partial<Record<Module, LucideIcon>> = {
   users: Users,
   audit: ScrollText,
   reports: ChartColumn,
+  simulation: Clock3,
 }

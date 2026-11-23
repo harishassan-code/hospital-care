@@ -3,7 +3,8 @@
 from django.urls import URLPattern, URLResolver, get_resolver
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-# Views anyone may call: health, sign-in and sign-up, and the public network pages (B19). Anything else must
+# Views anyone may call: health, sign-in and sign-up, the public network pages (B19) and the simulation's tick
+# (B21). Anything else must
 # name a permission class narrower than "signed in".
 PUBLIC = {
     "health",
@@ -14,6 +15,7 @@ PUBLIC = {
     "PublicNetworkView",
     "PublicHospitalListView",
     "PublicHospitalDetailView",
+    "TickView",
 }
 # Views that only need a signed-in user, by design (the user's own account and settings).
 SIGNED_IN_ONLY = {"MeView", "ChangePasswordView", "PasswordView", "ProfileView"}

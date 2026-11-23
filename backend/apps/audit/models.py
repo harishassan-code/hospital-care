@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
+from apps.core import clock
+
 
 class AuditLogQuerySet(models.QuerySet):
     def update(self, **kwargs):
@@ -18,7 +20,10 @@ class AuditLog(models.Model):
     Written through apps.audit.services.record.
     """
 
-    at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # When it happened, on the city clock (B21), so a simulated day's actions read in order. `recorded_at` is
+    # the real time the row was written, which the simulation can't move.
+    at = models.DateTimeField(default=clock.now, editable=False, db_index=True)
+    recorded_at = models.DateTimeField(default=clock.real_now, editable=False)
     # Kept even if the account is deleted later: the email is copied into actor_email.
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"

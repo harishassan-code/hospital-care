@@ -40,6 +40,14 @@ Free-plan limits: the API starts on demand, and the database sleeps after a few 
 after a quiet spell takes a few seconds. **Open the staging site about 2 minutes before every demo.** Neon's free
 database doesn't expire.
 
+### The live city simulation (B21)
+On Vercel the network runs a simulation of a city (`SIMULATION_ENABLED` is on there by default; set it to `false` to
+stop it). There is no background worker on the free plan: each open page asks the API to run the city up to its clock
+every 20 seconds, so the city sleeps while nobody has the site open and catches up when someone returns. The CityCare
+admin (`network@demo.citycare.pk`) runs the clock from **Simulation** in the staff menu. Before the scripted demo,
+pause it or leave it running: it never touches the demo's stock. After fast-forwarding more than about six days, run the
+reset below first. Everything else: [docs/product/simulation.md](../product/simulation.md).
+
 ### How the two halves share one domain
 The browser only ever talks to one address. `vercel.json` sends `/api/...` to the Django service and everything else
 to the site, so the session and CSRF cookies belong to the site's own domain. That matters: the frontend reads the

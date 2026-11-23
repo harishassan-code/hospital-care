@@ -86,6 +86,24 @@ export function DepartmentStatusPanel() {
         )}
       </div>
       <p className={styles.note}>This is what patients see on the CityCare home page and on {user.hospital.name}’s page.</p>
+      {current?.setBySimulation && current.factors && current.factors.length > 0 && (
+        <div className={styles.factors}>
+          <h3 className={styles.factorsTitle}>Why this wait</h3>
+          <ul>
+            {current.factors.map((f) => (
+              <li key={f.key}>
+                <span>
+                  {f.label}: <strong>{f.value}</strong>
+                </span>
+                <span className={f.minutes > 0 ? styles.adds : styles.none}>
+                  {f.minutes > 0 ? `+${f.minutes} min` : 'no delay'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className={styles.note}>Estimated from the department’s queue, staff on duty and beds every few minutes.</p>
+        </div>
+      )}
       {editable && (
         <form className={styles.form} onSubmit={submit} noValidate>
           <FormAlert>{errors.detail}</FormAlert>

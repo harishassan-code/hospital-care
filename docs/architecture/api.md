@@ -33,7 +33,7 @@ reading needs *view*, changing needs *edit*. No access → 403.
 | GET | `/public/network/` | `NetworkSnapshot`: member hospitals, emergency departments by status, the shortest wait, beds by type and red cells by group as levels, ambulances free (B19) | anyone, no sign-in |
 | GET | `/public/hospitals/` | `PublicHospital[]`: active hospitals with services and emergency status (B19) | anyone, no sign-in |
 | GET | `/public/hospitals/<id>/` | `PublicHospitalDetail`: departments, beds as levels, specialists on call by specialty; `names` null and `namesShown` false unless the caller is signed-in staff (#122). Inactive or unknown: 404 | anyone, no sign-in |
-| GET, PUT | `/emergencies/department/` | `DepartmentStatus` `{status, waitMinutes, waitingCount, updatedAt}` of the user's own hospital (all null until first reported); PUT is audit-logged as `er_status.updated`. No hospital: 404 (B19) | emergencies: view to read, edit to change |
+| GET, PUT | `/emergencies/department/` | `DepartmentStatus` `{status, waitMinutes, waitingCount, updatedAt, factors, setBySimulation}` of the user's own hospital (all null until first reported); PUT is audit-logged as `er_status.updated`. `factors` lists what made the wait longer when the simulation estimated it (B21), empty when a person set it. No hospital: 404 (B19) | emergencies: view to read, edit to change |
 | GET | `/beds/` | `BedBoard` = `{wards, beds}` | beds: view |
 | POST | `/beds/<bed id>/actions/` | `{action}` → updated `Bed` | beds: edit |
 | GET | `/blood/units/` | `BloodUnit[]` | blood: view |
@@ -1027,6 +1027,23 @@ It never carries the patient reference, stock or holds.
 - **Audit:** `patienttransfer.requested`, `patienttransfer.arrived` and `patienttransfer.cancelled`, each with the status
   before and after, and `emergencyrequest.hospital_changed` with the hospital before and after. Arrival also writes
   `reservation.released` for each hold it releases and `transfer.cancelled` for each stock transfer.
+
+## Live city simulation (B21)
+
+The city clock and the simulation that runs the network on staging ([docs/product/simulation.md](../product/simulation.md)).
+Off unless `SIMULATION_ENABLED` is on (on by default on Vercel). While it is on, every `/api/` response carries the
+city clock: `X-City-Time` (ISO 8601), `X-City-Mode` (`live`, `paused`, `fastForward`) and `X-City-Speed`.
+
+| Method | Path | Body → returns | Access |
+|---|---|---|---|
+| POST | `/simulation/tick/` | no body → `{ran, behind, mode, cityTime}`: runs the city up to its clock, at most once every 15 seconds and one at a time; `ran` false when too soon, busy, paused or off | anyone, no sign-in (no session, so no CSRF) |
+| GET | `/simulation/` | `SimulationStatus`: `{enabled, mode, paused, speed, speeds, cityTime, realTime, aheadMinutes, engineAt, scenario, scenarios, fastForwardOptions, fastForward: {from, to, progress, percent} \| null, incident: {until, hospitals} \| null, events: SimEvent[50]}` | the CityCare admin |
+| POST | `/simulation/control/` | `{action, value}` → `SimulationStatus`. `pause`, `resume`, `speed` (`0.5`, `1`, `2`, `5`, `10`, `60`), `fastForward` (`30m`, `1h`, `1d`, `1w`, `2w`), `catchUp` (to the real time, when behind), `scenario` (`regular`, `flu`, `slow`), `massCasualty`, `endIncident`. 400 for another value, or a clock change during a fast-forward. Audit-logged as `simulation.<action>` | the CityCare admin |
+| POST | `/simulation/advance/` | no body → `SimulationStatus` plus `{ran, behind}`: runs the next few seconds of the engine now (the panel calls it while fast-forwarding) | the CityCare admin |
+
+"The CityCare admin" is an admin with no hospital (`IsNetworkAdmin`); a hospital's admin gets 403. Simulated changes
+are recorded under the system account `simulation@system.citycare.invalid` (inactive, no password), so the audit page
+can filter by it.
 
 ## Demo data
 

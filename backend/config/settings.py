@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     "apps.specialists",
     "apps.staffing",
     "apps.metrics",
+    "apps.simulation",
     "apps.notifications",
     "apps.audit",
     "apps.reports",
@@ -112,6 +113,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.core.middleware.CityClockMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -191,6 +193,9 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
+# The city clock (B21) travels on every API response, so screens agree on the time. Exposed for local
+# development, where the site and the API are on different ports.
+CORS_EXPOSE_HEADERS = ["X-City-Time", "X-City-Mode", "X-City-Speed"]
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
 
 # Session auth. On Vercel the site and the API share one domain; the SameSite=None cookies date from the login
@@ -242,3 +247,13 @@ AUTH_THROTTLE_RATES = {
 # edge is the one proxy (1), and it writes the client's address there itself. 0 (local development) means
 # none: REMOTE_ADDR is the client's address.
 TRUSTED_PROXY_COUNT = non_negative_int_env("DJANGO_TRUSTED_PROXY_COUNT", 1 if ON_VERCEL else 0)
+
+# The live city simulation and its clock (B21). On on Vercel (staging) unless SIMULATION_ENABLED=false; off in
+# tests, CI and local Docker unless SIMULATION_ENABLED=true. docs/product/simulation.md.
+SIMULATION_ENABLED = os.environ.get(
+    "SIMULATION_ENABLED", "true" if ON_VERCEL else "false"
+).strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)

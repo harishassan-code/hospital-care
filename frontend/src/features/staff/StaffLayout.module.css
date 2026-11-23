@@ -209,8 +209,10 @@
 
 .topMeta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-4);
 }
 
 .shift {
@@ -289,6 +291,13 @@
 
   .topBar {
     position: static;
+  }
+
+  /* On a phone the simulated-time badge takes a line of its own, and the shift text stays on one line. */
+  .topMeta > [role='status'] {
+    order: -1;
+    flex-basis: 100%;
+    justify-content: flex-start;
   }
 
   .topBar,

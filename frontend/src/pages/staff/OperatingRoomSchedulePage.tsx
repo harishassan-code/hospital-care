@@ -1,3 +1,4 @@
+import { cityNow } from '../../lib/cityClock'
 import { useCallback, useState } from 'react'
 import { ApiError } from '../../api/client'
 import {
@@ -31,7 +32,7 @@ const statusLabel = (status: ScheduleRoom['status']) => OR_STATUSES.find((s) => 
 export default function OperatingRoomSchedulePage() {
   const { role } = useStaff()
   // `query` is what is loaded. A new object reloads it, which is how a save refreshes the day.
-  const [query, setQuery] = useState(() => ({ day: dateKey(new Date()) }))
+  const [query, setQuery] = useState(() => ({ day: dateKey(cityNow()) }))
   // `draft` is what the date box shows, so a half-typed date doesn't reload anything.
   const [draft, setDraft] = useState(query.day)
   const load = useCallback(() => getOperatingRoomSchedule(query.day), [query])

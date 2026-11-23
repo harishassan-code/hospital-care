@@ -7,11 +7,11 @@ in the order the reservations use: case, need, hold, then resource."""
 
 from django.db import transaction
 from django.db.models import F
-from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.permissions import can_edit, may_change
 from apps.audit.services import record
+from apps.core import clock
 from apps.emergencies.models import EmergencyRequest, RequestItem, RequestStatus, ResourceType
 from apps.emergencies.services import move_case
 from apps.resources.services import change_status
@@ -78,7 +78,7 @@ def allocate(reservation_id: int, *, actor, note: str = "", transfer_ok: bool = 
     a live transfer (unless `transfer_ok`, which only the transfer's receipt passes), AllocationRefused (409)
     for a case that is closed, cancelled or fulfilled, and TransitionNotAllowed (409) when the resource has
     moved on. Nothing is saved when any of these is raised."""
-    now = timezone.now()
+    now = clock.now()
     case_id, item_id = Reservation.objects.values_list("request_item__request_id", "request_item_id").get(
         pk=reservation_id
     )

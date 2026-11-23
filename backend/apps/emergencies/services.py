@@ -6,10 +6,10 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.http import Http404
-from django.utils import timezone
 
 from apps.accounts.permissions import may_change
 from apps.audit.services import record
+from apps.core import clock
 from apps.notifications.services import notify
 
 from .models import (
@@ -64,9 +64,12 @@ def _need_fields(item: dict) -> dict:
 
 
 @transaction.atomic
-def create_case(*, severity: str, patient_ref: str, items: list[dict], actor) -> EmergencyRequest:
+def create_case(
+    *, severity: str, patient_ref: str, items: list[dict], actor, hospital=None
+) -> EmergencyRequest:
     """
-    Open a case with its needs at the actor's hospital and audit-log it. Two cases created at the same moment
+    Open a case with its needs at the actor's hospital (or `hospital`, for the network's own system account,
+    B21) and audit-log it. Two cases created at the same moment
     can pick the same reference; the unique constraint refuses the second, which retries with the next one
     (each attempt is a savepoint, so a refused one leaves nothing behind).
     """
@@ -74,8 +77,8 @@ def create_case(*, severity: str, patient_ref: str, items: list[dict], actor) ->
         try:
             with transaction.atomic():
                 case = EmergencyRequest.objects.create(
-                    reference=next_reference(timezone.localdate().year),
-                    hospital=getattr(actor, "hospital", None),
+                    reference=next_reference(clock.localdate().year),
+                    hospital=hospital or getattr(actor, "hospital", None),
                     created_by=actor,
                     severity=severity,
                     patient_ref=patient_ref.strip(),
@@ -115,7 +118,7 @@ def move_case(case: EmergencyRequest, action: str, *, note: str, actor, at=None)
     TransitionNotAllowed and saves nothing if the lifecycle refuses the move. The caller holds the row lock
     and the transaction. `actor` None is the system (automatic escalation).
     """
-    at = at or timezone.now()
+    at = at or clock.now()
     before = case.status
     case.status = REQUEST_LIFECYCLE.next(before, action)
     case.save(update_fields=["status"])
@@ -190,7 +193,7 @@ def escalate_overdue(now=None) -> int:
     ponytail: a request-time sweep (the case list and detail GETs call this). Ceiling: read traffic or case
     volume grows; then run `escalate_overdue_cases` on a scheduler and drop the calls from the views.
     """
-    now = now or timezone.now()
+    now = now or clock.now()
     minutes = settings.EMERGENCY_ESCALATION_MINUTES
     cutoff = now - timedelta(minutes=minutes)
     candidates = list(_overdue_ids(cutoff))

@@ -550,3 +550,11 @@ class DepartmentStatusSerializer(serializers.Serializer):
     waitMinutes = serializers.IntegerField(source="wait_minutes", min_value=0, max_value=MAX_WAIT_MINUTES)
     waitingCount = serializers.IntegerField(source="waiting_count", min_value=0, max_value=MAX_WAITING)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
+    # What made the wait what it is, biggest first, when the simulation set it (B21); empty when a person did.
+    factors = serializers.JSONField(read_only=True)
+    setBySimulation = serializers.SerializerMethodField()
+
+    def get_setBySimulation(self, status) -> bool:
+        from apps.simulation.actor import SYSTEM_EMAIL  # the simulation builds on emergencies
+
+        return status.set_by is not None and status.set_by.username == SYSTEM_EMAIL

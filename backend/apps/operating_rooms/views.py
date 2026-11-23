@@ -1,12 +1,12 @@
 from datetime import date
 
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission
+from apps.core import clock
 from apps.resources.state_machine import TransitionNotAllowed
 
 from . import services
@@ -73,7 +73,7 @@ class OperatingRoomScheduleView(APIView):
     def get(self, request):
         raw = request.query_params.get("date")
         try:
-            day = date.fromisoformat(raw) if raw else timezone.localdate()
+            day = date.fromisoformat(raw) if raw else clock.localdate()
         except ValueError:
             return Response({"date": ["Use a date like 2026-11-17."]}, status=status.HTTP_400_BAD_REQUEST)
         return Response(services.day_schedule(request.user, day))

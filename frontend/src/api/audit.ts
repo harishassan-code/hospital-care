@@ -1,3 +1,4 @@
+import { cityNow } from '../lib/cityClock'
 import { apiDownload, apiGet } from './client'
 
 /** One critical action in the audit trail (story 8.1). Shape of `AuditEntrySerializer` in backend/apps/audit/serializers.py. */
@@ -84,5 +85,5 @@ export async function exportAuditCsv(filters: AuditFilters): Promise<{ blob: Blo
 
 /** Today's date in the project's time zone, "YYYY-MM-DD": the name the server gives the file. */
 function karachiToday(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(new Date())
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(cityNow())
 }

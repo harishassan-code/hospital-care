@@ -6,11 +6,11 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
 from django.http import Http404
-from django.utils import timezone
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import can_edit
 from apps.audit.services import record
+from apps.core import clock
 
 from .channels import CHANNELS
 from .models import Notification, Severity
@@ -84,7 +84,7 @@ def mark_read(pk: int, *, user) -> Notification:
     if row is None:
         raise Http404("No notification with that id.")
     if row.read_at is None:
-        row.read_at = timezone.now()
+        row.read_at = clock.now()
         row.save(update_fields=["read_at"])
         record(user, "notification.read", row, before={"read": False}, after={"read": True})
     return row

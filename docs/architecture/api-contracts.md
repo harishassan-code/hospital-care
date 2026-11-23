@@ -13,14 +13,14 @@ invalid input.
 `ACCESS` in `backend/apps/accounts/permissions.py` and `frontend/src/features/staff/roles.ts` must stay
 identical. Reads need *view*, writes need *edit*.
 
-| Role | overview | alerts | emergencies | beds | blood | donors | pharmacy | hospitals | specialists | users | equipment | operatingRooms | orBookings | transfers | ambulances | commandCentre | audit | reports |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| admin | view | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | view | view | view |
-| doctor | view | view | edit | view | view | – | view | view | view | – | view | view | edit | edit | view | – | – | – |
-| nurse | view | view | edit | edit | – | – | view | view | edit | – | edit | edit | edit | edit | edit | – | – | – |
-| bloodBank | view | view | view | – | edit | edit | – | view | view | – | – | – | – | edit | – | – | – | – |
-| pharmacist | view | view | view | – | – | – | edit | view | view | – | – | – | – | – | – | – | – | – |
-| patient | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – |
+| Role | overview | alerts | emergencies | beds | blood | donors | pharmacy | hospitals | specialists | users | equipment | operatingRooms | orBookings | transfers | ambulances | commandCentre | audit | reports | simulation |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| admin | view | view | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | edit | view | view | view | edit¹ |
+| doctor | view | view | edit | view | view | – | view | view | view | – | view | view | edit | edit | view | – | – | – | – |
+| nurse | view | view | edit | edit | – | – | view | view | edit | – | edit | edit | edit | edit | edit | – | – | – | – |
+| bloodBank | view | view | view | – | edit | edit | – | view | view | – | – | – | – | edit | – | – | – | – | – |
+| pharmacist | view | view | view | – | – | – | edit | view | view | – | – | – | – | – | – | – | – | – | – |
+| patient | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – | – |
 
 `emergencies` was added in Sprint 7 with #30 (see [api.md](api.md#emergency-cases-30-32)). `transfers` was added with
 B01 (#47): it lets a role use the transfer endpoints at all. Who may ask, approve, ship or receive is narrowed per move
@@ -39,6 +39,11 @@ can't send or step a trip. Trips add no module (see [trips](api.md#trips-b05-51)
 endpoint is in [api.md](api.md#city-command-centre-55).
 
 `audit` (#56) is the audit trail: admins only, and read only (`view`). Its endpoints are in [api.md](api.md#audit-trail-56).
+
+`simulation` (B21) is the live city simulation's panel: the city clock, scenarios and a mass-casualty event. ¹ Only the
+**CityCare admin**, an admin with no hospital (`IsNetworkAdmin`); a hospital's admin has the module but is refused (403)
+and doesn't see it in the menu (`canOpen` in `roles.ts`). Its endpoints are in
+[api.md](api.md#live-city-simulation-b21).
 
 `reports` (B18, #66, #67) is the operational reports page and its CSV/PDF export: admins only ("management" is the admin
 role), read only (`view`). Its endpoints are in [api.md](api.md#operational-reports-b18-66-67).

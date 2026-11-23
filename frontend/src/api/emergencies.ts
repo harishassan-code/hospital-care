@@ -417,11 +417,22 @@ export function allocateReservations(ids: number[]): Promise<CaseAllocation[]> {
 // ── Our emergency department (B19) ─────────────────────────────────────────────────────────────────────
 
 /** The signed-in user's own hospital's emergency department. All null until the hospital first reports it. */
+/** One reason the wait is what it is, and the minutes it added (B21). */
+export interface WaitFactor {
+  key: 'queue' | 'doctors' | 'nurses' | 'boarding' | 'arrivals' | 'beds'
+  label: string
+  value: string | number
+  minutes: number
+}
+
 export interface DepartmentStatus {
   status: ErStatus | null
   waitMinutes: number | null
   waitingCount: number | null
   updatedAt: string | null
+  /** What made the wait longer, biggest first, when the simulation set it (B21); empty when a person did. */
+  factors?: WaitFactor[]
+  setBySimulation?: boolean
 }
 
 export interface DepartmentStatusInput {

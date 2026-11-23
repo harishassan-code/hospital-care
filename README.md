@@ -34,7 +34,7 @@ Built for the **Agile Software Project Management** course using Scrum, with 1-w
 |---|---|
 | **Site** | _set by the account owner after the one-time set-up (B14, #69)_ |
 | **API health** | _the site_ + `/api/health/` → `{"status": "ok"}` |
-| **Demo logins** | `admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@demo.citycare.pk`, password `CityCare-demo-1` (public test accounts: never enter real patient data) |
+| **Demo logins** | `admin@`, `doctor@`, `nurse@`, `bloodbank@`, `pharmacist@`, `patient@`, `network@demo.citycare.pk` (the CityCare admin, who runs the live simulation), password `CityCare-demo-1` (public test accounts: never enter real patient data) |
 | **Database** | Neon PostgreSQL (free), connected from the Vercel project's Storage tab; it doesn't expire |
 
 The API and database start on demand, so the first request after a quiet spell is slow. Before a demo run
@@ -109,6 +109,7 @@ the password `CityCare-demo-1`. Staff work at CityCare General Hospital.
 | Blood bank | `bloodbank@demo.citycare.pk` |
 | Pharmacist | `pharmacist@demo.citycare.pk` |
 | Patient | `patient@demo.citycare.pk` |
+| CityCare admin (the whole network; runs the [live simulation](docs/product/simulation.md)) | `network@demo.citycare.pk` |
 
 Staff land in the staff workspace at `/staff` and see only the modules their role allows; patients land on the
 home page. Demo data only: never run `seed_demo` against a database with real patients. The frontend talks to the

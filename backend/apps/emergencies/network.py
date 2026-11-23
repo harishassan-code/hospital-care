@@ -7,11 +7,11 @@ network.
 """
 
 from django.db.models import Count, Max, Q
-from django.utils import timezone
 
 from apps.ambulances.models import Ambulance, AmbulanceStatus
 from apps.blood.models import BloodGroup, BloodUnit, Component, UnitStatus
 from apps.blood.services import RED_CELL_MINIMUM, stock_level
+from apps.core import clock
 from apps.hospitals.models import Bed, BedStatus, BedType, Hospital
 from apps.specialists.models import Specialist
 
@@ -101,7 +101,7 @@ def _status_of(hospital) -> EmergencyStatus | None:
 
 def network_snapshot(now=None) -> dict:
     """The city at a glance: shape of `NetworkSnapshot` in frontend/src/api/public.ts."""
-    now = now or timezone.now()
+    now = now or clock.now()
     hospitals = list(_active_hospitals())
     counts = {value: 0 for value in ErStatus.values}
     not_reported = 0
@@ -165,7 +165,7 @@ def hospital_profile(hospital, *, show_names: bool, now=None) -> dict:
     """One hospital's public page: shape of `PublicHospitalDetail` in frontend/src/api/public.ts. On duty
     means a
     specialist on call right now (B16), grouped by specialty; names only when `show_names`."""
-    now = now or timezone.now()
+    now = now or clock.now()
     on_call = Specialist.objects.filter(hospital=hospital).available_at(now).order_by("specialty", "name")
     groups: dict[str, list[str]] = {}
     for specialist in on_call:

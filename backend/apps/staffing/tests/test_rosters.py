@@ -1,7 +1,7 @@
 """Staff rosters (B20): every hospital's doctors and nurses, sized to its wards, with shifts from two weeks
 ago to a week ahead; clock times only for shifts that started; on duty means clocked in and not out."""
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 from django.core.management import call_command
@@ -82,8 +82,11 @@ def test_the_new_hospitals_consultants_come_from_their_rosters_and_a_rerun_tops_
     assert set(consultants.values_list("specialty", flat=True)) <= set(
         StaffMember.objects.filter(hospital=eastgate).values_list("department", flat=True)
     )
-    on_call_now = Specialist.objects.filter(hospital=eastgate).available_at(timezone.now())
-    assert on_call_now.exists()  # someone is always on call: day and night consultants
+    # Someone is on call by day and by night: checked at today's noon and 22:00, not now. Before 08:00 on
+    # the day of seeding, the night consultant's window began yesterday, which the seed doesn't add.
+    noon = timezone.make_aware(datetime.combine(timezone.localdate(), time(12)))
+    for at in (noon, noon + timedelta(hours=10)):
+        assert Specialist.objects.filter(hospital=eastgate).available_at(at).exists(), at
     first = consultants.first()
     first.on_call_windows.order_by("-starts_at").first().delete()
     call_command("seed_demo", stdout=None)

@@ -1,10 +1,10 @@
 """A hospital's emergency department status (B19): what the public sees for that hospital, changed only by
-that
-hospital's staff (and, on staging, by the simulation in B21). Every change is audit-logged."""
+that hospital's staff (and, on staging, by the simulation in B21). Every change is audit-logged."""
 
 from django.db import transaction
 
 from apps.audit.services import record
+from apps.core import clock
 
 from .models import EmergencyStatus
 
@@ -23,16 +23,28 @@ def department_status(hospital) -> EmergencyStatus | None:
 
 
 @transaction.atomic
-def update_department_status(*, hospital, status: str, wait_minutes: int, waiting_count: int, actor):
+def update_department_status(
+    *,
+    hospital,
+    status: str,
+    wait_minutes: int,
+    waiting_count: int,
+    actor,
+    log_minor: bool = True,
+    factors=None,
+):
     """Set the hospital's status, wait and number waiting. Logged as `er_status.updated` when anything
-    changed."""
+    changed; with `log_minor` off (the simulation, every five minutes), only when the status itself changed,
+    so the trail isn't one entry per minute of wait."""
     current = EmergencyStatus.objects.select_for_update().filter(hospital=hospital).first()
     before = None if current is None else _fields(current)
     if current is None:
         current = EmergencyStatus(hospital=hospital)
     current.status, current.wait_minutes, current.waiting_count = status, wait_minutes, waiting_count
+    current.updated_at, current.set_by, current.factors = clock.now(), actor, factors or []
     current.save()
     after = _fields(current)
-    if after != before:
+    changed = after != before if log_minor else (before or {}).get("status") != after["status"]
+    if changed:
         record(actor, "er_status.updated", hospital, before=before, after=after)
     return current

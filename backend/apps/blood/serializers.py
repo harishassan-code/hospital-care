@@ -2,10 +2,10 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.http import Http404
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.accounts.permissions import changeable_by
+from apps.core import clock
 
 from .models import (
     REQUIRED_TESTS,
@@ -80,7 +80,7 @@ class BloodUnitCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_collectedAt(self, value):
-        if value > timezone.now() + timedelta(minutes=5):  # small allowance for clock differences
+        if value > clock.now() + timedelta(minutes=5):  # small allowance for clock differences
             raise serializers.ValidationError("Collection time can't be in the future.")
         return value
 
@@ -189,7 +189,7 @@ class ScreeningSerializer(serializers.Serializer):
     deferredUntil = serializers.DateField(required=False, allow_null=True, default=None)
 
     def validate_deferredUntil(self, value):
-        if value is not None and value <= timezone.localdate():
+        if value is not None and value <= clock.localdate():
             raise serializers.ValidationError(
                 "The deferral must end in the future (or leave it empty for permanent)."
             )

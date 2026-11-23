@@ -10,10 +10,10 @@ from datetime import timedelta
 from django.conf import settings
 from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
-from django.utils import timezone
 
 from apps.blood.models import BloodGroup, BloodUnit, Component, UnitStatus
 from apps.blood.services import RED_CELL_MINIMUM, stock_level
+from apps.core import clock
 from apps.emergencies.models import EmergencyRequest, RequestItem, RequestStatus, ResourceType
 from apps.emergencies.services import ACTIVE
 from apps.equipment.models import Equipment, EquipmentType
@@ -133,7 +133,7 @@ def _totals(hospitals: list[dict]) -> dict:
 
 
 def network_figures(now=None) -> dict:
-    now = now or timezone.now()
+    now = now or clock.now()
     soon = now + timedelta(days=settings.BLOOD_NEAR_EXPIRY_DAYS)
     names = dict(Hospital.objects.filter(is_active=True).values_list("id", "name"))
 

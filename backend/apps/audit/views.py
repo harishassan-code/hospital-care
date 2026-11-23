@@ -1,10 +1,10 @@
 from django.http import StreamingHttpResponse
-from django.utils import timezone
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission
+from apps.core import clock
 
 from . import services
 from .serializers import AuditEntrySerializer
@@ -55,5 +55,5 @@ class AuditExportView(AuditReadView):
             services.export_chunks(queryset, request.user, filters),
             content_type="text/csv; charset=utf-8",
         )
-        response["Content-Disposition"] = f'attachment; filename="audit-{timezone.localdate():%Y-%m-%d}.csv"'
+        response["Content-Disposition"] = f'attachment; filename="audit-{clock.localdate():%Y-%m-%d}.csv"'
         return response

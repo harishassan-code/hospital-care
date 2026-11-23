@@ -47,7 +47,7 @@ def test_seed_demo_is_repeatable():
         "Bed": 1088,
         "BloodUnit": 1682,  # 320 at CityCare General, the scenario's 16 per partner, and each bank's stock
         "Medicine": 23,
-        "User": 6,
+        "User": 7,  # one login per role, and the CityCare network admin (B21)
         "Ambulance": 31,  # the scenario's seven (story #50) and each hospital's fleet
     }
     assert counts() == first
@@ -76,9 +76,12 @@ def test_beds_cover_every_bed_type():
 
 def test_one_login_per_role_and_staff_work_at_a_hospital():
     call_command("seed_demo", stdout=None)
-    assert sorted(User.objects.values_list("role", flat=True)) == sorted(Role.values)
+    # One per role, and the CityCare admin (B21): an admin of the whole network, with no hospital.
+    assert sorted(User.objects.values_list("role", flat=True)) == sorted([*Role.values, Role.ADMIN])
     for user in User.objects.all():
-        assert (user.hospital is None) == (user.role == Role.PATIENT)
+        network = user.username == "network@demo.citycare.pk"
+        assert (user.hospital is None) == (user.role == Role.PATIENT or network)
+    assert not User.objects.get(username="network@demo.citycare.pk").is_superuser
 
 
 def test_links_data_from_before_sprint_2_without_duplicating_it(make_user):

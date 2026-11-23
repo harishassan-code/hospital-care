@@ -31,7 +31,14 @@ def general(make_hospital):
 def test_a_hospital_that_never_reported_reads_as_nulls(api, make_user, general):
     nurse = staff(make_user, general)
     data = signed_in(api, nurse).get(URL).json()
-    assert data == {"status": None, "waitMinutes": None, "waitingCount": None, "updatedAt": None}
+    assert data == {
+        "status": None,
+        "waitMinutes": None,
+        "waitingCount": None,
+        "updatedAt": None,
+        "factors": [],  # what made the wait longer, when the simulation set it (B21)
+        "setBySimulation": False,
+    }
 
 
 @pytest.mark.parametrize("role", [Role.NURSE, Role.DOCTOR, Role.ADMIN])
@@ -125,3 +132,10 @@ def test_the_old_single_row_goes_to_the_first_hospital(make_hospital):
 
     [row] = EmergencyStatus.objects.all()
     assert row.hospital == first and row.wait_minutes == 40  # the oldest row, now the first hospital's
+
+
+def test_a_person_s_update_has_no_factors_and_isn_t_the_simulation_s(api, make_user, general):
+    nurse = staff(make_user, general)
+    body = {"status": "busy", "waitMinutes": 70, "waitingCount": 12}
+    data = signed_in(api, nurse).put(URL, body, format="json").json()
+    assert data["factors"] == [] and data["setBySimulation"] is False

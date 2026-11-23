@@ -6,12 +6,12 @@ each change."""
 from django.db import IntegrityError, transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import can_edit, may_change
 from apps.audit.services import record
+from apps.core import clock
 from apps.matching.distance import estimated_travel_minutes, hospital_distance
 from apps.resources.services import change_status
 from apps.resources.state_machine import TransitionNotAllowed
@@ -174,7 +174,7 @@ def step_trip(trip: Trip, action: str, *, actor, note: str = "") -> Trip:
         ambulance = Ambulance.objects.select_for_update().get(pk=locked.ambulance_id)
         change_status(ambulance, "release", actor=actor, reason=f"Trip #{locked.pk} completed")
     stamp = STEP_STAMP[action]
-    setattr(locked, stamp, timezone.now())
+    setattr(locked, stamp, clock.now())
     locked.status = after
     locked.save(update_fields=["status", stamp])
     record(

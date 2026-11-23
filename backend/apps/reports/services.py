@@ -13,10 +13,10 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db.models import Count, Min, Sum
-from django.utils import timezone
 from rest_framework.exceptions import APIException
 
 from apps.blood.models import BloodUnit, UnitStatus
+from apps.core import clock
 from apps.emergencies.models import (
     EmergencyRequest,
     RequestItem,
@@ -104,7 +104,7 @@ def range_from(params, *, today: dt.date | None = None) -> ReportRange:
     The range asked for. Neither date: the 30 days ending today. Only `from`: up to today. Only `to`: the 30
     days ending then. Refused: a malformed date, `to` before `from`, more than 366 days, an unknown hospital.
     """
-    today = today or timezone.localdate()
+    today = today or clock.localdate()
     start, end = _day(params, "from"), _day(params, "to")
     if end is None:
         end = today if start is None or start <= today else start
@@ -247,7 +247,7 @@ def wastage_report(r: ReportRange, *, now: dt.datetime | None = None) -> dict:
       (marked expired, or still on the shelf past expiry because the sweep hasn't run yet);
     - discarded: thrown away (a failed screening test) on a day in the range.
     """
-    now = now or timezone.now()
+    now = now or clock.now()
     units = BloodUnit.objects.all()
     if r.hospital:
         units = units.filter(hospital=r.hospital)
@@ -286,7 +286,7 @@ def build(r: ReportRange) -> dict:
     """All three reports for one range: the JSON the API answers and the data the exports lay out."""
     return {
         **r.describe(),
-        "generatedAt": timezone.now().isoformat(),
+        "generatedAt": clock.now().isoformat(),
         "requests": requests_report(r),
         "fulfilment": fulfilment_report(r),
         "wastage": wastage_report(r),
