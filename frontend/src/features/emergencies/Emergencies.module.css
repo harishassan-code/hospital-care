@@ -11,7 +11,7 @@
   min-height: var(--tap);
   padding: 0 var(--space-3);
   background: var(--surface);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
   font: inherit;
 }
@@ -90,10 +90,13 @@
   gap: var(--space-3);
   min-height: var(--tap);
   padding: var(--space-3);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--field-border);
   border-left-width: 6px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .severity[data-severity='critical'] {
@@ -128,7 +131,7 @@
   gap: var(--space-3);
   margin: 0;
   padding: var(--space-4);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
 }
 
@@ -188,11 +191,14 @@
   min-height: var(--tap);
   padding: 0 var(--space-4);
   background: var(--surface);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .secondaryAction:disabled {
@@ -473,9 +479,12 @@
   gap: var(--space-2);
   min-height: var(--tap);
   padding: 0 var(--space-4);
-  border: 2px solid var(--rule);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .toggle label:has(input:checked) {
@@ -495,7 +504,7 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--rule);
   border-left-width: 6px;
   border-radius: var(--radius);
 }

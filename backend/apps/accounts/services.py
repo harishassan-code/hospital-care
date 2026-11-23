@@ -17,18 +17,41 @@ class RoleLocked(Exception):
     """This account's role can't be changed here. The message says why."""
 
 
+class HospitalRequired(Exception):
+    """A staff role that works at one hospital was given without a hospital."""
+
+
+# Staff who work at one hospital. An account with one of these roles must have a hospital: without one it
+# could neither see nor change any hospital's records (own_hospital, changeable_by). Admins may have none
+# (functional sweep, F12).
+HOSPITAL_ROLES = frozenset({Role.DOCTOR, Role.NURSE, Role.BLOOD_BANK, Role.PHARMACIST})
+_KEEP = object()
+
+
 @transaction.atomic
-def change_role(actor: User, user: User, role: str) -> User:
-    """Change someone's role and log it. Takes effect on their next request (roles are read per request)."""
+def change_role(actor: User, user: User, role: str, hospital=_KEEP) -> User:
+    """Change someone's role, and optionally the hospital they work at, and log it. Takes effect on their next
+    request (roles are read per request). `hospital` left out keeps theirs; None clears it."""
     if user.pk == actor.pk:
         raise RoleLocked("You can't change your own role.")
     if user.is_superuser:
         raise RoleLocked("This account is a superuser. Change it in Django admin.")
-    before = user.role
-    if role != before:
+    new_hospital = user.hospital if hospital is _KEEP else hospital
+    if role in HOSPITAL_ROLES and new_hospital is None:
+        raise HospitalRequired("Choose the hospital this person works at.")
+    before, after, fields = {}, {}, []
+    if role != user.role:
+        before["role"], after["role"] = user.role, role
         user.role = role
-        user.save(update_fields=["role"])
-        record(actor, "user.role_changed", user, before={"role": before}, after={"role": role})
+        fields.append("role")
+    if hospital is not _KEEP and user.hospital_id != (hospital.pk if hospital else None):
+        before["hospital"] = user.hospital.name if user.hospital_id else None
+        after["hospital"] = hospital.name if hospital else None
+        user.hospital = hospital
+        fields.append("hospital")
+    if fields:
+        user.save(update_fields=fields)
+        record(actor, "user.role_changed", user, before=before, after=after)
     return user
 
 

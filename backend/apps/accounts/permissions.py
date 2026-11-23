@@ -109,9 +109,15 @@ def module_permission(module: str) -> type[BasePermission]:
 
 
 def own_hospital(queryset, user):
-    """Users who work at a hospital see only its rows; staff without one (admins) see the whole network.
+    """Users who work at a hospital see only its rows. Admins without a hospital see the whole network. Anyone
+    else without a hospital sees only rows that have none either (old data), as changeable_by() does: a role
+    change that left out the hospital must not open every hospital's records (functional sweep, F11).
     Always a fresh queryset: handing back a shared one (e.g. a module-level constant) would cache its rows."""
-    return queryset.filter(hospital_id=user.hospital_id) if user.hospital_id else queryset.all()
+    if user.hospital_id:
+        return queryset.filter(hospital_id=user.hospital_id)
+    if user.effective_role == Role.ADMIN:
+        return queryset.all()
+    return queryset.filter(hospital_id__isnull=True)
 
 
 def changeable_by(queryset, user):

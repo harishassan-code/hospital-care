@@ -16,8 +16,8 @@ For running the system see the [README](../../README.md); for a scripted walkthr
 After 5 wrong passwords in a row the account is locked for 15 minutes. A session ends after 30 minutes without
 activity; sign in again to continue.
 
-New patients can create their own account with **Create an account** (`/signup`). Staff accounts are created by an
-administrator in Django admin (see §8).
+New patients can create their own account with **Create an account** (`/signup`). To add a staff member, they sign
+up the same way, and an admin then gives them a role and the hospital they work at on **Users and roles** (see §8).
 
 ## 2. The staff workspace
 
@@ -119,8 +119,10 @@ trip, the ambulance and the estimated arrival time.
 
 - **Hospitals:** register hospitals (address, location, capabilities) and their departments, wards and storage
   locations.
-- **Users and roles:** change a person's role and hospital; deactivated accounts are marked. New staff accounts
-  are created, and accounts deactivated, in Django admin (`/admin/`, which is switched off on staging).
+- **Users and roles:** change a person's role and the hospital they work at; deactivated accounts are marked.
+  Doctors, nurses, blood bank and pharmacists need a hospital (admins may have none, and then see every hospital).
+  A new staff member signs up first, then gets their role and hospital here. Accounts are deactivated in Django
+  admin (`/admin/`, which is switched off on staging).
 - **City command centre:** every hospital in one table: free beds and ICU, blood by group, near-expiry units,
   equipment, active emergencies, with shortages highlighted.
 - **Audit log:** search every recorded action by person, action, entity and date, and export the result as CSV.

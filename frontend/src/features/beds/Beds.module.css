@@ -22,9 +22,7 @@
 
 .wardName {
   font-size: var(--text-xl);
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-weight: 800;
 }
 
 .wardKind {
@@ -114,7 +112,7 @@
   justify-self: start;
   margin-top: var(--space-1);
   padding: 1px var(--space-2);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--ink-muted);
   border-radius: 2px;
   font-size: var(--text-xs);
   font-weight: 700;
@@ -139,7 +137,10 @@
 
 .action {
   background: var(--surface);
-  border: 2px solid var(--rule);
+  border: 1px solid var(--field-border);
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .action:hover {

@@ -1,10 +1,13 @@
+import { LogOut, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Logo } from '../../components/brand/Logo'
 import { hospital } from '../../config/hospital'
 import { CriticalBanners } from '../notifications/CriticalBanners'
 import { NotificationBell } from '../notifications/NotificationBell'
 import { currentShift, formatDuration } from '../../lib/time'
 import { AccessDenied } from './AccessDenied'
+import { MODULE_ICONS } from './moduleIcons'
 import { PLANNED } from './planned'
 import { canSee, moduleForPath, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
@@ -54,9 +57,7 @@ function Sidebar() {
       <div className={styles.sidebarInner}>
         <div className={styles.brandRow}>
           <Link to="/staff" className={styles.brand}>
-            <span className={styles.monogram} aria-hidden="true">
-              {hospital.monogram}
-            </span>
+            <Logo className={styles.logo} />
             <span>
               <span className={styles.brandName}>{hospital.shortName}</span>
               <span className={styles.brandSub}>Staff workspace</span>
@@ -69,19 +70,24 @@ function Sidebar() {
             aria-controls="staff-nav"
             onClick={() => setOpen((o) => !o)}
           >
+            <Menu size={18} aria-hidden="true" />
             Menu
           </button>
         </div>
         <div id="staff-nav" className={styles.navArea} data-open={open}>
           <nav aria-label="Staff">
             <ul className={styles.navList}>
-              {MODULES.filter((m) => canSee(role, m.id)).map((m) => (
-                <li key={m.id}>
-                  <NavLink to={m.path} end className={styles.navLink} onClick={() => setOpen(false)}>
-                    {m.label}
-                  </NavLink>
-                </li>
-              ))}
+              {MODULES.filter((m) => canSee(role, m.id)).map((m) => {
+                const Icon = MODULE_ICONS[m.id]
+                return (
+                  <li key={m.id}>
+                    <NavLink to={m.path} end className={styles.navLink} onClick={() => setOpen(false)}>
+                      {Icon && <Icon className={styles.navIcon} size={18} strokeWidth={2} aria-hidden="true" />}
+                      {m.label}
+                    </NavLink>
+                  </li>
+                )
+              })}
             </ul>
           </nav>
           <div className={styles.user}>
@@ -89,6 +95,7 @@ function Sidebar() {
             <p className={styles.userRole}>{roleLabel}</p>
             {user.hospital && <p className={styles.userRole}>{user.hospital.name}</p>}
             <button type="button" className={styles.signOut} onClick={signOut}>
+              <LogOut size={16} aria-hidden="true" />
               Sign out
             </button>
           </div>

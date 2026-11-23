@@ -120,14 +120,37 @@ function IncomingRow({
 }
 
 /**
- * Patients this hospital is moving to another (B17): each request, and what became of it. Read-only: the sending side
- * cancels from the case page. The case itself is no longer this hospital's once the patient arrives, so there is no link.
+ * Patients this hospital is moving to another (B17): each request, and what became of it. The sending side cancels from
+ * the case page. Arrival is the receiving hospital's to confirm; an admin may confirm it for them (the API lists
+ * `arrive` in the row's actions), which is how the demo, with no logins at the partner hospitals, completes a move
+ * (functional sweep). Once the patient arrives the case is no longer this hospital's, so there is no link.
  */
 export function OutgoingPatients() {
   const load = useCallback(() => getPatientTransfers('outgoing'), [])
-  const { result } = useLoad(load)
+  const { result, setData } = useLoad(load)
+  const [notice, setNotice] = useState('')
+  const [error, setError] = useState<string>()
+  const [working, setWorking] = useState<number>()
+
+  async function arrive(transfer: PatientTransfer) {
+    setError(undefined)
+    setNotice('')
+    setWorking(transfer.id)
+    try {
+      const arrived = await patientTransferAction(transfer.id, 'arrive')
+      setData((current) => current.map((row) => (row.id === arrived.id ? arrived : row)))
+      setNotice(`${arrived.reference} has arrived at ${arrived.to.name}. The case is theirs now.`)
+    } catch (failure) {
+      setError(patientTransferFailure(failure))
+    } finally {
+      setWorking(undefined)
+    }
+  }
+
   return (
     <Panel title="Outgoing patients" id="outgoing-patients">
+      <FormAlert>{error}</FormAlert>
+      {notice && <p role="status">{notice}</p>}
       {result.state === 'loading' && <p role="status">Looking for outgoing patients…</p>}
       {result.state === 'failed' && <p role="status">The list didn’t load. Reload the page to try again.</p>}
       {result.state === 'ready' &&
@@ -143,6 +166,20 @@ export function OutgoingPatients() {
                 </div>
                 <div>{describePatientTransfer(transfer, transfer.status === 'arrived' ? 'arrived' : 'requested')}</div>
                 {transfer.status === 'cancelled' && <p className={styles.entryNote}>Cancelled: {transfer.reason}</p>}
+                {transfer.status === 'requested' && transfer.actions.includes('arrive') && (
+                  <div className={styles.moves}>
+                    <button
+                      type="button"
+                      className={styles.secondaryAction}
+                      disabled={working !== undefined}
+                      aria-busy={working === transfer.id}
+                      aria-label={`Confirm arrival of ${transfer.reference} at ${transfer.to.name}`}
+                      onClick={() => arrive(transfer)}
+                    >
+                      {working === transfer.id ? 'Confirming…' : `Confirm arrival at ${transfer.to.name}`}
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

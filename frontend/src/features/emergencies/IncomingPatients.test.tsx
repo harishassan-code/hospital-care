@@ -70,6 +70,27 @@ describe('Outgoing patients on the Emergencies page (B17)', () => {
     expect(within(panel).getByText('Transfer to Riverside Medical Centre requested')).toBeInTheDocument()
   })
 
+  it('lets an admin confirm arrival for the receiving hospital, which the demo has no login for (functional sweep)', async () => {
+    const { fetchMock } = mockStaffApi({ role: 'admin', patientTransfers: [sampleCaseTransfer(new Date())] })
+    renderStaff(EMERGENCIES)
+
+    const panel = await outgoing()
+    await userEvent.click(await within(panel).findByRole('button', { name: 'Confirm arrival of EC-2026-0002 at Riverside Medical Centre' }))
+    expect(await within(panel).findByText('EC-2026-0002 has arrived at Riverside Medical Centre. The case is theirs now.')).toBeInTheDocument()
+    expect(within(panel).getByText('Arrived')).toBeInTheDocument()
+    const paths = fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)
+    expect(paths.some((path) => /^\/api\/patient-transfers\/\d+\/actions\/$/.test(path))).toBe(true)
+  })
+
+  it('offers no arrival to the sending hospital’s own staff', async () => {
+    mockStaffApi({ role: 'doctor', patientTransfers: [sampleCaseTransfer(new Date())] })
+    renderStaff(EMERGENCIES)
+
+    const panel = await outgoing()
+    expect(await within(panel).findByText('EC-2026-0002')).toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: /Confirm arrival/ })).toBeNull()
+  })
+
   it('says so when this hospital is moving nobody', async () => {
     mockStaffApi({ role: 'doctor', patientTransfers: [] })
     renderStaff(EMERGENCIES)

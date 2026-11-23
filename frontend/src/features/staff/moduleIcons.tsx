@@ -1,0 +1,42 @@
+import {
+  Ambulance,
+  ArrowLeftRight,
+  BedDouble,
+  Bell,
+  ChartColumn,
+  Droplet,
+  HeartHandshake,
+  HeartPulse,
+  Hospital,
+  LayoutDashboard,
+  Pill,
+  Radar,
+  Scissors,
+  ScrollText,
+  Siren,
+  Stethoscope,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import type { Module } from './roles'
+
+/** The icon beside each module in the staff menu (Lucide, ISC licence). Decorative: the label says what it is. */
+export const MODULE_ICONS: Partial<Record<Module, LucideIcon>> = {
+  overview: LayoutDashboard,
+  alerts: Bell,
+  commandCentre: Radar,
+  emergencies: Siren,
+  transfers: ArrowLeftRight,
+  beds: BedDouble,
+  blood: Droplet,
+  donors: HeartHandshake,
+  pharmacy: Pill,
+  equipment: HeartPulse,
+  operatingRooms: Scissors,
+  ambulances: Ambulance,
+  hospitals: Hospital,
+  specialists: Stethoscope,
+  users: Users,
+  audit: ScrollText,
+  reports: ChartColumn,
+}

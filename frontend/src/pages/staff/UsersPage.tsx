@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ApiError, fieldErrors } from '../../api/client'
-import { getUsers, updateUserRole, type AccountRole, type UserSummary } from '../../api/users'
+import { getHospitals, type Hospital } from '../../api/hospitals'
+import { getUsers, HOSPITAL_ROLES, updateUserRole, type AccountRole, type UserSummary } from '../../api/users'
 import { FormAlert } from '../../components/form/FormAlert'
 import { Panel } from '../../components/ui/Panel'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -18,13 +19,17 @@ function saveError(error: unknown): string {
   const status = error instanceof ApiError ? error.status : 0
   if (status === 403) return 'Your role can’t change other people’s roles.'
   const errors = fieldErrors(error)
-  if (status === 400 && (errors.role || errors.detail)) return errors.role ?? errors.detail
+  if (status === 400 && (errors.role || errors.hospitalId || errors.detail)) return errors.role ?? errors.hospitalId ?? errors.detail
   return 'The hospital’s system didn’t respond, so the role wasn’t changed. Try again.'
 }
 
-/** Admin only: every account with its role, and a way to change the role. */
+const NEEDS_HOSPITAL = 'Choose the hospital this person works at.'
+
+/** Admin only: every account with its role and hospital, and a way to change both. */
 export default function UsersPage() {
   const { result, setData } = useLoad(getUsers)
+  const loadHospitals = useCallback(() => getHospitals().then((all) => all.filter((h) => h.isActive)), [])
+  const hospitals = useLoad(loadHospitals).result
   const [status, setStatus] = useState('')
   const [alert, setAlert] = useState('')
 
@@ -33,7 +38,8 @@ export default function UsersPage() {
   const saved = (user: UserSummary) => {
     setData((users) => users.map((u) => (u.id === user.id ? user : u)))
     setAlert('')
-    setStatus(`${user.fullName} is now ${roleLabel(user.role)}. The change applies on their next page load.`)
+    const where = user.hospital ? ` at ${user.hospital.name}` : ''
+    setStatus(`${user.fullName} is now ${roleLabel(user.role)}${where}. The change applies on their next page load.`)
   }
   const failed = (message: string) => {
     setStatus('')
@@ -44,7 +50,8 @@ export default function UsersPage() {
     <div className={pageStyles.stack}>
       <Panel title="Users and roles" aside={<span className={pageStyles.note}>{result.data.length} accounts</span>}>
         <p className={pageStyles.note}>
-          A role decides which pages and actions someone has. New staff accounts are created in Django admin.
+          A role decides which pages and actions someone has; doctors, nurses, blood bank and pharmacists also need the
+          hospital they work at. To add a staff member, they sign up, then you give them a role and a hospital here.
         </p>
         <p role="status" aria-live="polite">
           {status}
@@ -63,7 +70,13 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {result.data.map((user) => (
-                <UserRow key={user.id} user={user} onSaved={saved} onFailed={failed} />
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  hospitals={hospitals.state === 'ready' ? hospitals.data : []}
+                  onSaved={saved}
+                  onFailed={failed}
+                />
               ))}
             </tbody>
           </table>
@@ -73,20 +86,35 @@ export default function UsersPage() {
   )
 }
 
-type UserRowProps = { user: UserSummary; onSaved: (user: UserSummary) => void; onFailed: (message: string) => void }
+type UserRowProps = {
+  user: UserSummary
+  hospitals: readonly Hospital[]
+  onSaved: (user: UserSummary) => void
+  onFailed: (message: string) => void
+}
 
-function UserRow({ user, onSaved, onFailed }: UserRowProps) {
+function UserRow({ user, hospitals, onSaved, onFailed }: UserRowProps) {
   const me = useStaff().user
   const [role, setRole] = useState(user.role)
+  const [hospitalId, setHospitalId] = useState<number | null>(user.hospital?.id ?? null)
   const [pending, setPending] = useState(false)
   const selectId = `role-${user.id}`
+  const hospitalSelectId = `hospital-${user.id}`
+  const hospitalChanged = hospitalId !== (user.hospital?.id ?? null)
+  // The user's current hospital stays choosable even if it has since been made inactive.
+  const choices = user.hospital && !hospitals.some((h) => h.id === user.hospital?.id) ? [user.hospital, ...hospitals] : hospitals
 
   async function save() {
+    if (HOSPITAL_ROLES.includes(role) && hospitalId === null) {
+      onFailed(`${NEEDS_HOSPITAL} ${roleLabel(role)} accounts work at one hospital.`)
+      return
+    }
     setPending(true)
     try {
-      onSaved(await updateUserRole(user.id, role))
+      onSaved(await updateUserRole(user.id, role, hospitalChanged ? hospitalId : undefined))
     } catch (error) {
       setRole(user.role)
+      setHospitalId(user.hospital?.id ?? null)
       onFailed(saveError(error))
     } finally {
       setPending(false)
@@ -105,7 +133,30 @@ function UserRow({ user, onSaved, onFailed }: UserRowProps) {
         )}
       </td>
       <td>{user.email}</td>
-      <td>{user.hospital?.name ?? (user.role === 'admin' ? 'All hospitals' : 'No hospital')}</td>
+      <td>
+        {user.roleLocked ? (
+          (user.hospital?.name ?? (user.role === 'admin' ? 'All hospitals' : 'No hospital'))
+        ) : (
+          <>
+            <label className="visually-hidden" htmlFor={hospitalSelectId}>
+              Hospital for {user.fullName}
+            </label>
+            <select
+              id={hospitalSelectId}
+              className={styles.select}
+              value={hospitalId ?? ''}
+              onChange={(e) => setHospitalId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">{role === 'admin' ? 'All hospitals' : 'No hospital'}</option>
+              {choices.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </td>
       <td>
         {user.roleLocked ? (
           <span>
@@ -132,7 +183,7 @@ function UserRow({ user, onSaved, onFailed }: UserRowProps) {
             <button
               type="button"
               className={styles.action}
-              disabled={pending || role === user.role}
+              disabled={pending || (role === user.role && !hospitalChanged)}
               aria-label={`${pending ? 'Saving' : 'Save'} role for ${user.fullName}`}
               onClick={save}
             >

@@ -62,6 +62,7 @@ not circular imports.
 
 - ERD → [erd.md](erd.md) (Mermaid source, rendered by GitHub; matches the models at the end of Sprint 2)
 - Wireframes → [docs/product/wireframes.md](../product/wireframes.md) (text wireframes and the navigation map per role)
+- UI design system (colours, type, logo, icons, motion, dark mode) → [design-system.md](design-system.md)
 - Resource model, bed and blood unit state diagrams, own-hospital rule, audit log → [resources.md](resources.md).
   EmergencyRequest, Reservation and Transfer state diagrams are added with those stories (Sprints 5–7).
 - Blood compatibility rules → [docs/domain/blood-compatibility.md](../domain/blood-compatibility.md)

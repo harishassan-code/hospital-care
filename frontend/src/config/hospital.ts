@@ -6,15 +6,15 @@
 export const hospital = {
   name: 'CityCare General Hospital',
   shortName: 'CityCare General',
-  monogram: 'CG',
   emergencyNumber: '1122',
   mainPhone: '(021) 3400 0000',
   address: 'Plot 14, Shahrah-e-Faisal, Karachi',
   visitingHours: '11:00–13:00 and 17:00–20:00 daily',
   /** Wards and bed types at or above this occupancy (%) are flagged on the bed board and overview. */
   occupancyAlertPercent: 90,
-  /** Overhead sign and header colour. Keep it dark: white text sits on it. */
-  brandColor: '#0F2A26',
+  /** Brand colour: the logo, primary buttons and the active line. White text sits on it, so keep it dark enough
+   * for 4.5:1 (the default teal is 5.96:1). */
+  brandColor: '#0B6E79',
   /** Staff shifts; together they must cover all 24 hours. */
   shifts: [
     { name: 'Morning', start: '08:00', end: '14:00' },

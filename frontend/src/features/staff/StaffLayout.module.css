@@ -1,17 +1,17 @@
 .shell {
-  --sidebar: 15.5rem;
+  --sidebar: 16rem;
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar) minmax(0, 1fr);
 }
 
-/* ── Sidebar: the overhead sign ────────────────────────── */
+/* ── Sidebar ───────────────────────────────────────────── */
 
 /* The colour fills the whole column; only the inner panel stays put while the page scrolls. */
 .sidebar {
-  --focus: var(--sign-text);
-  background: var(--sign);
-  color: var(--sign-text);
+  background: var(--chrome);
+  color: var(--chrome-text);
+  border-right: 1px solid var(--chrome-border);
 }
 
 .sidebarInner {
@@ -27,7 +27,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) var(--space-4) var(--space-4);
 }
 
 .brand {
@@ -38,16 +38,13 @@
   text-decoration: none;
 }
 
-.monogram {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  background: var(--sign-text);
-  color: var(--sign);
-  font-family: var(--font-display);
-  font-weight: 900;
-  border-radius: var(--radius);
+.logo {
+  flex: none;
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.brand:hover .logo {
+  transform: rotate(-8deg) scale(1.04);
 }
 
 .brandName,
@@ -57,13 +54,15 @@
 
 .brandName {
   font-family: var(--font-display);
+  font-size: 1.0625rem;
   font-weight: 800;
   line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .brandSub {
   font-size: var(--text-xs);
-  color: var(--sign-muted);
+  color: var(--chrome-muted);
 }
 
 .menuButton {
@@ -73,40 +72,64 @@
 .navArea {
   display: grid;
   grid-template-rows: 1fr auto;
+  overflow-y: auto;
 }
 
 .navList {
   display: grid;
   gap: 2px;
   margin: 0;
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
   list-style: none;
 }
 
-/* The active page gets the teal floor-line stripe. */
+/* The active page: a soft brand-tinted pill with a brand-coloured line on its left. */
 .navLink {
+  position: relative;
   display: flex;
   align-items: center;
-  min-height: 2.875rem;
-  padding: 0 var(--space-4) 0 calc(var(--space-4) + var(--stripe));
-  color: var(--sign-muted);
-  font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  gap: var(--space-3);
+  min-height: 2.625rem;
+  padding: 0 var(--space-3);
+  color: var(--chrome-muted);
+  font-weight: 600;
+  font-size: var(--text-sm);
   text-decoration: none;
-  border-left: var(--stripe) solid transparent;
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.navIcon {
+  flex: none;
+  transition: transform var(--duration-fast) var(--ease-out);
 }
 
 .navLink:hover {
-  color: var(--sign-text);
-  background: color-mix(in srgb, var(--sign-text) 6%, transparent);
+  color: var(--chrome-text);
+  background: color-mix(in srgb, var(--chrome-text) 6%, transparent);
+}
+
+.navLink:hover .navIcon {
+  transform: translateX(1px) scale(1.06);
 }
 
 .navLink[aria-current='page'] {
-  color: var(--sign-text);
-  background: color-mix(in srgb, var(--sign-text) 9%, transparent);
-  border-left-color: var(--line-portal);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.navLink[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--space-3));
+  top: 22%;
+  bottom: 22%;
+  width: var(--stripe);
+  border-radius: 0 3px 3px 0;
+  background: var(--sign);
 }
 
 .navLink:focus-visible {
@@ -114,8 +137,10 @@
 }
 
 .user {
-  padding: var(--space-4);
-  border-top: 1px solid color-mix(in srgb, var(--sign-text) 16%, transparent);
+  margin: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
   font-size: var(--text-sm);
 }
 
@@ -124,20 +149,24 @@
 }
 
 .userRole {
-  color: var(--sign-muted);
+  color: var(--chrome-muted);
 }
 
 .signOut {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
   min-height: var(--tap);
   padding: 0;
   background: none;
   border: 0;
-  color: var(--sign-text);
+  color: var(--chrome-text);
   font-weight: 700;
-  text-decoration: underline;
   cursor: pointer;
+}
+
+.signOut:hover {
+  color: var(--accent);
 }
 
 /* ── Main column ───────────────────────────────────────── */
@@ -148,21 +177,26 @@
   grid-template-rows: auto 1fr;
 }
 
+/* Stays at the top while the page scrolls, on a frosted strip. */
 .topBar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3) var(--space-5);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  background: color-mix(in srgb, var(--wall) 82%, transparent);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--rule);
 }
 
 .title {
   font-size: var(--text-2xl);
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .topMeta {
@@ -172,13 +206,18 @@
 }
 
 .shift {
-  font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .main {
   padding: var(--space-6);
+}
+
+/* Each page fades up as it opens. */
+.main > * {
+  animation: page-enter var(--duration) var(--ease-out) both;
 }
 
 .denied {
@@ -190,6 +229,7 @@
   border: 1px solid var(--rule);
   border-left: var(--stripe) solid var(--status-critical);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
 }
 
 .denied h2 {
@@ -207,6 +247,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--chrome-border);
+  }
+
   .sidebarInner {
     position: static;
     height: auto;
@@ -219,18 +264,23 @@
   .menuButton {
     display: inline-flex;
     align-items: center;
+    gap: var(--space-2);
     min-height: var(--tap);
     padding: 0 var(--space-4);
-    background: none;
-    border: 2px solid color-mix(in srgb, var(--sign-text) 40%, transparent);
-    border-radius: var(--radius);
-    color: var(--sign-text);
+    background: var(--surface);
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-sm);
+    color: var(--chrome-text);
     font-weight: 700;
     cursor: pointer;
   }
 
   .navArea[data-open='false'] {
     display: none;
+  }
+
+  .topBar {
+    position: static;
   }
 
   .topBar,

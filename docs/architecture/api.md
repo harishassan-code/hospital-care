@@ -20,8 +20,8 @@ already does); the cookie is set by `login`, `signup`, `me` and `csrf`.
 | GET | `/auth/me/` | signed in | – | 200 `User` | 403 when signed out |
 
 `User` = `{id, email, fullName, phone, role, isStaff}`; `role` is one of `admin`, `doctor`, `nurse`,
-`bloodBank`, `pharmacist`, `patient` (same ids as `features/staff/roles.ts`). Staff accounts are created in
-Django admin, never through sign-up.
+`bloodBank`, `pharmacist`, `patient` (same ids as `features/staff/roles.ts`). Sign-up always creates a patient;
+an admin then gives a staff member their role and hospital (`PATCH /users/<id>/`, in api-contracts.md).
 
 ## Modules
 

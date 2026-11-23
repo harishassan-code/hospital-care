@@ -32,9 +32,9 @@ until the receiving hospital confirms delivery.
 | Release plan, Sprints 1–9 | 233 of 250 story points closed by 22 Nov; the 17 left are hardening, staging and this report | [burndown](charts/burndown.csv) |
 | Stretch goals | All 22 points delivered: specialists (#61, #62), patient transfer (#63–#65), reports (#66, #67) | [velocity table](../../scrum/timeline.md#velocity-check) |
 | MVP acceptance criteria (proposal §23) | All 11 covered by the end-to-end browser test; criteria 2 and 4 partly, with the rest in unit tests | [MVP scenario](../../testing/mvp-scenario.md) |
-| Automated tests | 1,857 backend tests (10 more run only on PostgreSQL, in CI), 734 frontend tests, 1 end-to-end scenario | section 4 |
+| Automated tests | 1,863 backend tests (10 more run only on PostgreSQL, in CI), 741 frontend tests, 1 end-to-end scenario | section 4 |
 | Candidate search speed | p95 about 26 ms on PostgreSQL, 50-hospital network | [load test](../../testing/search-load-test.md) |
-| Security | All 66 API routes reviewed; 7 of 10 findings fixed, 1 kept by design, 2 for the Product Owner (#122, #123) | [security review](../../testing/security-review.md) |
+| Security | All 66 API routes reviewed; 9 of 12 findings fixed, 1 kept by design, 2 for the Product Owner (#122, #123) | [security review](../../testing/security-review.md) |
 | Staging | Configured, not yet deployed (#69). Rehearsed locally with its production settings: the full scenario passes | [rehearsal](../../testing/mvp-scenario.md#against-production-settings-staging-rehearsal-22-nov) |
 
 ## 2. Product
@@ -91,7 +91,9 @@ change follows are in [AGENTS.md](../../../AGENTS.md). The ones that shaped the 
 
 ### 2.5 Screenshots
 
-Taken from a local run of the seeded app after the full MVP scenario, at 1366 × 820. Staging screenshots replace
+Taken from a local run of the seeded app after the full MVP scenario, at 1366 × 820, in the "Clinical Calm" design
+adopted on 22 Nov (light surfaces, one teal brand colour, Atkinson Hyperlegible type chosen for legibility;
+[design system](../../architecture/design-system.md)). Staging screenshots replace
 them once staging is deployed (#69).
 
 | | |
@@ -182,9 +184,9 @@ Other differences, from the repository's history:
 
 | Suite | What it covers | Size |
 |---|---|---|
-| Backend (pytest) | Services, API, permissions for every route, state machines, seed data | 1,857 tests on SQLite; 10 more need PostgreSQL and run in CI |
+| Backend (pytest) | Services, API, permissions for every route, state machines, seed data | 1,863 tests on SQLite; 10 more need PostgreSQL and run in CI |
 | Concurrency (pytest, PostgreSQL) | Two reservations, allocations or transfers racing for the same unit | In the 10 above |
-| Frontend (Vitest) | Pages, components, the API client and the access table, against a mock of the real API shape | 734 tests |
+| Frontend (Vitest) | Pages, components, the API client and the access table, against a mock of the real API shape | 741 tests |
 | End-to-end (Playwright) | The MVP acceptance scenario: three hospitals, a critical blood request, local holds, ranked sources, a transfer through delivery, allocation, closure, and the history in the audit log | 1 scenario, 12 steps |
 
 The end-to-end scenario maps each step to the proposal's §23 criteria, in
@@ -203,12 +205,13 @@ Every push and pull request runs four jobs ([ci.yml](../../../.github/workflows/
 ### 4.3 Security
 
 The review in [security-review.md](../../testing/security-review.md) lists every one of the 66 API routes with its
-permission and hospital scope, and two tests walk every route to keep it that way. Seven of its ten findings are
-fixed: donors and records at
-other hospitals now answer 404 rather than leaking their existence, sign-in and sign-up are rate-limited per address,
-the server refuses to start without a secret key, HTTPS and HSTS are on in production, and the Django admin is off on
-staging. One finding is kept by design (some reads also run housekeeping), and two need a Product Owner decision
-(#122, #123). The deploy check on staging waits for #69.
+permission and hospital scope, and two tests walk every route to keep it that way. Nine of its twelve findings are
+fixed: donors and records at other hospitals now answer 404 rather than leaking their existence, sign-in and sign-up
+are rate-limited per address, the server refuses to start without a secret key, HTTPS and HSTS are on in production,
+the Django admin is off on staging, and staff without a hospital no longer see every hospital's records (with a way
+to give them one; found by the [functional sweep](../../testing/functional-sweep.md)). One finding is kept by design
+(some reads also run housekeeping), and two need a Product Owner decision (#122, #123). The deploy check on staging
+waits for #69.
 
 ### 4.4 Performance
 

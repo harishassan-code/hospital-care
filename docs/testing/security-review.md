@@ -43,7 +43,7 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 | SignupView | POST `/api/auth/signup/` | AllowAny | creates patient accounts only | Public by design. F4 | Limited per client address (F4) |
 | MeView | GET `/api/auth/me/` | IsAuthenticated | self | OK | OK |
 | UserListView | GET `/api/users/` | table: users | network, admin only | OK | OK |
-| UserRoleView | PATCH `/api/users/<id>/` | table: users (edit) | network, admin only | OK, audit-logged | OK |
+| UserRoleView | PATCH `/api/users/<id>/` | table: users (edit) | network, admin only | F12 | Fixed: a hospital role needs a hospital; role and hospital set together, audit-logged |
 | BloodUnitListView | GET/POST `/api/blood/units/` | table: blood | own_hospital; POST: donor scoped to the actor (F2) | F2 | Fixed: another hospital's donor is 404 |
 | BloodUnitDetailView | GET `/api/blood/units/<id>/` | table: blood | own_hospital | OK | OK |
 | BloodUnitTestView | POST `/api/blood/units/<id>/tests/` | table: blood (edit) | changeable_by, 404; then service may_change | F3 | Fixed: 404 |
@@ -141,6 +141,18 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 - **F10 (low), fixed.** Nothing enforced the table. `apps/accounts/tests/test_permissions.py` now fails when a route has
   no permission class, or when an `AllowAny` route is not on the allowlist, and when the allowlist names a route that
   is not `AllowAny`.
+
+Found on 22 Nov by the [functional sweep](functional-sweep.md), which drove every page and form as each role:
+
+- **F11 (medium), fixed.** `own_hospital()` gave the whole network to *any* user without a hospital, not only to
+  admins. A patient promoted to nurse on the Users page has no hospital, so they read every hospital's beds, blood,
+  cases and stock. Writes were safe (`changeable_by()` already limited them). Now a non-admin without a hospital sees
+  only rows with no hospital, as `changeable_by()` does. Test: `test_staff_without_a_hospital_no_longer_see_every_hospitals_rows`.
+- **F12 (medium), fixed.** There was no way to give a user a hospital: `PATCH /api/users/<id>/` took only a role, and
+  the Django admin is off on staging (F6). So the only way to add staff on staging made the F11 account above. The
+  endpoint now takes `hospitalId`, refuses a doctor, nurse, blood bank or pharmacist without one, and logs both
+  changes; the Users page has a hospital picker beside the role. Tests in `apps/accounts/tests/test_roles.py` and
+  `UsersPage.test.tsx`.
 
 ## Deploy settings (B13, unit 1)
 

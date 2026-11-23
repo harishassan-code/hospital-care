@@ -11,10 +11,13 @@
   min-height: var(--tap);
   padding: 0 var(--space-4);
   background: var(--surface);
-  border: 2px solid var(--rule);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .option:hover {
@@ -22,9 +25,9 @@
 }
 
 .option[aria-pressed='true'] {
-  background: var(--line-clinics);
-  border-color: var(--line-clinics);
-  color: var(--surface);
+  background: var(--sign);
+  border-color: var(--sign);
+  color: var(--sign-text);
 }
 
 .count {

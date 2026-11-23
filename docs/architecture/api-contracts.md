@@ -63,7 +63,7 @@ have one. Pharmacy has no hospital yet.
 | Method | Path | Access | Body | Success |
 |---|---|---|---|---|
 | GET | `/users/` | users: view | – | 200 `UserSummary[]`, sorted by email |
-| PATCH | `/users/<id>/` | users: edit | `{role}` | 200 `UserSummary` |
+| PATCH | `/users/<id>/` | users: edit | `{role, hospitalId?}` | 200 `UserSummary` |
 
 ```ts
 UserSummary = {
@@ -78,7 +78,13 @@ UserSummary = {
 - 400 `{role: ["…is not a valid choice."]}` for an unknown role.
 - 400 `{role: ["You can't change your own role."]}`: stops an admin locking themselves out.
 - 400 `{role: ["This account is a superuser. Change it in Django admin."]}`: a superuser always acts as admin.
-- Every change writes an audit entry `user.role_changed` with `{role}` before and after.
+- `hospitalId` (optional) sets the hospital the user works at: left out keeps it, `null` clears it. Only an active
+  hospital can be chosen: 400 `{hospitalId: [...]}` otherwise.
+- 400 `{hospitalId: ["Choose the hospital this person works at."]}` when the result would be a doctor, nurse, blood bank
+  or pharmacist with no hospital. Such an account could neither see nor change any hospital's records. Admins may
+  have none, and then see the whole network (functional sweep, 22 Nov: F11 and F12 in the security review).
+- Every change writes an audit entry `user.role_changed` with what changed before and after: `{role}`, `{hospital}`
+  (by name) or both.
 - The new role applies on the user's next request. The SPA reads `/auth/me/` on every page load.
 
 ## Hospitals (story 1.3 Hospital registration and capability profile)

@@ -1,5 +1,7 @@
 # Landing, Log in and Sign up: Design
 
+> **Superseded on 22 Nov 2026** for colours, type and styling by [Clinical Calm](../../architecture/design-system.md). The page structure described here still holds.
+
 **Status:** Approved by Haris (Scrum Master / frontend lead), 5 Oct 2026
 **Scope:** public frontend only. No backend endpoints are built here.
 

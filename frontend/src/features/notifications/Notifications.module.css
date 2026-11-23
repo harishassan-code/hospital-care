@@ -15,10 +15,13 @@
   height: var(--tap);
   padding: 0;
   background: var(--surface);
-  border: 2px solid var(--rule);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   color: var(--ink);
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .bell:hover {
@@ -132,13 +135,16 @@
   min-height: var(--tap);
   padding: 0 var(--space-3);
   background: var(--surface);
-  border: 2px solid var(--rule);
-  border-radius: var(--radius);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
   color: var(--ink);
   font: inherit;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .action:hover {

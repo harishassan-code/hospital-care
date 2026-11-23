@@ -19,6 +19,7 @@ from .serializers import (
 from .services import (
     LOCKOUT_SECONDS,
     EmailTaken,
+    HospitalRequired,
     RoleLocked,
     authenticate_by_email,
     change_role,
@@ -113,7 +114,9 @@ class UserListView(APIView):
 
 
 class UserRoleView(APIView):
-    """PATCH /api/users/<id>/ {"role": "doctor"}: change someone's role (admins only). Audit-logged."""
+    """PATCH /api/users/<id>/ {"role": "doctor", "hospitalId": 3}: change someone's role and, optionally, the
+    hospital they work at (admins only). Doctors, nurses, blood bank and pharmacists need a hospital.
+    Audit-logged."""
 
     permission_classes = [module_permission("users")]
 
@@ -121,8 +124,12 @@ class UserRoleView(APIView):
         user = get_object_or_404(User.objects.select_related("hospital"), pk=pk)
         serializer = RoleChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        extra = {"hospital": data["hospitalId"]} if "hospitalId" in data else {}
         try:
-            change_role(request.user, user, serializer.validated_data["role"])
+            change_role(request.user, user, data["role"], **extra)
         except RoleLocked as exc:
             return Response({"role": [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
+        except HospitalRequired as exc:
+            return Response({"hospitalId": [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
         return Response(UserSummarySerializer(user, context={"request": request}).data)
