@@ -190,3 +190,8 @@
     border-top: 0;
   }
 }
+
+.privacy {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}

@@ -55,7 +55,7 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 | AppointmentListView | GET/POST `/api/blood/appointments/` | table: donors | GET own_hospital; POST: donor scoped to the actor (F1) | F1 | Fixed: another hospital's donor is 404 |
 | AppointmentCancelView | POST `/api/blood/appointments/<id>/cancel/` | table: donors (edit) | changeable_by, 404; then service | F3 | Fixed: 404 |
 | health | GET `/api/health/` | AllowAny (decorator) | none | Public, Render health check | Allowlisted; exempt from the HTTPS redirect |
-| PublicStatusView | GET `/api/public/status/` | AllowAny, no auth classes | none | F5 | Open: decision Q8, follow-up [#122](https://github.com/harishassan-code/hospital-care/issues/122) |
+| PublicStatusView | GET `/api/public/status/` | AllowAny, session read but not required | none | F5 | Fixed (#122): names only for signed-in staff |
 | CaseListView | GET/POST `/api/emergencies/` | table: emergencies | own_hospital; POST uses actor's hospital | F9 | Not changed (F9) |
 | CaseDetailView | GET `/api/emergencies/<ref>/` | table: emergencies | own_hospital | F9 | Not changed (F9) |
 | EmergencyFeedView | GET `/api/emergencies/feed/` | table: emergencies (view) | network-wide by design (#36); no patient field | F9 | Not changed (F9) |
@@ -123,10 +123,11 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
   (`DJANGO_TRUSTED_PROXY_COUNT`) recorded it, and otherwise from `REMOTE_ADDR`. Defaults: login 30 per minute, signup 30
   per hour, both set in the environment. The per-account lockout is unchanged. Tests:
   `apps/accounts/tests/test_throttle.py`.
-- **F5 (low), open: decision Q8.** `/api/public/status/` needs no sign-in and returns the on-shift doctors' names,
-  departments and shift times. The demo data is synthetic, so the names stay for now. A follow-up is needed before any
-  real hospital joins, because staff names on a public page need the staff's consent. Follow-up:
-  [#122](https://github.com/harishassan-code/hospital-care/issues/122), with the options for the Product Owner.
+- **F5 (low), fixed (23 Nov, #122).** `/api/public/status/` needs no sign-in and returned the on-shift doctors' names,
+  departments and shift times. Staff names on a public page need the staff's consent, and CityCare is meant for any
+  hospital that joins. Now the public sees each shift's department and hours with `name: null`; signed-in hospital
+  staff (who can already see the staff directory) see the names. The view reads the session to tell them apart and
+  still requires nothing. Tests in `apps/emergencies/tests/test_public_status.py`.
 - **F6 (decision Q7), fixed.** The Django admin at `/admin/` was routed on staging, and the demo `admin@` superuser's
   password is public in `docs/setup/deployment.md`. Now `/admin/` is routed only when `DJANGO_ADMIN_ENABLED=true`, which
   defaults to on under DEBUG and off otherwise. Render sets it to `false`. Tests: `apps/core/tests/test_admin_route.py`.

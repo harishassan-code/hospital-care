@@ -26,6 +26,7 @@ export function DoctorSchedule({ doctors, now }: DoctorScheduleProps) {
     return <p>No doctor schedules are published for today.</p>
   }
 
+  const anonymous = doctors.some((d) => d.name === null)
   const filtered = department === ALL ? doctors : doctors.filter((d) => d.department === department)
   const shown = sortForDisplay(filtered, now)
   const nowAt = pct(minutesOfDay(now))
@@ -38,6 +39,7 @@ export function DoctorSchedule({ doctors, now }: DoctorScheduleProps) {
         value={department}
         onChange={setDepartment}
       />
+      {anonymous && <p className={styles.privacy}>Doctors’ names are shown to signed-in hospital staff.</p>}
 
       <div className={styles.chart}>
         <div className={styles.axis} aria-hidden="true">
@@ -66,12 +68,13 @@ export function DoctorSchedule({ doctors, now }: DoctorScheduleProps) {
                 <div className={styles.who}>
                   <span className={styles.nameLine}>
                     <span id={`${doctor.id}-name`} className={styles.name}>
-                      {doctor.name}
+                      {doctor.name ?? doctor.department}
                     </span>
                     {inNow && <span className={styles.tag}>In now</span>}
                   </span>
                   <span className={styles.meta}>
-                    {doctor.department} · <span className={styles.time}>{`${doctor.start}–${doctor.end}`}</span>
+                    {doctor.name && <>{doctor.department} · </>}
+                    <span className={styles.time}>{`${doctor.start}–${doctor.end}`}</span>
                   </span>
                 </div>
                 <div className={styles.track} aria-hidden="true">

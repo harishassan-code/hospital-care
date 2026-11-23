@@ -30,7 +30,7 @@ reading needs *view*, changing needs *edit*. No access → 403.
 
 | Method | Path | Returns | Access |
 |---|---|---|---|
-| GET | `/public/status/` | `PublicStatus` (ER status + today's doctors) | anyone, no sign-in |
+| GET | `/public/status/` | `PublicStatus` (ER status + today's doctors; `name` is null and `namesShown` false unless the caller is signed-in staff, #122) | anyone, no sign-in |
 | GET | `/beds/` | `BedBoard` = `{wards, beds}` | beds: view |
 | POST | `/beds/<bed id>/actions/` | `{action}` → updated `Bed` | beds: edit |
 | GET | `/blood/units/` | `BloodUnit[]` | blood: view |

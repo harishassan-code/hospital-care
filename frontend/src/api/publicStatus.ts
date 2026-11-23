@@ -4,7 +4,8 @@ export type ErStatus = 'accepting' | 'busy' | 'diverting'
 
 export interface Doctor {
   id: string
-  name: string
+  /** null for the public: names go only to signed-in staff (#122). */
+  name: string | null
   department: string
   /** "HH:MM", 24-hour clock */
   start: string
@@ -20,6 +21,8 @@ export interface PublicStatus {
     waitMinutes: number
     waitingCount: number
   }
+  /** Whether the names are in `doctors` (signed-in staff only). */
+  namesShown?: boolean
   doctors: Doctor[]
 }
 

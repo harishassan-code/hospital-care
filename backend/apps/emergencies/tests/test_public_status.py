@@ -3,6 +3,7 @@ from datetime import time
 import pytest
 from django.urls import reverse
 
+from apps.accounts.models import Role
 from apps.emergencies.models import EmergencyStatus
 from apps.hospitals.models import DoctorShift
 
@@ -25,3 +26,34 @@ def test_public_status_needs_no_login_and_matches_frontend_shape(api):
 
 def test_public_status_works_on_an_empty_database(api):
     assert api.get(reverse("public-status")).status_code == 200
+
+
+# #122 (B13 finding F5): staff names only for signed-in staff.
+
+
+def make_shift():
+    return DoctorShift.objects.create(
+        name="Dr. Usman Farooq", department="Emergency medicine", start=time(20), end=time(8)
+    )
+
+
+def test_the_public_sees_departments_and_hours_but_no_names(api):
+    make_shift()
+    data = api.get(reverse("public-status")).json()
+    assert data["namesShown"] is False
+    [doctor] = data["doctors"]
+    assert doctor["name"] is None
+    assert (doctor["department"], doctor["start"], doctor["end"]) == ("Emergency medicine", "20:00", "08:00")
+
+
+def test_signed_in_staff_see_the_names(client_as):
+    make_shift()
+    data = client_as(Role.NURSE).get(reverse("public-status")).json()
+    assert data["namesShown"] is True
+    assert data["doctors"][0]["name"] == "Dr. Usman Farooq"
+
+
+def test_a_signed_in_patient_sees_no_names(client_as):
+    make_shift()
+    data = client_as(Role.PATIENT).get(reverse("public-status")).json()
+    assert data["namesShown"] is False and data["doctors"][0]["name"] is None
