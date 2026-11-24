@@ -1,12 +1,12 @@
 """Hospital network rules: bed lifecycle, hospital registration and structure, each audit-logged."""
 
 from django.db import transaction
-from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.permissions import may_change
 from apps.audit.services import record
+from apps.core import clock
 from apps.resources.services import change_status
 
 from .models import BED_LIFECYCLE, Bed, BedStatus, Hospital, Ward
@@ -26,8 +26,31 @@ def apply_bed_action(label: str, action: str, *, actor) -> Bed:
     if bed.status == BedStatus.OCCUPIED:
         bed.clear_patient()  # discharge is the only way out of occupied; a refused move saves nothing
     if action == "admit":
-        bed.admitted_at = timezone.now()  # no patient is recorded here; the bed is only marked occupied
+        bed.admitted_at = clock.now()  # no patient is recorded here; the bed is only marked occupied
     return change_status(bed, action, actor=actor)
+
+
+@transaction.atomic
+def place_patient(
+    bed: Bed, *, initials: str, age: int, sex: str, actor, expected_discharge=None, isolation=""
+):
+    """Put a patient in a free bed (B21): reserve it, then admit, as staff would at the bed board, with the
+    patient's initials, age and sex. Raises TransitionNotAllowed and saves nothing if the bed isn't free or is
+    held for a case."""
+    bed = Bed.objects.select_for_update().select_related("ward").get(pk=bed.pk)
+    change_status(bed, "reserve", actor=actor, reason="Patient arriving")
+    bed.patient_initials, bed.patient_age, bed.patient_sex = initials, age, sex
+    bed.admitted_at, bed.expected_discharge, bed.isolation = clock.now(), expected_discharge, isolation
+    return change_status(bed, "admit", actor=actor)
+
+
+@transaction.atomic
+def vacate_bed(bed: Bed, *, actor, reason: str = "discharge") -> Bed:
+    """The patient left (B21): the bed goes to cleaning and its patient details are cleared."""
+    bed = Bed.objects.select_for_update().select_related("ward").get(pk=bed.pk)
+    if bed.status == BedStatus.OCCUPIED:
+        bed.clear_patient()
+    return change_status(bed, "discharge", actor=actor, reason=reason)
 
 
 @transaction.atomic

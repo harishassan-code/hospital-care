@@ -1,3 +1,5 @@
+import { observeClock } from '../lib/cityClock'
+
 // Base URL for the Django API. Set VITE_API_URL in .env for staging/production.
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
 
@@ -27,6 +29,7 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   } catch {
     throw new ApiError(0)
   }
+  if (res.headers) observeClock(res.headers)
   const body: unknown = await res.json().catch(() => null)
   if (!res.ok) throw new ApiError(res.status, body)
   return body as T

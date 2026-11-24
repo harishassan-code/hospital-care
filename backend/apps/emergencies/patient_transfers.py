@@ -12,12 +12,12 @@ first, so two moves on one case take turns."""
 
 from django.db import transaction
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import can_edit, may_change
 from apps.audit.services import record
+from apps.core import clock
 from apps.hospitals.models import Hospital
 from apps.matching.candidates import candidates_for_case
 from apps.matching.models import Reservation, ReservationStatus
@@ -272,7 +272,7 @@ def arrive_patient(transfer: PatientTransfer, *, actor) -> PatientTransfer:
         actor=actor,
         audit_reason=f"From {sending.name}",
         arrived_by=actor,
-        arrived_at=timezone.now(),
+        arrived_at=clock.now(),
     )
 
 

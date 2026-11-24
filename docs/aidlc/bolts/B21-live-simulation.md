@@ -7,7 +7,7 @@ priority: high
 sprint: 9
 depends_on: B20
 owner: harishassan-code
-status: Backlog
+status: In Progress
 ---
 
 # B21 · Live city simulation with time controls

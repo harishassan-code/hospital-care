@@ -26,6 +26,8 @@ import OperatingRoomsPage from './pages/staff/OperatingRoomsPage'
 import PharmacyPage from './pages/staff/PharmacyPage'
 import PlannedPage from './pages/staff/PlannedPage'
 import ReportsPage from './pages/staff/ReportsPage'
+import SimulationPage from './pages/staff/SimulationPage'
+import { CityTicker } from './features/simulation/CityTicker'
 import SpecialistDetailPage from './pages/staff/SpecialistDetailPage'
 import SpecialistFormPage from './pages/staff/SpecialistFormPage'
 import SpecialistsPage from './pages/staff/SpecialistsPage'
@@ -66,6 +68,7 @@ export function AppRoutes() {
         <Route path="users" element={<UsersPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="simulation" element={<SimulationPage />} />
         {PLANNED.map((p) => (
           <Route key={p.path} path={p.path.replace('/staff/', '')} element={<PlannedPage />} />
         ))}
@@ -78,6 +81,7 @@ export function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <CityTicker />
       <AppRoutes />
     </BrowserRouter>
   )

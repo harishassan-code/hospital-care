@@ -419,4 +419,37 @@ describe('Our emergency department (B19)', () => {
     renderStaff('/staff/emergencies')
     expect(within(await panel()).getByText(/hasn’t reported its emergency status yet/)).toBeInTheDocument()
   })
+
+  it('shows what made the wait longer when the simulation estimated it (B21)', async () => {
+    mockStaffApi({
+      role: 'nurse',
+      department: {
+        status: 'busy',
+        waitMinutes: 84,
+        waitingCount: 14,
+        updatedAt: new Date().toISOString(),
+        setBySimulation: true,
+        factors: [
+          { key: 'queue', label: 'Patients waiting', value: 14, minutes: 52 },
+          { key: 'doctors', label: 'Emergency doctors on duty', value: '2 of 3', minutes: 21 },
+          { key: 'beds', label: 'Free emergency beds', value: '0 of 24', minutes: 0 },
+        ],
+      },
+    })
+    renderStaff('/staff/emergencies')
+    const section = await panel()
+    const why = within(section).getByRole('heading', { name: 'Why this wait' }).parentElement!
+    const items = within(why).getAllByRole('listitem').map((li) => li.textContent)
+    expect(items).toEqual([
+      'Patients waiting: 14+52 min',
+      'Emergency doctors on duty: 2 of 3+21 min',
+      'Free emergency beds: 0 of 24no delay',
+    ])
+  })
+
+  it('has no factors when a person set the status', async () => {
+    mockStaffApi({ role: 'nurse' })
+    renderStaff('/staff/emergencies')
+    expect(within(await panel()).queryByRole('heading', { name: 'Why this wait' })).not.toBeInTheDocument()
+  })
 })

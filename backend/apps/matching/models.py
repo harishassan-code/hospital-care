@@ -10,7 +10,8 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
-from django.utils import timezone
+
+from apps.core import clock
 
 
 class ReservationStatus(models.TextChoices):
@@ -35,7 +36,7 @@ class Reservation(models.Model):
         max_length=10, choices=ReservationStatus.choices, default=ReservationStatus.HELD
     )
     reserved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=clock.now)
     expires_at = models.DateTimeField(
         help_text="When an unused hold is released. Set from RESERVATION_HOLD_MINUTES."
     )
@@ -78,7 +79,7 @@ class Allocation(models.Model):
     object_id = models.PositiveBigIntegerField()
     resource = GenericForeignKey("content_type", "object_id")
     allocated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
-    at = models.DateTimeField(default=timezone.now)
+    at = models.DateTimeField(default=clock.now)
     note = models.TextField(blank=True)
 
     class Meta:

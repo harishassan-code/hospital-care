@@ -3,7 +3,8 @@ happens. Read state belongs to that one person, so the row is theirs alone. The 
 
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
+
+from apps.core import clock
 
 
 class Severity(models.TextChoices):
@@ -21,7 +22,7 @@ class Notification(models.Model):
     link = models.CharField(
         max_length=200, blank=True, help_text='A staff page path, e.g. "/staff/transfers".'
     )
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=clock.now)
     read_at = models.DateTimeField(null=True, blank=True, help_text="Empty until the person marks it read.")
 
     class Meta:

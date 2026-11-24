@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.utils import timezone
+
+from apps.core import clock
 
 if TYPE_CHECKING:
     from apps.emergencies.models import RequestItem
@@ -182,7 +183,7 @@ class ScoringStrategy:
     def score(
         self, candidate: Candidate, *, needed: int, item: RequestItem, now: datetime | None = None
     ) -> Score:
-        now = timezone.now() if now is None else now
+        now = clock.now() if now is None else now
         total_weight = sum(self.weights.values())
         factors = []
         for name in self.factors:
@@ -274,7 +275,7 @@ def rank(item_candidates: ItemCandidates, *, now: datetime | None = None) -> lis
     last), then hospital id. Deterministic on ties."""
     item = item_candidates.item
     strategy = strategy_for(item.resource_type)
-    now = timezone.now() if now is None else now
+    now = clock.now() if now is None else now
     scored = [
         ScoredCandidate(
             candidate,

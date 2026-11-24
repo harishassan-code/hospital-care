@@ -26,4 +26,5 @@ urlpatterns = [
     path("api/trips/", include("apps.ambulances.trip_urls")),
     path("api/patient-transfers/", include("apps.emergencies.patient_transfer_urls")),
     path("api/specialists/", include("apps.specialists.urls")),
+    path("api/simulation/", include("apps.simulation.urls")),
 ]

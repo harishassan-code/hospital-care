@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
-from django.utils import timezone
 
 from apps.audit.services import record
+from apps.core import clock
 
 from .models import Resource
 from .state_machine import TransitionNotAllowed
@@ -37,7 +37,7 @@ def change_status(
         )
     before = resource.status
     resource.status = type(resource).machine.next(before, action)
-    resource.status_since = timezone.now()
+    resource.status_since = clock.now()
     resource.save()
     record(
         actor,

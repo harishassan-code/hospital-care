@@ -13,10 +13,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Exists, OuterRef
-from django.utils import timezone
 
 from apps.audit.services import record
 from apps.blood.models import BloodUnit, Component
+from apps.core import clock
 from apps.emergencies.models import EmergencyRequest, RequestItem, RequestStatus, ResourceType
 from apps.emergencies.services import case_path, move_case
 from apps.equipment.models import Equipment
@@ -119,7 +119,7 @@ def reserve(item: RequestItem, *, hospital, quantity: int, actor) -> list[Reserv
     if not found:
         raise ReservationUnavailable("No matching stock is free at this hospital.")
 
-    now = timezone.now()
+    now = clock.now()
     expires_at = now + timedelta(minutes=settings.RESERVATION_HOLD_MINUTES)
     reservations = []
     for resource in found:
@@ -214,7 +214,7 @@ def release(reservation: Reservation, *, actor, reason: str, transfer_ok: bool =
         raise ReservationNotHeld(
             f"This hold is part of transfer #{transfer.pk}; cancel the transfer instead."
         )
-    return _end(hold, status=ReservationStatus.RELEASED, actor=actor, reason=reason, now=timezone.now())
+    return _end(hold, status=ReservationStatus.RELEASED, actor=actor, reason=reason, now=clock.now())
 
 
 def release_expired(now=None) -> int:
@@ -228,7 +228,7 @@ def release_expired(now=None) -> int:
     scheduler and drop the calls from the views."""
     from apps.transfers.models import LIVE  # transfers builds on matching, so import late
 
-    now = now or timezone.now()
+    now = now or clock.now()
     due = list(
         Reservation.objects.filter(status=ReservationStatus.HELD, expires_at__lte=now)
         .exclude(transfers__status__in=LIVE)

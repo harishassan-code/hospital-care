@@ -59,6 +59,7 @@ import { sampleCapabilities, sampleHospitals, sampleUsers } from './fixtures/hos
 import { sampleMedicines } from './fixtures/pharmacy'
 import { sampleDepartment, samplePublicHospitalDetail, samplePublicHospitals, sampleNetwork } from './fixtures/publicNetwork'
 import { sampleReport } from './fixtures/reports'
+import { sampleSimulation } from './fixtures/simulation'
 import { sampleSpecialists, type SpecialistRecord } from './fixtures/specialists'
 
 /** A reply is JSON (`body`), or a file (`file`): its text, sent with the type and the name the server gives it. */
@@ -181,8 +182,8 @@ const NAMES: Record<Role | 'patient', string> = {
   patient: 'Sara Ahmed',
 }
 
-export function userFor(role: Role | 'patient'): User {
-  const hospital = role === 'patient' ? null : { id: 1, name: 'CityCare General Hospital' }
+export function userFor(role: Role | 'patient', network = false): User {
+  const hospital = role === 'patient' || network ? null : { id: 1, name: 'CityCare General Hospital' }
   return { id: 1, email: `${role.toLowerCase()}@demo.test`, fullName: NAMES[role], phone: '', role, isStaff: role !== 'patient', hospital }
 }
 
@@ -192,6 +193,8 @@ export function userFor(role: Role | 'patient'): User {
  */
 type StaffApiOptions = {
   role: Role | 'patient' | null
+  /** Sign in as the CityCare admin (B21): an admin with no hospital, who runs the simulation. */
+  network?: boolean
   /** Make our emergency department's status (GET /emergencies/department/) fail. */
   erDown?: boolean
   /** Use this board instead of the sample one. */
@@ -320,6 +323,7 @@ const clock = (iso: string) => iso.slice(11, 16)
 
 export function mockStaffApi({
   role,
+  network = false,
   erDown = false,
   board: customBoard,
   department: customDepartment,
@@ -802,6 +806,34 @@ export function mockStaffApi({
     }
   const view = allowed(canSee)
   const edit = allowed(canEdit)
+  // The live city simulation (B21): only the CityCare admin, an admin with no hospital.
+  let simulation = sampleSimulation(now)
+  const networkAdmin = (reply: (request: Request) => Reply): Route => (request) =>
+    role === 'admin' && network ? reply(request) : fail(403, { detail: 'Only the CityCare network admin can do this.' })
+  const controlSimulationMock = (action: string, value: string): Reply => {
+    const s = simulation
+    if (s.fastForward && ['pause', 'resume', 'speed', 'fastForward', 'catchUp'].includes(action)) {
+      return fail(400, { action: ['Wait for the fast-forward to finish.'] })
+    }
+    const log = (message: string) => [{ id: s.events.length + 1, at: s.cityTime, kind: `control.${action}`, message, hospital: null }, ...s.events]
+    if (action === 'pause') simulation = { ...s, paused: true, mode: 'paused', events: log('Paused the city clock.') }
+    else if (action === 'resume') simulation = { ...s, paused: false, mode: 'live', events: log('Resumed the city clock.') }
+    else if (action === 'speed') {
+      if (!s.speeds.includes(Number(value))) return fail(400, { value: ['Speed must be one of 0.5, 1, 2, 5, 10, 60.'] })
+      simulation = { ...s, speed: Number(value), events: log(`City clock at ${value}× real time.`) }
+    } else if (action === 'fastForward') {
+      if (!s.fastForwardOptions.includes(value as never)) return fail(400, { value: ['Fast-forward by one of: 30m, 1h, 1d, 1w, 2w.'] })
+      const to = new Date(new Date(s.cityTime).getTime() + 24 * 3_600_000).toISOString()
+      simulation = { ...s, mode: 'fastForward', fastForward: { from: s.cityTime, to, progress: s.cityTime, percent: 0 } }
+    } else if (action === 'scenario') simulation = { ...s, scenario: value as typeof s.scenario }
+    else if (action === 'massCasualty') {
+      if (s.incident) return fail(400, { action: ['A mass-casualty event is already under way.'] })
+      const until = new Date(new Date(s.cityTime).getTime() + 2 * 3_600_000).toISOString()
+      simulation = { ...s, incident: { until, hospitals: ['Bahadurabad Medical Centre', 'CityCare General Hospital', 'Harbourline District Hospital'] } }
+    } else if (action === 'endIncident') simulation = { ...s, incident: null }
+    else return fail(400, { action: ['Unknown action.'] })
+    return ok(simulation)
+  }
   const findHospital = (id: string) => hospitals.find((h) => h.id === Number(id))
   /** The report for `from`/`to`/`hospital` with the server's rules: 30 days ending today by default, at most 366. */
   const reportFor = (query: URLSearchParams): Report | { detail: string } => {
@@ -831,8 +863,8 @@ export function mockStaffApi({
   /** Our emergency department (B19); a PUT replaces it, as the server does. */
   let department: DepartmentStatus = customDepartment ?? sampleDepartment(now)
   const fetchMock = mockApi({
-    'GET /auth/me/': role ? ok(userFor(role)) : fail(403),
-    'POST /auth/login/': role ? ok(userFor(role)) : fail(401, { detail: 'That email and password don’t match an account.' }),
+    'GET /auth/me/': role ? ok(userFor(role, network)) : fail(403),
+    'POST /auth/login/': role ? ok(userFor(role, network)) : fail(401, { detail: 'That email and password don’t match an account.' }),
     'POST /auth/logout/': { status: 204 },
     'GET /public/network/': ok(sampleNetwork(now)),
     'GET /public/hospitals/': ok(samplePublicHospitals(now)),
@@ -840,6 +872,23 @@ export function mockStaffApi({
       samplePublicHospitals(now).some((h) => String(h.id) === params.id)
         ? ok(samplePublicHospitalDetail(now, Number(params.id), role !== null && role !== 'patient'))
         : fail(404, { detail: 'Not found.' }),
+    'GET /simulation/': networkAdmin(() => ok(simulation)),
+    'POST /simulation/control/': networkAdmin(({ body }) => {
+      const { action, value } = body as { action: string; value?: string }
+      return controlSimulationMock(action, value ?? '')
+    }),
+    'POST /simulation/advance/': networkAdmin(() => {
+      const ff = simulation.fastForward
+      if (ff) {
+        const percent = Math.min(100, ff.percent + 50)
+        simulation =
+          percent >= 100
+            ? { ...simulation, mode: 'live', fastForward: null, cityTime: ff.to, aheadMinutes: 1440, events: [{ id: 99, at: ff.to, kind: 'clock.fastForward', message: 'Fast-forwarded a day.', hospital: null }, ...simulation.events] }
+            : { ...simulation, fastForward: { ...ff, percent } }
+      }
+      return ok({ ...simulation, ran: true, behind: simulation.fastForward !== null })
+    }),
+    'POST /simulation/tick/': ok({ ran: false, behind: false, mode: 'live', cityTime: now.toISOString() }),
     'GET /emergencies/department/': gate('emergencies', () => (erDown ? fail(503) : ok(department))),
     'PUT /emergencies/department/': edit('emergencies', ({ body }) => {
       const input = body as DepartmentStatusInput

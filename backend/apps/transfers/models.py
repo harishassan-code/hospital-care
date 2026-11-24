@@ -9,9 +9,9 @@ services.py."""
 from django.conf import settings
 from django.db import models
 from django.db.models import Prefetch
-from django.utils import timezone
 
 from apps.ambulances.models import Trip
+from apps.core import clock
 from apps.matching.models import Reservation
 from apps.resources.state_machine import StateMachine
 
@@ -77,7 +77,7 @@ class Transfer(models.Model):
     status = models.CharField(max_length=12, choices=TransferStatus.choices, default=TransferStatus.REQUESTED)
     reason = models.TextField(blank=True, help_text="Why the request was rejected or cancelled.")
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=clock.now)
     reservations = models.ManyToManyField(
         "matching.Reservation",
         blank=True,
@@ -117,7 +117,7 @@ class TransferStatusChange(models.Model):
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
-    at = models.DateTimeField(default=timezone.now)
+    at = models.DateTimeField(default=clock.now)
 
     class Meta:
         ordering = ["at", "id"]

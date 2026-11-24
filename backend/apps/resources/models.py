@@ -1,5 +1,6 @@
 from django.db import models
-from django.utils import timezone
+
+from apps.core import clock
 
 from .state_machine import StateMachine
 
@@ -20,7 +21,7 @@ class Resource(models.Model):
     storage_location = models.ForeignKey(
         "hospitals.StorageLocation", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
     )
-    status_since = models.DateTimeField(default=timezone.now)
+    status_since = models.DateTimeField(default=clock.now)
 
     class Meta:
         abstract = True

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from apps.core import clock
 from apps.resources.models import Resource
 from apps.resources.state_machine import StateMachine
 
@@ -86,7 +87,7 @@ class Donor(models.Model):
     # Eligibility screening (story #21). A reason with no end date is a permanent deferral.
     deferral_reason = models.CharField(max_length=300, blank=True)
     deferred_until = models.DateField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=clock.now, editable=False)
 
     class Meta:
         ordering = ["code"]
@@ -101,7 +102,7 @@ class Donor(models.Model):
 
     def eligibility(self, on: date | None = None) -> tuple[bool, str, date | None]:
         """(eligible, reason when not, date they become eligible again or None if never/now)."""
-        on = on or timezone.localdate()
+        on = on or clock.localdate()
         if self.deferral_reason and (self.deferred_until is None or self.deferred_until > on):
             return False, self.deferral_reason, self.deferred_until
         last = self.last_donation_at()
@@ -129,6 +130,9 @@ class BloodUnit(Resource):
     status = models.CharField(max_length=12, choices=UnitStatus.choices, default=UnitStatus.QUARANTINED)
     location = models.CharField(max_length=100)
     donor = models.ForeignKey(Donor, on_delete=models.PROTECT, null=True, blank=True, related_name="units")
+    # Stock the scripted demo relies on (seed_demo flags it): the live simulation never issues, screens or
+    # adds to it (B21).
+    demo_stock = models.BooleanField(default=False, editable=False)
 
     class Meta:
         ordering = ["expires_at"]
@@ -145,7 +149,7 @@ class BloodUnit(Resource):
 
     def effective_status(self, now=None) -> str:
         """A unit still on the shelf past its expiry counts as expired, even before anyone updates it."""
-        now = now or timezone.now()
+        now = now or clock.now()
         if self.status not in (UnitStatus.ISSUED, UnitStatus.DISCARDED) and self.expires_at <= now:
             return UnitStatus.EXPIRED
         return self.status
@@ -160,7 +164,7 @@ class TestResult(models.Model):
     test = models.CharField(max_length=12, choices=ScreeningTest.choices)
     passed = models.BooleanField()
     reason = models.CharField(max_length=300, blank=True, help_text="Required when the test failed.")
-    recorded_at = models.DateTimeField(auto_now_add=True)
+    recorded_at = models.DateTimeField(default=clock.now, editable=False)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
     )
@@ -187,7 +191,7 @@ class DonationAppointment(models.Model):
     status = models.CharField(
         max_length=10, choices=AppointmentStatus.choices, default=AppointmentStatus.BOOKED
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=clock.now, editable=False)
 
     class Meta:
         ordering = ["starts_at"]

@@ -16,9 +16,9 @@ from apps.specialists.models import Specialist
 pytestmark = pytest.mark.django_db
 
 
-# The only endpoints anyone may call without signing in (B13, F5 and F10; B19): the CSRF cookie, sign-in,
-# sign-out, sign-up, the health check and the public network pages. A new AllowAny route is added here on
-# purpose.
+# The only endpoints anyone may call without signing in (B13, F5 and F10; B19; B21): the CSRF cookie,
+# sign-in, sign-out, sign-up, the health check, the public network pages and the simulation's tick (it only
+# brings the city up to its clock). A new AllowAny route is added here on purpose.
 PUBLIC_ENDPOINTS = {
     "auth-csrf",
     "auth-login",
@@ -28,6 +28,7 @@ PUBLIC_ENDPOINTS = {
     "public-network",
     "public-hospitals",
     "public-hospital",
+    "simulation-tick",
 }
 
 

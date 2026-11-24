@@ -5,12 +5,13 @@ import { Logo } from '../../components/brand/Logo'
 import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { hospital } from '../../config/hospital'
 import { CriticalBanners } from '../notifications/CriticalBanners'
+import { CityClockBadge } from '../simulation/CityClockBadge'
 import { NotificationBell } from '../notifications/NotificationBell'
 import { currentShift, formatDuration } from '../../lib/time'
 import { AccessDenied } from './AccessDenied'
 import { MODULE_ICONS } from './moduleIcons'
 import { PLANNED } from './planned'
-import { canSee, moduleForPath, MODULES, ROLES } from './roles'
+import { canOpen, canSee, moduleForPath, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
 import styles from './StaffLayout.module.css'
 import { StaffProvider } from './StaffProvider'
@@ -25,7 +26,7 @@ export default function StaffLayout() {
 }
 
 function StaffShell() {
-  const { role } = useStaff()
+  const { role, user } = useStaff()
   const { pathname } = useLocation()
   const module = moduleForPath(pathname)
 
@@ -40,7 +41,11 @@ function StaffShell() {
         <div>
           <CriticalBanners />
           <main id="main" className={styles.main}>
-            {canSee(role, module.id) ? <Outlet /> : <AccessDenied what={module.label} />}
+            {canOpen(role, module.id, Boolean(user.hospital)) ? (
+              <Outlet />
+            ) : (
+              <AccessDenied what={module.label} networkOnly={canSee(role, module.id)} />
+            )}
           </main>
         </div>
       </div>
@@ -78,7 +83,7 @@ function Sidebar() {
         <div id="staff-nav" className={styles.navArea} data-open={open}>
           <nav aria-label="Staff">
             <ul className={styles.navList}>
-              {MODULES.filter((m) => canSee(role, m.id)).map((m) => {
+              {MODULES.filter((m) => canOpen(role, m.id, Boolean(user.hospital))).map((m) => {
                 const Icon = MODULE_ICONS[m.id]
                 return (
                   <li key={m.id}>
@@ -114,6 +119,7 @@ function TopBar({ title }: { title: string }) {
     <header className={styles.topBar}>
       <h1 className={styles.title}>{title}</h1>
       <div className={styles.topMeta}>
+        <CityClockBadge />
         <p className={styles.shift}>
           {`${shift.name} shift · ${shift.start}–${shift.end} · ${formatDuration(shift.minutesLeft)} left`}
         </p>

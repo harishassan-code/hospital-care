@@ -9,14 +9,21 @@ from apps.accounts.permissions import module_permission
 from .department import department_status, update_department_status
 from .serializers import DepartmentStatusSerializer
 
-NOT_REPORTED = {"status": None, "waitMinutes": None, "waitingCount": None, "updatedAt": None}
+NOT_REPORTED = {
+    "status": None,
+    "waitMinutes": None,
+    "waitingCount": None,
+    "updatedAt": None,
+    "factors": [],
+    "setBySimulation": False,
+}
 
 
 class DepartmentStatusView(APIView):
     """GET/PUT /api/emergencies/department/. Reading needs the emergencies module, changing it edit rights
     (admin, doctor, nurse). It is always the user's own hospital; staff with no hospital have no department
-    (404). A
-    hospital that hasn't reported yet reads as all nulls."""
+    (404). A hospital that hasn't reported yet reads as all nulls. On staging the simulation sets it, with the
+    factors behind the wait (B21); a person's own setting has none."""
 
     permission_classes = [module_permission("emergencies")]
 

@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import F, Q
 from django.db.models.functions import Lower
 
+from apps.core import clock
 from apps.resources.models import Resource
 from apps.resources.state_machine import StateMachine
 
@@ -113,7 +114,7 @@ class OrBooking(models.Model):
     patient_initials = models.CharField(max_length=10, blank=True)  # minimal patient data, as for Bed
     status = models.CharField(max_length=10, choices=OrBookingStatus.choices, default=OrBookingStatus.BOOKED)
     booked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=clock.now, editable=False)
 
     class Meta:
         ordering = ["starts_at"]

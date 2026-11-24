@@ -2,8 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
-from django.utils import timezone
 
+from apps.core import clock
 from apps.resources.models import Resource
 from apps.resources.state_machine import StateMachine
 
@@ -103,7 +103,7 @@ class Trip(models.Model):
     status = models.CharField(max_length=12, choices=TripStatus.choices, default=TripStatus.DISPATCHED)
     eta_minutes = models.PositiveSmallIntegerField(help_text="Estimated minutes, set at dispatch.")
     dispatched_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
-    dispatched_at = models.DateTimeField(default=timezone.now)
+    dispatched_at = models.DateTimeField(default=clock.now)
     departed_at = models.DateTimeField(null=True, blank=True)
     arrived_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)

@@ -13,7 +13,8 @@ network finds, moves and confirms the third. Bolt [B14](../aidlc/bolts/B14-stagi
 |---|---|
 | **Site** | the Vercel URL in the [README](../../README.md#staging) |
 | **Wake the API** | `python3 scripts/smoke_staging.py <site>` must end with "Staging is up." (the free API sleeps after 15 min) |
-| **Logins** | password for all: `CityCare-demo-1` · `doctor@`, `nurse@`, `admin@`, `bloodbank@`, `patient@` + `demo.citycare.pk` |
+| **Logins** | password for all: `CityCare-demo-1` · `doctor@`, `nurse@`, `admin@`, `bloodbank@`, `patient@`, `network@` (the CityCare admin: Simulation panel) + `demo.citycare.pk` |
+| **Live city** | On staging the network runs a simulation (B21). It never touches the scenario's O− red cells, so the script works with it running; to keep the screens still, sign in as `network@` → **Simulation** → **Pause**. To show it off: speed it up, fast-forward a day, or set off a mass-casualty event ([simulation.md](../product/simulation.md)) |
 | **Browser** | one normal window and one private window, so two people can be signed in at once without signing out |
 | **Check the data** | Equipment page (as `nurse@`): CityCare General shows **2 ventilators available** (VENT-003, VENT-005). If not, see *Reset* below |
 | **Zoom** | browser zoom 125 %, so the back row can read it |

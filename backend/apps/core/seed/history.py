@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from apps.ambulances.models import Ambulance, AmbulanceStatus
 from apps.blood.models import BloodUnit, Component, UnitStatus
-from apps.emergencies.models import ErStatus
+from apps.emergencies.wait import er_status_for, er_wait_minutes  # noqa: F401
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import Bed, BedStatus, BedType, Hospital
 from apps.metrics import catalog
@@ -123,14 +123,6 @@ def _walk(rand: random.Random, n: int, step: float) -> list[float]:
     return out
 
 
-def er_wait_minutes(arrivals_per_hour: float, capacity_per_hour: float) -> float:
-    """The average wait for how busy a department is (load = arrivals over what it can see in an hour): about
-    a quarter of an hour when quiet, rising steeply as the load passes 1, at most four hours. Shared with the
-    simulation (B21)."""
-    load = arrivals_per_hour / capacity_per_hour if capacity_per_hour else 1.0
-    return min(240.0, 15 + 30 * load**3)
-
-
 def _er_series(rand, hours, per_day: int, er_beds: int, final: tuple[int, int] | None):
     """Arrivals and departures per hour, and the waiting count and wait at the end of each hour. A department
     is sized to see a quarter more than its average arrivals; people waiting follow from arrivals times the
@@ -155,14 +147,6 @@ def _er_series(rand, hours, per_day: int, er_beds: int, final: tuple[int, int] |
             waiting[-4 + k] = round(waiting[-4 + k] * (1 - blend) + final[0] * blend)
             wait[-4 + k] = round(wait[-4 + k] * (1 - blend) + final[1] * blend)
     return arrivals, departures, waiting, wait
-
-
-def er_status_for(waiting: int, wait: int, er_beds: int) -> str:
-    if wait >= 150 or waiting >= er_beds * 1.5:
-        return ErStatus.DIVERTING
-    if wait >= 60 or waiting >= er_beds:
-        return ErStatus.BUSY
-    return ErStatus.ACCEPTING
 
 
 def seed_history(hospital: Hospital, rand: random.Random, now, *, er_per_day: int, final_er=None):

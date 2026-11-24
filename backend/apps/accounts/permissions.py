@@ -29,6 +29,7 @@ ACCESS: dict[str, dict[str, str]] = {
         "commandCentre": VIEW,  # the whole network's figures, read-only (story #55)
         "audit": VIEW,
         "reports": VIEW,  # operational reports and their export (B18, #66, #67); "management" is the admin
+        "simulation": EDIT,  # the city clock and scenarios (B21): only the admin without a hospital, below
     },
     Role.DOCTOR: {
         "overview": VIEW,
@@ -145,3 +146,19 @@ class IsStaff(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return bool(user and user.is_authenticated and user.effective_role in STAFF_ROLES)
+
+
+class IsNetworkAdmin(BasePermission):
+    """The CityCare admin (B21): an admin who works for the network, not one hospital. Only they run the
+    simulation's clock and scenarios; a hospital's admin can't, though both have the module."""
+
+    message = "Only the CityCare network admin can do this."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and can_edit(user.effective_role, "simulation")
+            and user.hospital_id is None
+        )

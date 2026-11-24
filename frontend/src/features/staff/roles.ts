@@ -18,6 +18,7 @@ export type Module =
   | 'commandCentre'
   | 'audit'
   | 'reports'
+  | 'simulation'
 
 export const ROLES: readonly { id: Role; label: string }[] = [
   { id: 'admin', label: 'Admin' },
@@ -45,6 +46,7 @@ export const MODULES: readonly { id: Module; label: string; path: string }[] = [
   { id: 'users', label: 'Users and roles', path: '/staff/users' },
   { id: 'audit', label: 'Audit log', path: '/staff/audit' },
   { id: 'reports', label: 'Reports', path: '/staff/reports' },
+  { id: 'simulation', label: 'Simulation', path: '/staff/simulation' },
 ]
 
 /** The module a staff path belongs to, e.g. /staff/hospitals/3/edit → hospitals. Anything else → overview. */
@@ -79,6 +81,7 @@ const ACCESS: Record<Role, Partial<Record<Module, Access>>> = {
     users: 'edit',
     audit: 'view',
     reports: 'view', // operational reports and their export (B18, #66, #67); "management" is the admin
+    simulation: 'edit', // the city clock and scenarios (B21): only the admin without a hospital, below
   },
   doctor: {
     overview: 'view',
@@ -119,4 +122,12 @@ export function canSee(role: Role, module: Module): boolean {
 
 export function canEdit(role: Role, module: Module): boolean {
   return ACCESS[role][module] === 'edit'
+}
+
+/** Modules only the CityCare admin (an admin with no hospital) uses, as IsNetworkAdmin checks on the API. */
+const NETWORK_ONLY: readonly Module[] = ['simulation']
+
+/** Whether this user sees the module: their role can, and a network-only module needs no hospital. */
+export function canOpen(role: Role, module: Module, hasHospital: boolean): boolean {
+  return canSee(role, module) && !(NETWORK_ONLY.includes(module) && hasHospital)
 }

@@ -13,6 +13,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.accounts.permissions import may_change
 from apps.audit.services import record
+from apps.core import clock
 from apps.resources.services import change_status
 from apps.resources.state_machine import TransitionNotAllowed
 
@@ -60,8 +61,37 @@ def register_unit(serializer, actor) -> BloodUnit:
             raise Http404("No donor with that id.")
         check_donation_interval(donor, serializer.validated_data["collected_at"])
     unit = serializer.save(hospital=getattr(actor, "hospital", None))
-    after = BloodUnitSerializer(unit, context={"now": timezone.now()}).data
+    after = BloodUnitSerializer(unit, context={"now": clock.now()}).data
     record(actor, "bloodunit.registered", unit, after=dict(after))
+    return unit
+
+
+@transaction.atomic
+def receive_donation(
+    *,
+    hospital,
+    group: str,
+    component: str,
+    donation_number: str,
+    collected_at,
+    shelf_days: int,
+    storage_location=None,
+    actor,
+) -> BloodUnit:
+    """A unit from a donation taken at `hospital` (B21): quarantined until its screening tests pass."""
+    unit = BloodUnit.objects.create(
+        hospital=hospital,
+        storage_location=storage_location,
+        location=storage_location.name if storage_location else "Blood bank",
+        donation_number=donation_number,
+        group=group,
+        component=component,
+        collected_at=collected_at,
+        expires_at=collected_at + timedelta(days=shelf_days),
+        status=UnitStatus.QUARANTINED,
+        status_since=collected_at,
+    )
+    record(actor, "bloodunit.registered", unit, after={"group": group, "component": component})
     return unit
 
 
@@ -119,7 +149,7 @@ def apply_unit_action(donation_number: str, action: str, *, actor, reason: str =
 def expire_overdue_units(now=None) -> int:
     """Story #19: mark every unit past its expiry date as expired (and audit-log each). Returns how many.
     Run by the `expire_blood_units` command (schedule it) and before the stock view, so it's never stale."""
-    now = now or timezone.now()
+    now = now or clock.now()
     count = 0
     expirable = [s for (s, action) in BloodUnit.machine.transitions if action == "expire"]
     overdue = BloodUnit.objects.filter(status__in=expirable, expires_at__lte=now).values_list("pk", flat=True)
@@ -138,13 +168,13 @@ def expire_overdue_units(now=None) -> int:
 def usable_units(units, now=None):
     """The units that count as usable stock: `available` and not yet expired. Stock counts and the local
     availability check (#33) both use this, so they agree on what is on the shelf."""
-    return units.filter(status=UnitStatus.AVAILABLE, expires_at__gt=now or timezone.now())
+    return units.filter(status=UnitStatus.AVAILABLE, expires_at__gt=now or clock.now())
 
 
 def stock_summary(units, *, near_expiry_days: int, low_stock_units: int, now=None) -> dict:
     """Counts per blood group and component, with near-expiry units and low-stock flags.
     Only `available` units count as usable stock."""
-    now = now or timezone.now()
+    now = now or clock.now()
     soon = now + timedelta(days=near_expiry_days)
     usable = usable_units(units, now)
     available = Counter(usable.values_list("group", "component"))
@@ -243,13 +273,13 @@ def book_appointment(donor: Donor, starts_at: datetime, *, actor) -> DonationApp
         raise ValidationError(
             {"startsAt": [f"Appointments start on a {slot}-minute slot (e.g. 10:00, 10:{slot:02d})."]}
         )
-    if starts_at <= timezone.now():
+    if starts_at <= clock.now():
         raise ValidationError({"startsAt": ["Pick a time in the future."]})
     eligible, why, _ = donor.eligibility(on=local.date())
     if not eligible:
         raise ValidationError({"donorId": [f"This donor can't be booked: {why}"]})
     hospital = getattr(actor, "hospital", None) or donor.hospital
-    if donor.appointments.filter(status=AppointmentStatus.BOOKED, starts_at__gte=timezone.now()).exists():
+    if donor.appointments.filter(status=AppointmentStatus.BOOKED, starts_at__gte=clock.now()).exists():
         raise ValidationError({"donorId": ["This donor already has an upcoming appointment."]})
     # The unique constraint is the race-safe guard on Postgres, but SQLite (the no-Docker test fallback)
     # ignores nulls_distinct=False, so check up front too: one booking per slot, admins (no hospital) too.

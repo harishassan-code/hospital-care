@@ -21,6 +21,16 @@ def sign_in_limits_off(settings):
     settings.AUTH_THROTTLE_RATES = {}
 
 
+@pytest.fixture(autouse=True)
+def fresh_clock():
+    """The city clock (B21) caches its state for a second; every test reads it afresh."""
+    from apps.core import clock
+
+    clock.forget()
+    yield
+    clock.forget()
+
+
 @pytest.fixture
 def api():
     return APIClient(enforce_csrf_checks=True)

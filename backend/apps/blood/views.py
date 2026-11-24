@@ -1,12 +1,12 @@
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import changeable_by, module_permission, own_hospital
+from apps.core import clock
 from apps.resources.state_machine import TransitionNotAllowed
 
 from . import services
@@ -39,7 +39,7 @@ class BloodUnitListView(APIView):
     permission_classes = [BloodAccess]
 
     def get(self, request):
-        now = timezone.now()
+        now = clock.now()
         units = own_hospital(BloodUnit.objects.all(), request.user)
         wanted = request.query_params.get("status")
         if wanted in UnitStatus.values:
@@ -57,7 +57,7 @@ class BloodUnitListView(APIView):
         serializer.is_valid(raise_exception=True)
         unit = services.register_unit(serializer, request.user)
         return Response(
-            BloodUnitSerializer(unit, context={"now": timezone.now()}).data, status=status.HTTP_201_CREATED
+            BloodUnitSerializer(unit, context={"now": clock.now()}).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -67,7 +67,7 @@ def unit_detail(donation_number):
         .prefetch_related("tests")
         .get(donation_number=donation_number)
     )
-    return BloodUnitDetailSerializer(unit, context={"now": timezone.now()}).data
+    return BloodUnitDetailSerializer(unit, context={"now": clock.now()}).data
 
 
 class BloodUnitDetailView(APIView):
@@ -162,9 +162,7 @@ class DonorDetailView(APIView):
     def get(self, request, donor_id):
         donor = get_object_or_404(own_hospital(Donor.objects.all(), request.user), code=donor_id)
         data = DonorSerializer(donor).data
-        data["units"] = BloodUnitSerializer(
-            donor.units.all(), many=True, context={"now": timezone.now()}
-        ).data
+        data["units"] = BloodUnitSerializer(donor.units.all(), many=True, context={"now": clock.now()}).data
         return Response(data)
 
 
@@ -193,7 +191,7 @@ class AppointmentListView(APIView):
     def get(self, request):
         appointments = own_hospital(DonationAppointment.objects.select_related("donor"), request.user)
         if request.query_params.get("all") != "true":
-            appointments = appointments.filter(status=AppointmentStatus.BOOKED, starts_at__gte=timezone.now())
+            appointments = appointments.filter(status=AppointmentStatus.BOOKED, starts_at__gte=clock.now())
         return Response(AppointmentSerializer(appointments, many=True).data)
 
     def post(self, request):

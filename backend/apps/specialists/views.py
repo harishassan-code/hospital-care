@@ -3,12 +3,12 @@ staff reads the whole network, and only admins and nurses write (nurses at their
 are in services.py."""
 
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission
+from apps.core import clock
 
 from .models import Specialist
 from .serializers import (
@@ -46,7 +46,7 @@ class SpecialistListView(APIView):
         query = SpecialistQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         data = query.validated_data
-        now = timezone.now()  # read once, so one response never mixes two moments
+        now = clock.now()  # read once, so one response never mixes two moments
         specialists = Specialist.objects.with_schedule(now)
         if data.get("hospital") is not None:
             specialists = specialists.filter(hospital_id=data["hospital"])
@@ -64,7 +64,7 @@ class SpecialistListView(APIView):
         specialist = create_specialist(
             data["hospitalId"], name=data["name"], specialty=data["specialty"], actor=request.user
         )
-        return Response(_detail(specialist.pk, timezone.now()), status=status.HTTP_201_CREATED)
+        return Response(_detail(specialist.pk, clock.now()), status=status.HTTP_201_CREATED)
 
 
 class SpecialistDetailView(APIView):
@@ -75,13 +75,13 @@ class SpecialistDetailView(APIView):
     permission_classes = [module_permission("specialists")]
 
     def get(self, request, pk):
-        return Response(_detail(pk, timezone.now()))
+        return Response(_detail(pk, clock.now()))
 
     def patch(self, request, pk):
         serializer = SpecialistUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         update_specialist(pk, serializer.validated_data, actor=request.user)
-        return Response(_detail(pk, timezone.now()))
+        return Response(_detail(pk, clock.now()))
 
 
 class OnCallWindowListView(APIView):
@@ -100,7 +100,7 @@ class OnCallWindowListView(APIView):
             starts_at=data["startsAt"],
             ends_at=data["endsAt"],
             actor=request.user,
-            now=timezone.now(),
+            now=clock.now(),
         )
         return Response(OnCallWindowSerializer(window).data, status=status.HTTP_201_CREATED)
 
@@ -113,7 +113,7 @@ class OnCallWindowDetailView(APIView):
 
     def delete(self, request, pk, window):
         try:
-            remove_on_call_window(pk, window, actor=request.user, now=timezone.now())
+            remove_on_call_window(pk, window, actor=request.user, now=clock.now())
         except SpecialistConflict as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response(status=status.HTTP_204_NO_CONTENT)

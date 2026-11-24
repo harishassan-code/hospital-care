@@ -27,6 +27,9 @@ erDiagram
     Hospital ||--o{ StaffMember : "rosters (B20)"
     StaffMember ||--o{ Shift : works
     Hospital ||--o{ MetricSnapshot : "hourly figures (B20)"
+    Hospital ||--o{ ErVisit : "emergency patients (B21)"
+    Bed |o--o{ ErVisit : "treated in"
+    Hospital |o--o{ SimEvent : "simulation events (B21)"
     User |o--o{ AuditLog : "acted in"
 
     User {
@@ -96,6 +99,7 @@ erDiagram
         datetime collected_at
         datetime expires_at "after collected_at"
         string status "quarantined|available|reserved|issued|expired"
+        bool demo_stock "the scripted demo's; the simulation leaves it (B21)"
         string location "label, kept until Sprint 3"
         bigint hospital_id FK "Resource"
         bigint storage_location_id FK "Resource"
@@ -125,6 +129,44 @@ erDiagram
         string status
         int wait_minutes
         int waiting_count
+        datetime updated_at "city time"
+        bigint set_by_id FK "a person or the simulation (B21)"
+        json factors "what made the wait longer (B21)"
+    }
+    ErVisit {
+        bigint id PK
+        bigint hospital_id FK
+        string tag "random, never a name"
+        int triage "1-5"
+        string age_band
+        string sex
+        string complaint "category"
+        string status "waiting|treating|boarding|left"
+        string outcome "discharged|admitted|transferred|leftUnseen"
+        datetime arrived_at
+        datetime seen_at
+        datetime left_at
+        bigint bed_id FK "emergency bed"
+        bigint ward_bed_id FK "if admitted"
+    }
+    SimulationState {
+        int id PK "always 1"
+        bool paused
+        float speed
+        datetime anchor_real
+        datetime anchor_city "city clock = anchor_city + (now - anchor_real) x speed"
+        datetime progress "how far the engine got"
+        datetime fast_forward_to
+        string scenario "regular|flu|slow"
+        datetime incident_until "mass-casualty event"
+        datetime lease_until "one tick at a time"
+    }
+    SimEvent {
+        bigint id PK
+        datetime at "city time"
+        bigint hospital_id FK
+        string kind
+        string message
     }
     StaffMember {
         bigint id PK
@@ -152,7 +194,8 @@ erDiagram
     }
     AuditLog {
         bigint id PK
-        datetime at
+        datetime at "city time (B21)"
+        datetime recorded_at "real time it was written (B21)"
         bigint actor_id FK "null if account deleted"
         string actor_email
         string action
@@ -167,7 +210,9 @@ erDiagram
 `Bed` and `BloodUnit` share the abstract `Resource` columns (`hospital`, `storage_location`, `status_since`).
 See [resources.md](resources.md) for the status lifecycles and the audit log. `EmergencyStatus` belongs to a hospital
 (B19); the single-hospital doctor rota (`DoctorShift`) was removed then, and "on duty" comes from each hospital's
-specialists. `Medicine` is the network's shared formulary; each hospital's stock is its `Batch` rows (#123).
+specialists. `Medicine` is the network's shared formulary; each hospital's stock is its `Batch` rows (#123). `ErVisit`,
+`SimulationState` and `SimEvent` belong to the live simulation (B21, [simulation.md](../product/simulation.md)); every
+timestamp is on the city clock except `AuditLog.recorded_at`.
 
 ## Planned MVP schema (proposed)
 

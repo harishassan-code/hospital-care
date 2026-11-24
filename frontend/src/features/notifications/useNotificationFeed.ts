@@ -1,3 +1,4 @@
+import { cityNow } from '../../lib/cityClock'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError } from '../../api/client'
 import { listNotifications, markNotificationRead, unreadCount, type Notification } from '../../api/notifications'
@@ -45,7 +46,7 @@ export function useNotificationFeed(): NotificationFeed {
       try {
         const [all, unread, { count }] = await Promise.all([listNotifications(), listNotifications({ unread: true }), unreadCount()])
         if (stopped) return
-        setLists({ all, unread, unreadCount: count, failed: false, updatedAt: new Date(), refreshFailed: false })
+        setLists({ all, unread, unreadCount: count, failed: false, updatedAt: cityNow(), refreshFailed: false })
       } catch (error) {
         if (stopped) return
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {

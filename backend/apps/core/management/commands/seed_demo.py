@@ -38,7 +38,7 @@ from apps.blood.services import usable_units
 from apps.core.seed import history, resources, staffing
 from apps.core.seed.profiles import EXTRA_DEPARTMENTS, EXTRA_WARDS, NEW_HOSPITALS, PROFILES
 from apps.core.seed.profiles import WARD_BED_TYPES as NETWORK_BED_TYPES
-from apps.emergencies.models import EmergencyRequest, EmergencyStatus, PatientTransfer
+from apps.emergencies.models import EmergencyRequest, EmergencyStatus, ErVisit, PatientTransfer
 from apps.equipment.models import Equipment, EquipmentStatus, EquipmentType
 from apps.hospitals.models import (
     Bed,
@@ -56,6 +56,7 @@ from apps.metrics.models import MetricSnapshot
 from apps.notifications.models import Notification
 from apps.operating_rooms.models import OperatingRoom, OrBooking, OrStatus
 from apps.pharmacy.models import Batch, Medicine
+from apps.simulation.models import SimEvent, SimulationState
 from apps.specialists.models import OnCallWindow, Specialist
 from apps.staffing.models import Shift, StaffMember
 from apps.transfers.models import Transfer
@@ -68,7 +69,10 @@ DEMO_USERS = [
     ("bloodbank@demo.citycare.pk", "Tariq", "Lodhi", Role.BLOOD_BANK),
     ("pharmacist@demo.citycare.pk", "Saima", "Raza", Role.PHARMACIST),
     ("patient@demo.citycare.pk", "Ali", "Patient", Role.PATIENT),
+    # The CityCare admin (B21): works for the network, not one hospital, and runs the simulation's clock.
+    ("network@demo.citycare.pk", "Sana", "Malik", Role.ADMIN),
 ]
+NETWORK_ADMIN = "network@demo.citycare.pk"
 
 # code, name, kind, label prefix, size, occupancy, (min age, max age), department
 WARDS = [
@@ -610,6 +614,9 @@ class Command(BaseCommand):
                 PatientTransfer,  # before cases and hospitals
                 EmergencyRequest,  # its needs and timeline go with it
                 Notification,  # alerts about the cases above; references restart at 0001 after a reset
+                SimEvent,  # the simulation starts again from the real time (B21)
+                SimulationState,
+                ErVisit,
                 Ambulance,
                 Shift,  # before the staff and hospitals (PROTECT)
                 StaffMember,
@@ -678,6 +685,10 @@ class Command(BaseCommand):
         Batch.objects.filter(hospital=None).update(hospital=main)  # stock seeded before #123
         self.seed_specialists({h.name: h for h in hospitals}, now)
         self.seed_network(hospitals[: len(HOSPITALS)], seed, now)
+        # The scenario's O- red cells are the demo's: the live simulation neither uses nor adds to them (B21).
+        BloodUnit.objects.filter(
+            hospital__in=hospitals[:SCENARIO_HOSPITALS], group=BloodGroup.O_NEG, component=Component.RED_CELLS
+        ).update(demo_stock=True)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         for hospital in hospitals:
@@ -791,6 +802,11 @@ class Command(BaseCommand):
                 user.set_password(DEMO_PASSWORD)
                 user.is_staff = role == Role.ADMIN  # demo admin can open /admin/ too
                 user.is_superuser = role == Role.ADMIN
+            if email == NETWORK_ADMIN:  # no hospital, and not a superuser: an admin of the network only
+                if created:
+                    user.is_superuser = False
+                    user.save()
+                continue
             if created or (user.hospital_id is None and role != Role.PATIENT):
                 user.hospital = None if role == Role.PATIENT else hospital
                 user.save()

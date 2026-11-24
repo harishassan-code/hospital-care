@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { canEdit, canSee, moduleForPath, MODULES, ROLES, type Module, type Role } from './roles'
+import { canEdit, canOpen, canSee, moduleForPath, MODULES, ROLES, type Module, type Role } from './roles'
 
 // The access table from the design spec: v = view only, e = edit, - = no access.
 const TABLE: Record<Role, Record<Module, 'v' | 'e' | '-'>> = {
-  admin: { overview: 'v', alerts: 'v', commandCentre: 'v', emergencies: 'e', transfers: 'e', beds: 'e', blood: 'e', pharmacy: 'e', equipment: 'e', operatingRooms: 'e', orBookings: 'e', ambulances: 'e', hospitals: 'e', specialists: 'e', users: 'e', audit: 'v', donors: 'e', reports: 'v' },
-  doctor: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'e', transfers: 'e', beds: 'v', blood: 'v', pharmacy: 'v', equipment: 'v', operatingRooms: 'v', orBookings: 'e', ambulances: 'v', hospitals: 'v', specialists: 'v', users: '-', audit: '-', donors: '-', reports: '-' },
-  nurse: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'e', transfers: 'e', beds: 'e', blood: '-', pharmacy: 'v', equipment: 'e', operatingRooms: 'e', orBookings: 'e', ambulances: 'e', hospitals: 'v', specialists: 'e', users: '-', audit: '-', donors: '-', reports: '-' },
-  bloodBank: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'v', transfers: 'e', beds: '-', blood: 'e', pharmacy: '-', equipment: '-', operatingRooms: '-', orBookings: '-', ambulances: '-', hospitals: 'v', specialists: 'v', users: '-', audit: '-', donors: 'e', reports: '-' },
-  pharmacist: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'v', transfers: '-', beds: '-', blood: '-', pharmacy: 'e', equipment: '-', operatingRooms: '-', orBookings: '-', ambulances: '-', hospitals: 'v', specialists: 'v', users: '-', audit: '-', donors: '-', reports: '-' },
+  admin: { overview: 'v', alerts: 'v', commandCentre: 'v', emergencies: 'e', transfers: 'e', beds: 'e', blood: 'e', pharmacy: 'e', equipment: 'e', operatingRooms: 'e', orBookings: 'e', ambulances: 'e', hospitals: 'e', specialists: 'e', users: 'e', audit: 'v', donors: 'e', reports: 'v', simulation: 'e' },
+  doctor: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'e', transfers: 'e', beds: 'v', blood: 'v', pharmacy: 'v', equipment: 'v', operatingRooms: 'v', orBookings: 'e', ambulances: 'v', hospitals: 'v', specialists: 'v', users: '-', audit: '-', donors: '-', reports: '-', simulation: '-' },
+  nurse: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'e', transfers: 'e', beds: 'e', blood: '-', pharmacy: 'v', equipment: 'e', operatingRooms: 'e', orBookings: 'e', ambulances: 'e', hospitals: 'v', specialists: 'e', users: '-', audit: '-', donors: '-', reports: '-', simulation: '-' },
+  bloodBank: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'v', transfers: 'e', beds: '-', blood: 'e', pharmacy: '-', equipment: '-', operatingRooms: '-', orBookings: '-', ambulances: '-', hospitals: 'v', specialists: 'v', users: '-', audit: '-', donors: 'e', reports: '-', simulation: '-' },
+  pharmacist: { overview: 'v', alerts: 'v', commandCentre: '-', emergencies: 'v', transfers: '-', beds: '-', blood: '-', pharmacy: 'e', equipment: '-', operatingRooms: '-', orBookings: '-', ambulances: '-', hospitals: 'v', specialists: 'v', users: '-', audit: '-', donors: '-', reports: '-', simulation: '-' },
 }
 
 describe('roles', () => {
   it('lists every role and module', () => {
     expect(ROLES.map((r) => r.id)).toEqual(Object.keys(TABLE))
-    expect(MODULES.map((m) => m.id)).toEqual(['overview', 'alerts', 'commandCentre', 'emergencies', 'transfers', 'beds', 'blood', 'donors', 'pharmacy', 'equipment', 'operatingRooms', 'ambulances', 'hospitals', 'specialists', 'users', 'audit', 'reports'])
+    expect(MODULES.map((m) => m.id)).toEqual(['overview', 'alerts', 'commandCentre', 'emergencies', 'transfers', 'beds', 'blood', 'donors', 'pharmacy', 'equipment', 'operatingRooms', 'ambulances', 'hospitals', 'specialists', 'users', 'audit', 'reports', 'simulation'])
   })
 
   it.each([
@@ -32,6 +32,7 @@ describe('roles', () => {
     ['/staff/command-centre', 'commandCentre'],
     ['/staff/audit', 'audit'],
     ['/staff/reports', 'reports'],
+    ['/staff/simulation', 'simulation'],
     ['/staff/specialists', 'specialists'],
     ['/staff/specialists/3', 'specialists'],
     ['/staff/specialists/3/edit', 'specialists'],
@@ -45,5 +46,12 @@ describe('roles', () => {
       expect(canSee(role as Role, module as Module), `${role} sees ${module}`).toBe(access !== '-')
       expect(canEdit(role as Role, module as Module), `${role} edits ${module}`).toBe(access === 'e')
     }
+  })
+
+  it('opens the simulation only for the CityCare admin, who has no hospital (B21)', () => {
+    expect(canOpen('admin', 'simulation', false)).toBe(true)
+    expect(canOpen('admin', 'simulation', true)).toBe(false)
+    expect(canOpen('nurse', 'simulation', false)).toBe(false)
+    expect(canOpen('admin', 'reports', true)).toBe(true)
   })
 })

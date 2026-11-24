@@ -1,7 +1,8 @@
 from datetime import timedelta
 
-from django.utils import timezone
 from rest_framework import serializers
+
+from apps.core import clock
 
 from .models import OR_LIFECYCLE, OperatingRoom, OrBooking, OrCapability, OrStatus
 
@@ -52,7 +53,7 @@ class OrBookingCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError({"endsAt": ["The booking must end after it starts."]})
         if ends - starts > MAX_BOOKING_LENGTH:
             raise serializers.ValidationError({"endsAt": ["A booking can be at most 24 hours long."]})
-        if starts < timezone.now() - START_SLACK:
+        if starts < clock.now() - START_SLACK:
             raise serializers.ValidationError({"startsAt": ["Pick a start time in the future."]})
         return data
 
