@@ -148,6 +148,39 @@ def may_change(user, resource) -> bool:
     return user.effective_role == Role.ADMIN or resource.hospital_id == user.hospital_id
 
 
+# ── Patient information: the minimum necessary (B23, docs/testing/privacy-review.md) ───────────────────────
+
+# The roles that treat patients, and the admin who runs a hospital.
+PATIENT_ROLES = (Role.DOCTOR, Role.NURSE, Role.ADMIN)
+
+
+def sees_patients(user, hospital_id) -> bool:
+    """Whether `user` may see patient-level details (initials, age, sex, a case's patient reference and notes,
+    a visit's details) of a record at `hospital_id`. Only doctors, nurses and the admin of that same hospital:
+    blood bank staff and pharmacists work from a case's needs, an admin who runs one hospital never sees
+    another hospital's patients, and the CityCare admin (no hospital) sees counts and statuses only. Doctors
+    and nurses without a hospital match records without one (data from before Sprint 2), as `own_hospital`
+    does."""
+    if not (user and user.is_authenticated):
+        return False
+    role = user.effective_role
+    if role in (Role.DOCTOR, Role.NURSE):
+        return user.hospital_id == hospital_id
+    return role == Role.ADMIN and user.hospital_id is not None and user.hospital_id == hospital_id
+
+
+def sees_case_patient(user, case) -> bool:
+    """A case's patient reference and notes: its own hospital's clinical staff, and the receiving hospital's
+    once a move of the patient to it has been requested (they need to know who is coming)."""
+    if sees_patients(user, case.hospital_id):
+        return True
+    if not (user and user.is_authenticated and user.effective_role in PATIENT_ROLES and user.hospital_id):
+        return False
+    from apps.emergencies.models import PatientTransfer  # emergencies builds on accounts
+
+    return PatientTransfer.objects.filter(request=case, to_hospital_id=user.hospital_id).exists()
+
+
 class IsStaff(BasePermission):
     """Signed in with a staff role, admins included (with or without a hospital). Patients and
     signed-out users get 403. Personal data such as notifications has no module, so no ACCESS row."""

@@ -1,6 +1,7 @@
 from django.db.models import Count
 from rest_framework import serializers
 
+from apps.accounts.permissions import sees_patients
 from apps.accounts.serializers import PHONE_REGEX
 
 from .models import Bed, Capability, Department, Hospital, StorageLocation, Ward
@@ -16,7 +17,8 @@ class WardSerializer(serializers.ModelSerializer):
 
 
 class BedSerializer(serializers.ModelSerializer):
-    """Shape of `Bed` in frontend/src/api/beds.ts. Patient fields are left out when the bed is empty."""
+    """Shape of `Bed` in frontend/src/api/beds.ts. Patient fields are left out when the bed is empty, and for
+    anyone but the clinical staff and admin of the bed's own hospital (B23): pass `context={"user": ...}`."""
 
     id = serializers.CharField(source="label")
     ward = serializers.CharField(source="ward.code")
@@ -29,6 +31,8 @@ class BedSerializer(serializers.ModelSerializer):
 
     def to_representation(self, bed):
         data = super().to_representation(bed)
+        if not sees_patients(self.context.get("user"), bed.hospital_id):
+            return data
         if bed.patient_initials:
             data["patient"] = {
                 "initials": bed.patient_initials,

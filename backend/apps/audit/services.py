@@ -73,6 +73,83 @@ def record(actor, action: str, target, *, before=None, after=None, reason: str =
     )
 
 
+# A record of access to patient information (B23): once per person per page or record per 10 minutes, so
+# the 30-second refresh doesn't flood the trail. The window is kept in the cache (the database on Vercel), so
+# every copy of the app shares it.
+VIEW_WINDOW_SECONDS = 600
+
+
+def record_view(actor, kind: str, *, hospital, count: int):
+    """Log that `actor` was shown patient-level details: which list or record (`kind`, e.g. "beds" or
+    "case:EC-2026-0001"), at which hospital, and how many records. Returns the entry, or None when the same
+    view was recorded in the last 10 minutes."""
+    from django.core.cache import cache
+
+    if actor is None or not actor.is_authenticated:
+        return None
+    if not cache.add(f"phi-view:{actor.pk}:{kind}", 1, VIEW_WINDOW_SECONDS):
+        return None
+    return record(
+        actor,
+        "phi.view",
+        hospital if hospital is not None else actor,
+        after={"view": kind, "hospital": getattr(hospital, "name", None), "records": count},
+    )
+
+
+# Entries about these records can carry patient information in free text (a case's note as the reason) or in
+# their values (a visit's complaint): B23 shows them only to those who may see that record's patient.
+PATIENT_TARGETS = {
+    "emergencies.emergencyrequest": ("reason",),
+    "emergencies.patienttransfer": ("reason",),
+    "emergencies.ervisit": ("reason", "before", "after"),
+}
+HIDDEN = "(hidden: patient information)"
+
+
+def _patient_hospitals(rows) -> dict[tuple[str, str], set]:
+    """(target type, id) → the hospitals whose clinical staff may read that record's patient details."""
+    from apps.emergencies.models import EmergencyRequest, ErVisit, PatientTransfer  # audit is the base app
+
+    wanted: dict[str, set] = {}
+    for row in rows:
+        if row.target_type in PATIENT_TARGETS:
+            wanted.setdefault(row.target_type, set()).add(row.target_id)
+    out: dict[tuple[str, str], set] = {}
+    lookups = {
+        "emergencies.emergencyrequest": (EmergencyRequest, ("hospital_id",)),
+        "emergencies.ervisit": (ErVisit, ("hospital_id",)),
+        "emergencies.patienttransfer": (PatientTransfer, ("from_hospital_id", "to_hospital_id")),
+    }
+    for target_type, ids in wanted.items():
+        model, fields = lookups[target_type]
+        numeric = [int(i) for i in ids if i.isdigit()]
+        for pk, *hospitals in model.objects.filter(pk__in=numeric).values_list("pk", *fields):
+            out[(target_type, str(pk))] = set(hospitals)
+    return out
+
+
+def redact(rows, data: list[dict], user) -> list[dict]:
+    """Hide the patient information in entries about another hospital's patients (B23). `rows` and `data` are
+    the same entries, as models and as serialized dicts. A reason that is only a lifecycle action stays."""
+    from apps.accounts.permissions import sees_patients
+
+    allowed = _patient_hospitals(rows)
+    for row, entry in zip(rows, data, strict=True):
+        fields = PATIENT_TARGETS.get(row.target_type)
+        if not fields:
+            continue
+        hospitals = allowed.get((row.target_type, row.target_id), {None})
+        if any(sees_patients(user, h) for h in hospitals):
+            continue
+        for field in fields:
+            if field == "reason" and entry["reason"] and " " in entry["reason"]:
+                entry["reason"] = HIDDEN
+            elif field in ("before", "after") and entry[field]:
+                entry[field] = {k: v for k, v in entry[field].items() if k == "status"} or None
+    return data
+
+
 @dataclass(frozen=True)
 class AuditFilters:
     """The search filters after parsing. A blank or missing filter is "" or None."""
@@ -241,6 +318,6 @@ def export_chunks(queryset: QuerySet, actor, filters: AuditFilters) -> Iterator[
         rows += len(batch)
         if rows > MAX_EXPORT_ROWS:
             raise ExportGrewPastCap(f"Audit export passed {MAX_EXPORT_ROWS} rows while it was being written.")
-        cells = AuditEntrySerializer(batch, many=True).data
+        cells = redact(batch, AuditEntrySerializer(batch, many=True).data, actor)
         yield "".join(writer.writerow(_csv_row(entry)) for entry in cells)
     record(actor, "audit.exported", actor, after={"filters": filters.set_filters(), "rows": rows})

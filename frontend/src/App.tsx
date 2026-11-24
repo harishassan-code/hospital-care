@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { PLANNED } from './features/staff/planned'
 import StaffLayout from './features/staff/StaffLayout'
 import HospitalPublicPage from './pages/HospitalPublicPage'
+import PrivacyPage from './pages/PrivacyPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -41,6 +42,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/hospitals/:id" element={<HospitalPublicPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/staff" element={<StaffLayout />}>

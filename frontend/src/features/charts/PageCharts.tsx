@@ -25,6 +25,8 @@ function lastDays(n: number): string[] {
 }
 
 const label = (day: string) => dayLabel.format(Date.parse(`${day}T07:00:00Z`))
+const clock = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit' })
+const TONE_LABEL = { planned: 'Booked', running: 'Should be running', done: 'Done', cancelled: 'Cancelled' } as const
 
 // ── Overview ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -316,7 +318,6 @@ export function OperatingRoomsCharts() {
   const to = Date.parse(`${day}T20:00:00+05:00`)
   const rooms = schedule?.rooms ?? []
   const bookings = rooms.flatMap((r) => r.bookings)
-  const cancelled = bookings.filter((b) => b.status === 'cancelled').length
   const tone = (b: (typeof bookings)[number]) => {
     if (b.status === 'cancelled') return 'cancelled' as const
     const s = Date.parse(b.startsAt)
@@ -327,7 +328,7 @@ export function OperatingRoomsCharts() {
     <ChartGrid>
       <ChartFrame
         title="Today’s lists"
-        summary={`Each room's bookings today, 08:00 to 20:00, with a line at the time now. ${cancelled} cancelled today.`}
+        summary="Each room's booked cases today, 08:00 to 20:00, with a line at the time now."
         legend={[
           { label: 'Booked', color: 'var(--chart-1)', mark: 'bar' },
           { label: 'Should be running', color: 'var(--chart-2)', mark: 'bar' },
@@ -336,7 +337,7 @@ export function OperatingRoomsCharts() {
         table={{
           columns: ['Room', 'Start', 'End', 'Procedure', 'Status'],
           rows: rooms.flatMap((r) =>
-            r.bookings.map((b) => [r.name, b.startsAt.slice(11, 16), b.endsAt.slice(11, 16), b.procedure, b.status === 'cancelled' ? 'Cancelled' : tone(b)]),
+            r.bookings.map((b) => [r.name, clock.format(Date.parse(b.startsAt)), clock.format(Date.parse(b.endsAt)), b.procedure, TONE_LABEL[tone(b)]]),
           ),
         }}
         state={failed ? 'failed' : !schedule ? 'loading' : rooms.length ? 'ready' : 'empty'}

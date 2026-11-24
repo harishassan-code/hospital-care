@@ -44,7 +44,7 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 | [B20](B20-realistic-data.md) | Realistic city network data with history | – | 3 | high | B19 | harishassan-code | 🔵 In Review |
 | [B21](B21-live-simulation.md) | Live city simulation with time controls | – | 13 | high | B20 | harishassan-code | 🟡 In Progress |
 | [B22](B22-purposeful-pages.md) | Every page with a purpose, an action and charts | – | 8 | high | B20, B21 | harishassan-code | 🟡 In Progress |
-| [B23](B23-patient-privacy.md) | Patient privacy safeguards (HIPAA principles) | – | 3 | high | – | harishassan-code | ⚪ Backlog |
+| [B23](B23-patient-privacy.md) | Patient privacy safeguards (HIPAA principles) | – | 3 | high | – | harishassan-code | 🟡 In Progress |
 
 ## Stretch (15 pts)
 
@@ -56,4 +56,4 @@ A bolt can start once everything in **Depends on** is Done (or the bolt says whi
 
 ## Progress
 
-⚪ Backlog: 1 · 🟢 Ready: 0 · 🟡 In Progress: 3 · 🔵 In Review: 5 · ✅ Done: 15
+⚪ Backlog: 0 · 🟢 Ready: 0 · 🟡 In Progress: 4 · 🔵 In Review: 5 · ✅ Done: 15

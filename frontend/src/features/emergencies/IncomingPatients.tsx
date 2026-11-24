@@ -86,6 +86,7 @@ function IncomingRow({
     <li className={styles.candidate}>
       <div className={styles.candidateTop}>
         <strong>{transfer.reference}</strong>
+        {transfer.patientRef && <span>Patient {transfer.patientRef}</span>}
         <StatusBadge tone={SEVERITY_TONE[transfer.severity]}>{severity}</StatusBadge>
       </div>
       <div>

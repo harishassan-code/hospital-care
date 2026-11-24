@@ -153,7 +153,23 @@ trip, the ambulance and the estimated arrival time.
 ones (a new critical case, an escalation, a transfer request to your hospital) stay as a banner until you choose
 **Acknowledge**.
 
-## 10. If something goes wrong
+## 10. Patient privacy
+
+CityCare shows patient details only to the people treating the patient (B23; the public **Patient privacy** page lists
+every safeguard):
+
+| You are | You see |
+|---|---|
+| A doctor or nurse | The patients at your own hospital: bed occupants, case references and notes, theatre booking initials, the emergency queue. A patient another hospital is sending to you, once the move is asked for. |
+| A hospital's admin | The same, for your hospital only. Never another hospital's patients. |
+| Blood bank staff, pharmacist | A case's needs, severity and hospital, without the patient reference or notes. Donors' details stay with blood bank staff. |
+| The CityCare admin (network) | Counts and statuses across the network: no patient details anywhere. |
+
+Every time you are shown patient details, the system records it (who, which page or record, when), at most once every
+10 minutes per page, and every export is recorded. Admins can search these records in the audit log (action
+`phi.view`). Never type a patient's name into a note: use the case reference or the bed.
+
+## 11. If something goes wrong
 
 | What you see | What to do |
 |---|---|

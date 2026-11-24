@@ -36,6 +36,9 @@ export function SiteFooter() {
                   <Link to="/#how">How it works</Link>
                 </li>
                 <li>
+                  <Link to="/privacy">Patient privacy</Link>
+                </li>
+                <li>
                   <Link to="/login">Sign in</Link>
                 </li>
               </ul>

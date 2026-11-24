@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission, own_hospital
+from apps.audit.services import record_view
 from apps.matching.candidates import candidates_for_case
 from apps.matching.models import Reservation
 from apps.matching.multi import match_hospitals
@@ -58,7 +59,11 @@ class CaseListView(APIView):
     def get(self, request):
         escalate_overdue()  # Story #35: reads sweep overdue cases first (see its ponytail note).
         cases = own_hospital(case_queryset(), request.user).by_priority()
-        return Response(CaseSerializer(cases, many=True).data)
+        data = CaseSerializer(cases, many=True, context={"user": request.user}).data
+        shown = sum(1 for case in data if case["patientRef"])
+        if shown:
+            record_view(request.user, "cases", hospital=request.user.hospital, count=shown)
+        return Response(data)
 
     def post(self, request):
         serializer = CaseInputSerializer(data=request.data)
@@ -67,7 +72,8 @@ class CaseListView(APIView):
         case = create_case(
             severity=data["severity"], patient_ref=data["patientRef"], items=data["items"], actor=request.user
         )
-        return Response(CaseSerializer(case_queryset().get(pk=case.pk)).data, status=status.HTTP_201_CREATED)
+        created = CaseSerializer(case_queryset().get(pk=case.pk), context={"user": request.user}).data
+        return Response(created, status=status.HTTP_201_CREATED)
 
 
 class CaseDetailView(APIView):
@@ -79,7 +85,10 @@ class CaseDetailView(APIView):
         escalate_overdue()  # Story #35: the same request-time sweep as the list.
         release_expired()  # Story #43: expired holds go back to stock before the figures are worked out.
         case = get_object_or_404(own_hospital(case_detail_queryset(), request.user), reference=reference)
-        return Response(CaseDetailSerializer(case, context={"user": request.user}).data)
+        data = CaseDetailSerializer(case, context={"user": request.user}).data
+        if data["patientRef"]:
+            record_view(request.user, f"case:{case.reference}", hospital=case.hospital, count=1)
+        return Response(data)
 
 
 class EmergencyFeedView(APIView):

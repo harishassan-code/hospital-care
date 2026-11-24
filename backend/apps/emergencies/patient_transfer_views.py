@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import module_permission, own_hospital
+from apps.audit.services import record_view
 from apps.matching.reservations import release_expired
 
 from .models import EmergencyRequest, PatientTransfer
@@ -88,7 +89,11 @@ class PatientTransferListView(APIView):
         )
         if status_filter := data.get("status"):
             transfers = transfers.filter(status=status_filter)
-        return Response(PatientTransferSerializer(transfers, many=True, context={"user": request.user}).data)
+        data = PatientTransferSerializer(transfers, many=True, context={"user": request.user}).data
+        shown = sum(1 for transfer in data if transfer["patientRef"])
+        if shown:
+            record_view(request.user, "patient-transfers", hospital=request.user.hospital, count=shown)
+        return Response(data)
 
 
 class PatientTransferActionView(APIView):

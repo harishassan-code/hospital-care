@@ -22,8 +22,9 @@ export interface EmergencyCase {
   id: string
   severity: Severity
   status: CaseStatus
-  /** Optional bed or triage tag. Never a name. */
-  patientRef: string
+  /** Optional bed or triage tag. Never a name. null when the reader may not see it (B23: blood bank, pharmacy,
+   * another hospital, the CityCare admin). */
+  patientRef: string | null
   hospital: { id: number; name: string } | null
   createdBy: string
   createdAt: string
@@ -263,6 +264,8 @@ export interface PatientTransfer {
   from: { id: number; name: string }
   /** The receiving hospital. */
   to: { id: number; name: string }
+  /** Who is coming, for the two hospitals' clinical staff (B23); null for anyone else. */
+  patientRef?: string | null
   /** The case's needs as labels, as the sources list shows them: "O− red cells", "ICU bed". */
   needs: string[]
   /** The receiving hospital's #42 entry as it stood when the move was asked for. Kept, so the reason survives later changes. */

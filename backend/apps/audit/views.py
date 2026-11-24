@@ -31,12 +31,13 @@ class AuditEntryListView(AuditReadView):
 
     def get(self, request):
         page = services.search(request.query_params)
+        rows = list(page.rows)
         return Response(
             {
                 "count": page.count,
                 "limit": page.limit,
                 "offset": page.offset,
-                "results": AuditEntrySerializer(page.rows, many=True).data,
+                "results": services.redact(rows, AuditEntrySerializer(rows, many=True).data, request.user),
             }
         )
 
