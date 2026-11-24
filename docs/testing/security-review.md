@@ -55,7 +55,9 @@ and public status. The Django admin at `/admin/` is not a DRF view and is listed
 | AppointmentListView | GET/POST `/api/blood/appointments/` | table: donors | GET own_hospital; POST: donor scoped to the actor (F1) | F1 | Fixed: another hospital's donor is 404 |
 | AppointmentCancelView | POST `/api/blood/appointments/<id>/cancel/` | table: donors (edit) | changeable_by, 404; then service | F3 | Fixed: 404 |
 | health | GET `/api/health/` | AllowAny (decorator) | none | Public, Render health check | Allowlisted; exempt from the HTTPS redirect |
-| PublicStatusView | GET `/api/public/status/` | AllowAny, session read but not required | none | F5 | Fixed (#122): names only for signed-in staff |
+| PublicHospitalDetailView (was PublicStatusView) | GET `/api/public/hospitals/<id>/` (was `/api/public/status/`, until B19) | AllowAny, session read but not required | none | F5 | Fixed (#122): names only for signed-in staff |
+| PublicNetworkView, PublicHospitalListView | GET `/api/public/network/`, `/api/public/hospitals/` (B19) | AllowAny | none | Public by design | Levels and counts only: no patient data, no exact stock, no identifiers (tested) |
+| DepartmentStatusView | GET/PUT `/api/emergencies/department/` (B19) | table: emergencies | the user's own hospital only; no hospital: 404 | OK | OK: audit-logged |
 | CaseListView | GET/POST `/api/emergencies/` | table: emergencies | own_hospital; POST uses actor's hospital | F9 | Not changed (F9) |
 | CaseDetailView | GET `/api/emergencies/<ref>/` | table: emergencies | own_hospital | F9 | Not changed (F9) |
 | EmergencyFeedView | GET `/api/emergencies/feed/` | table: emergencies (view) | network-wide by design (#36); no patient field | F9 | Not changed (F9) |

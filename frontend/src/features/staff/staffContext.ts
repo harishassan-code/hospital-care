@@ -2,9 +2,8 @@ import { createContext, useContext } from 'react'
 import type { User } from '../../api/auth'
 import type { Bed, BedAction, Ward } from '../../api/beds'
 import type { BloodUnit } from '../../api/blood'
-import type { EmergencyCase } from '../../api/emergencies'
+import type { DepartmentStatus, EmergencyCase } from '../../api/emergencies'
 import type { Medicine } from '../../api/pharmacy'
-import type { PublicStatus } from '../../api/publicStatus'
 import type { Transfer } from '../../api/transfers'
 import type { NotificationFeed } from '../notifications/useNotificationFeed'
 import type { AttentionItem } from './attention'
@@ -22,8 +21,9 @@ export interface StaffData {
   beds: Bed[]
   units: BloodUnit[]
   medicines: Medicine[]
-  /** null if the public ER status couldn't be loaded; the rest of the workspace still works. */
-  emergency: PublicStatus['emergency'] | null
+  /** Our emergency department (B19). null if it couldn't be loaded or the user has no hospital; the rest of the
+   * workspace still works. Its fields are null until the hospital first reports. */
+  emergency: DepartmentStatus | null
   /** The hospital's emergency cases. null if they couldn't be loaded. */
   cases: EmergencyCase[] | null
   /** null when the role can't see transfers, or they couldn't be loaded. */
@@ -54,6 +54,8 @@ export interface StaffState {
   upsertUnit: (unit: BloodUnit) => void
   /** Reads the blood units again, so the stock figures show what changed on the server (e.g. after an allocation). */
   refreshUnits: () => Promise<void>
+  /** Shows our emergency department's status as just saved (B19). */
+  setDepartmentStatus: (status: DepartmentStatus) => void
   signOut: () => Promise<void>
 }
 

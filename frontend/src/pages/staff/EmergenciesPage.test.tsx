@@ -370,3 +370,53 @@ describe('EmergenciesPage quick blood request (story #36)', () => {
     }
   })
 })
+
+describe('Our emergency department (B19)', () => {
+  const panel = () => screen.findByRole('region', { name: 'Our emergency department' })
+
+  it('shows the status the public sees, and lets a nurse update it', async () => {
+    mockStaffApi({ role: 'nurse' })
+    renderStaff('/staff/emergencies')
+    const section = await panel()
+    expect(within(section).getByText('Accepting patients', { ignore: 'option' })).toBeInTheDocument()
+    expect(within(section).getByText(/This is what patients see on the CityCare home page/)).toBeInTheDocument()
+
+    await userEvent.selectOptions(within(section).getByLabelText('Status'), 'busy')
+    const waiting = within(section).getByLabelText('People waiting')
+    await userEvent.clear(waiting)
+    await userEvent.type(waiting, '18')
+    const wait = within(section).getByLabelText('Estimated wait (minutes)')
+    await userEvent.clear(wait)
+    await userEvent.type(wait, '80')
+    await userEvent.click(within(section).getByRole('button', { name: 'Update status' }))
+
+    expect(await within(section).findByText('Saved. The public pages show it now.')).toBeInTheDocument()
+    expect(within(section).getByText('Very busy', { ignore: 'option' })).toBeInTheDocument()
+    const put = vi.mocked(globalThis.fetch).mock.calls.find(([, init]) => init?.method === 'PUT')
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ status: 'busy', waitMinutes: 80, waitingCount: 18 })
+  })
+
+  it('checks the figures before sending them', async () => {
+    mockStaffApi({ role: 'doctor' })
+    renderStaff('/staff/emergencies')
+    const section = await panel()
+    await userEvent.clear(within(section).getByLabelText('Estimated wait (minutes)'))
+    await userEvent.click(within(section).getByRole('button', { name: 'Update status' }))
+    expect(await within(section).findByText('Enter the wait in whole minutes.')).toBeInTheDocument()
+    expect(vi.mocked(globalThis.fetch).mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+  })
+
+  it('is read-only for roles that only view cases', async () => {
+    mockStaffApi({ role: 'pharmacist' })
+    renderStaff('/staff/emergencies')
+    const section = await panel()
+    expect(within(section).getByText('Accepting patients')).toBeInTheDocument()
+    expect(within(section).queryByRole('button', { name: 'Update status' })).not.toBeInTheDocument()
+  })
+
+  it('says when the hospital has not reported yet', async () => {
+    mockStaffApi({ role: 'nurse', department: { status: null, waitMinutes: null, waitingCount: null, updatedAt: null } })
+    renderStaff('/staff/emergencies')
+    expect(within(await panel()).getByText(/hasn’t reported its emergency status yet/)).toBeInTheDocument()
+  })
+})

@@ -5,7 +5,7 @@ from .models import EmergencyRequest, EmergencyStatus, RequestItem
 
 @admin.register(EmergencyStatus)
 class EmergencyStatusAdmin(admin.ModelAdmin):
-    list_display = ["status", "wait_minutes", "waiting_count", "updated_at"]
+    list_display = ["hospital", "status", "wait_minutes", "waiting_count", "updated_at"]
 
 
 class RequestItemInline(admin.TabularInline):

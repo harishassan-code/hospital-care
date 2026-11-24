@@ -187,19 +187,3 @@ class Bed(Resource):
         self.admitted_at = None
         self.expected_discharge = None
         self.isolation = ""
-
-
-class DoctorShift(models.Model):
-    """A doctor's regular daily shift, shown on the public landing page."""
-
-    name = models.CharField(max_length=150)
-    department = models.CharField(max_length=100)
-    start = models.TimeField()
-    end = models.TimeField(help_text="Earlier than start means the shift runs past midnight.")
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ["department", "start", "name"]
-
-    def __str__(self):
-        return f"{self.name} ({self.department})"

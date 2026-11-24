@@ -4,9 +4,8 @@ import { getMe, logout, type User } from '../../api/auth'
 import { getBedBoard, postBedAction, type BedAction, type BedBoard } from '../../api/beds'
 import { getBloodUnits, type BloodUnit } from '../../api/blood'
 import { ApiError } from '../../api/client'
-import { getCases } from '../../api/emergencies'
+import { getCases, getDepartmentStatus, type DepartmentStatus } from '../../api/emergencies'
 import { getMedicines } from '../../api/pharmacy'
-import { getPublicStatus } from '../../api/publicStatus'
 import { listTransfers } from '../../api/transfers'
 import { useNotificationFeed } from '../notifications/useNotificationFeed'
 import { useNow } from '../../lib/useNow'
@@ -68,16 +67,16 @@ export function StaffProvider({ children }: { children: ReactNode }) {
 
 /**
  * Every call the role's workspace makes, answered together. A call that fails leaves its part undefined. Null when a call
- * the pages can't do without (beds, blood, pharmacy) failed. `complete` is false when an optional call (the public ER
- * status, cases, transfers) failed.
+ * the pages can't do without (beds, blood, pharmacy) failed. `complete` is false when an optional call (our emergency
+ * department's status, cases, transfers) failed. Staff with no hospital have no department, so it isn't asked for.
  */
-async function loadStaffData(role: Role): Promise<{ data: StaffData; complete: boolean } | null> {
+async function loadStaffData(role: Role, hasHospital: boolean): Promise<{ data: StaffData; complete: boolean } | null> {
   const attempt = <T,>(request: Promise<T>) => request.catch(() => undefined)
   const [board, units, medicines, emergency, cases, transfers] = await Promise.all([
     canSee(role, 'beds') ? attempt(getBedBoard()) : NO_BEDS,
     canSee(role, 'blood') ? attempt(getBloodUnits()) : [],
     canSee(role, 'pharmacy') ? attempt(getMedicines()) : [],
-    attempt(getPublicStatus().then((status) => status.emergency)),
+    canSee(role, 'emergencies') && hasHospital ? attempt(getDepartmentStatus()) : null,
     canSee(role, 'emergencies') ? attempt(getCases()) : null,
     canSee(role, 'transfers')
       ? attempt(
@@ -111,6 +110,7 @@ type Load = { data: StaffData | null; failed: boolean; updatedAt: Date | null; r
  */
 function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   const role = user.role as Role
+  const hasHospital = user.hospital !== null
   const now = useNow()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -125,7 +125,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     if (reloading.current) return
     reloading.current = true
     try {
-      const result = await loadStaffData(role)
+      const result = await loadStaffData(role, hasHospital)
       if (!mounted.current) return
       const at = new Date()
       setLoad((current) => {
@@ -136,7 +136,7 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     } finally {
       reloading.current = false
     }
-  }, [role])
+  }, [role, hasHospital])
 
   useEffect(() => {
     mounted.current = true
@@ -203,6 +203,11 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
     [setData],
   )
 
+  const setDepartmentStatus = useCallback(
+    (status: DepartmentStatus) => setData((current) => ({ ...current, emergency: status })),
+    [setData],
+  )
+
   const refreshUnits = useCallback(async () => {
     const units = await getBloodUnits().catch(() => null)
     if (units) setData((current) => ({ ...current, units }))
@@ -214,8 +219,38 @@ function StaffSession({ user, children }: { user: User; children: ReactNode }) {
   )
 
   const value = useMemo<StaffState>(
-    () => ({ user, role, now, data, failed, updatedAt, refreshFailed, attention, notifications, updateBed, upsertUnit, refreshUnits, signOut }),
-    [user, role, now, data, failed, updatedAt, refreshFailed, attention, notifications, updateBed, upsertUnit, refreshUnits, signOut],
+    () => ({
+      user,
+      role,
+      now,
+      data,
+      failed,
+      updatedAt,
+      refreshFailed,
+      attention,
+      notifications,
+      updateBed,
+      upsertUnit,
+      refreshUnits,
+      setDepartmentStatus,
+      signOut,
+    }),
+    [
+      user,
+      role,
+      now,
+      data,
+      failed,
+      updatedAt,
+      refreshFailed,
+      attention,
+      notifications,
+      updateBed,
+      upsertUnit,
+      refreshUnits,
+      setDepartmentStatus,
+      signOut,
+    ],
   )
 
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>

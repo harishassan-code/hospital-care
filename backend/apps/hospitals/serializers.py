@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.accounts.serializers import PHONE_REGEX
 
-from .models import Bed, Capability, Department, DoctorShift, Hospital, StorageLocation, Ward
+from .models import Bed, Capability, Department, Hospital, StorageLocation, Ward
 from .services import ACTIONS, new_ward_code
 
 
@@ -46,19 +46,6 @@ class BedSerializer(serializers.ModelSerializer):
 
 class BedActionSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=ACTIONS)
-
-
-class DoctorSerializer(serializers.ModelSerializer):
-    id = serializers.SerializerMethodField()
-    start = serializers.TimeField(format="%H:%M")
-    end = serializers.TimeField(format="%H:%M")
-
-    class Meta:
-        model = DoctorShift
-        fields = ["id", "name", "department", "start", "end"]
-
-    def get_id(self, shift):
-        return f"d{shift.pk:02d}"
 
 
 # ── Hospital network (docs/architecture/api-contracts.md) ────────────────────

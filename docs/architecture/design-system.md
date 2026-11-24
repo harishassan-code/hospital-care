@@ -48,6 +48,14 @@ header, sign-in pages); the choice is then kept in that browser ([`lib/theme.ts`
 `index.html` applies the same rule before first paint, so there is no flash of the wrong theme, and colours cross-fade
 for 300 ms on a switch. Dark tokens apply to `<html data-theme="dark">`.
 
+## Public pages (B19)
+
+The home page presents the network, not a hospital: a hero, **the network right now** (stat cards with an icon, a big
+tabular number and a plain label; beds and blood as level badges), the **hospital directory** (cards that lift under
+the pointer; the whole card is the hospital's link), **how it works** (one card per audience) and sign-in. A hospital's
+page uses the same cards, with its emergency department marked by a red top rule. Availability is always a level badge
+(an icon and a word), never a bare number or colour, and exact stock stays in the staff workspace.
+
 ## Logo and imagery
 
 - **Logo** ([`components/brand/Logo.tsx`](../../frontend/src/components/brand/Logo.tsx)): a plus whose centre is a

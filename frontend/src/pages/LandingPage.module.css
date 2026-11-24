@@ -5,23 +5,19 @@
 }
 
 .main {
+  width: var(--page-width);
+  margin-inline: auto;
   padding-bottom: var(--space-8);
 }
 
-.container {
-  width: var(--page-width);
-  margin-inline: auto;
-}
-
-.heroHead {
-  padding: var(--space-7) 0 var(--space-6);
-}
+/* ── Hero ──────────────────────────────────────────────── */
 
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
   gap: var(--space-7);
   align-items: center;
+  padding: var(--space-7) 0 var(--space-6);
 }
 
 .heroText {
@@ -30,61 +26,92 @@
   animation: page-enter 400ms var(--ease-out) both;
 }
 
+.eyebrow {
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
 .title {
-  max-width: 14ch;
+  max-width: 16ch;
   font-size: var(--text-display);
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 1.02;
+  line-height: 1.05;
 }
 
 .lede {
-  max-width: 38ch;
+  max-width: 46ch;
   font-size: var(--text-lg);
   color: var(--ink-muted);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.heroActions a {
+  width: auto;
+  padding-inline: var(--space-5);
+  text-decoration: none;
+}
+
+.urgent {
+  color: var(--ink-muted);
+}
+
+.urgent a {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--line-emergency);
 }
 
 .art {
   animation: page-enter 500ms var(--ease-out) 100ms both;
 }
 
-.note {
-  padding-block: var(--space-4);
+/* ── Sections ──────────────────────────────────────────── */
+
+.section {
+  display: grid;
+  gap: var(--space-5);
+  padding-top: var(--space-7);
+  scroll-margin-top: var(--space-4);
+}
+
+.sectionHead {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.sectionHead h2 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.sectionLede,
+.state {
   color: var(--ink-muted);
 }
 
-.note a {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  color: var(--line-emergency);
-}
-
-.updated {
-  font-family: var(--font-mono);
-}
-
 @media (max-width: 59.99rem) {
-  /* The sign runs edge to edge on small screens. */
-  .container {
-    width: 100%;
-  }
-
-  .heroHead,
-  .note,
-  .container > section {
-    padding-inline: var(--space-4);
-  }
-
-  .heroHead {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
     padding-top: var(--space-6);
   }
 
   /* On small screens the words come first and the picture goes. */
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .art {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroText,
+  .art {
+    animation: none;
   }
 }

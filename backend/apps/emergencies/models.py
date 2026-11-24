@@ -15,23 +15,23 @@ class ErStatus(models.TextChoices):
 
 
 class EmergencyStatus(models.Model):
-    """The emergency department's current public status. A single row (pk=1), edited by staff."""
+    """One hospital's emergency department as the public sees it (B19): accepting, very busy or not accepting
+    ambulances, the estimated wait and how many are waiting. Updated by that hospital's staff through
+    services.update_department_status. A hospital without a row hasn't reported its status."""
 
+    hospital = models.OneToOneField(
+        "hospitals.Hospital", on_delete=models.CASCADE, related_name="emergency_status"
+    )
     status = models.CharField(max_length=20, choices=ErStatus.choices, default=ErStatus.ACCEPTING)
     wait_minutes = models.PositiveIntegerField(default=0)
     waiting_count = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name_plural = "emergency status"
+        verbose_name_plural = "emergency statuses"
 
     def __str__(self):
-        return self.get_status_display()
-
-    @classmethod
-    def current(cls) -> "EmergencyStatus":
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
+        return f"{self.hospital}: {self.get_status_display()}"
 
 
 # ── Emergency cases (stories #30, #32) ────────────────────────────────────────────────────────────

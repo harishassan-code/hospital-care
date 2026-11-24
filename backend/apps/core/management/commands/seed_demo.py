@@ -41,7 +41,6 @@ from apps.hospitals.models import (
     BedType,
     Capability,
     Department,
-    DoctorShift,
     Hospital,
     StorageLocation,
     Ward,
@@ -611,7 +610,6 @@ class Command(BaseCommand):
                 StorageLocation,
                 Batch,
                 Medicine,
-                DoctorShift,
                 OnCallWindow,  # before the specialists: a window holds its specialist (PROTECT)
                 Specialist,  # before the hospitals: a specialist holds its hospital (PROTECT)
                 Hospital,
@@ -652,16 +650,8 @@ class Command(BaseCommand):
         if not Medicine.objects.exists():
             self.seed_pharmacy(now, hospitals)
         Batch.objects.filter(hospital=None).update(hospital=main)  # stock seeded before #123
-        if not DoctorShift.objects.exists():
-            DoctorShift.objects.bulk_create(
-                DoctorShift(name=n, department=d, start=time.fromisoformat(s), end=time.fromisoformat(e))
-                for n, d, s, e in DOCTORS
-            )
         self.seed_specialists({h.name: h for h in hospitals}, now)
-        er = EmergencyStatus.current()
-        if reset or er.wait_minutes == 0:
-            er.status, er.wait_minutes, er.waiting_count = ErStatus.ACCEPTING, 24, 7
-            er.save()
+        self.seed_emergency_statuses(hospitals, rand)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         for hospital in hospitals:
@@ -695,6 +685,23 @@ class Command(BaseCommand):
                 if starts not in booked:
                     missing.append(OnCallWindow(specialist=specialist, starts_at=starts, ends_at=ends))
         OnCallWindow.objects.bulk_create(missing)
+
+    def seed_emergency_statuses(self, hospitals: list[Hospital], rand: random.Random):
+        """Each hospital's emergency department, as the public sees it (B19). The main hospital keeps the
+        figures the demo script shows; the others get their own. Only hospitals without one get one."""
+        reported = set(EmergencyStatus.objects.values_list("hospital_id", flat=True))
+        for index, hospital in enumerate(hospitals):
+            if hospital.pk in reported:
+                continue
+            if index == 0:
+                status, wait, waiting = ErStatus.ACCEPTING, 24, 7
+            else:
+                waiting = rand.randint(2, 18)
+                wait = 10 + waiting * rand.randint(3, 6)
+                status = ErStatus.BUSY if wait >= 60 else ErStatus.ACCEPTING
+            EmergencyStatus.objects.create(
+                hospital=hospital, status=status, wait_minutes=wait, waiting_count=waiting
+            )
 
     def seed_users(self, hospital: Hospital):
         """One login per role; staff work at `hospital`."""

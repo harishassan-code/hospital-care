@@ -193,7 +193,8 @@ OnCallWindow = { id: number, startsAt: string, endsAt: string }             // I
   `{"startsAt": ["Overlaps an on-call window from 16 Jan 08:00 to 16 Jan 20:00."]}`, `{"name": [...]}` (taken at the hospital),
   `{"hospitalId": [...]}` (unknown or deactivated hospital). A role that may not edit, or a non-admin writing for another
   hospital, gets **403** `{detail}`. An unknown specialist is 404.
-- **Public page.** `/public/status/` is unchanged. It never lists staff specialists.
+- **Public page.** Each hospital's public page (`/public/hospitals/<id>/`, B19) lists the specialists on call now by
+  specialty and count; names only for signed-in hospital staff.
 - **Audit:** `specialist.created` (after: name, specialty, hospital), `specialist.updated` (only the fields that changed,
   before and after), `on_call.created` (after: startsAt, endsAt) and `on_call.deleted` (before: startsAt, endsAt). The
   target of an `on_call` entry is the window.

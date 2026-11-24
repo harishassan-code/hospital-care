@@ -1,5 +1,5 @@
-"""Specialist doctors and their on-call windows (B16, stories #61 and #62). Staff-only: the public page keeps
-its own doctor schedule (apps.hospitals.DoctorShift), which has no hospital and no dates. The rules are in
+"""Specialist doctors and their on-call windows (B16, stories #61 and #62). Each hospital's public page (B19)
+shows who is on call now by specialty, with names only for signed-in hospital staff. The rules are in
 services.py."""
 
 from django.db import models

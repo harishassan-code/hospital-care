@@ -115,15 +115,9 @@ erDiagram
         date expires_on
         int quantity
     }
-    DoctorShift {
-        bigint id PK
-        string name
-        string department
-        time start
-        time end
-    }
     EmergencyStatus {
-        bigint id PK "always 1"
+        bigint id PK
+        bigint hospital_id FK "one per hospital (B19)"
         string status
         int wait_minutes
         int waiting_count
@@ -143,8 +137,9 @@ erDiagram
 ```
 
 `Bed` and `BloodUnit` share the abstract `Resource` columns (`hospital`, `storage_location`, `status_since`).
-See [resources.md](resources.md) for the status lifecycles and the audit log. `Medicine`, `DoctorShift` and
-`EmergencyStatus` still belong to the single demo hospital. Tying them to `Hospital` is part of their next stories.
+See [resources.md](resources.md) for the status lifecycles and the audit log. `EmergencyStatus` belongs to a hospital
+(B19); the single-hospital doctor rota (`DoctorShift`) was removed then, and "on duty" comes from each hospital's
+specialists. `Medicine` is the network's shared formulary; each hospital's stock is its `Batch` rows (#123).
 
 ## Planned MVP schema (proposed)
 
