@@ -11,7 +11,8 @@ import { currentShift, formatDuration } from '../../lib/time'
 import { AccessDenied } from './AccessDenied'
 import { MODULE_ICONS } from './moduleIcons'
 import { PLANNED } from './planned'
-import { canOpen, canSee, moduleForPath, MODULES, ROLES } from './roles'
+import { PURPOSE } from './purposes'
+import { canOpen, deniedBecause, moduleForPath, MODULES, ROLES } from './roles'
 import { useStaff } from './staffContext'
 import styles from './StaffLayout.module.css'
 import { StaffProvider } from './StaffProvider'
@@ -29,6 +30,7 @@ function StaffShell() {
   const { role, user } = useStaff()
   const { pathname } = useLocation()
   const module = moduleForPath(pathname)
+  const denied = deniedBecause(role, module.id, Boolean(user.hospital))
 
   return (
     <div className={styles.shell}>
@@ -37,15 +39,14 @@ function StaffShell() {
       </a>
       <Sidebar />
       <div className={styles.column}>
-        <TopBar title={PLANNED.find((p) => p.path === pathname.replace(/\/$/, ''))?.label ?? module.label} />
+        <TopBar
+          title={PLANNED.find((p) => p.path === pathname.replace(/\/$/, ''))?.label ?? module.label}
+          question={isModuleHome(pathname, module.path) ? PURPOSE[module.id] : undefined}
+        />
         <div>
           <CriticalBanners />
           <main id="main" className={styles.main}>
-            {canOpen(role, module.id, Boolean(user.hospital)) ? (
-              <Outlet />
-            ) : (
-              <AccessDenied what={module.label} networkOnly={canSee(role, module.id)} />
-            )}
+            {denied === null ? <Outlet /> : <AccessDenied what={module.label} reason={denied} />}
           </main>
         </div>
       </div>
@@ -111,13 +112,21 @@ function Sidebar() {
   )
 }
 
-function TopBar({ title }: { title: string }) {
+/** The question shows on a module's own page, not on its sub-pages (a case, a hospital's form). */
+function isModuleHome(pathname: string, path: string): boolean {
+  return pathname.replace(/\/$/, '') === path
+}
+
+function TopBar({ title, question }: { title: string; question?: string }) {
   const { now } = useStaff()
   const shift = currentShift(hospital.shifts, now)
 
   return (
     <header className={styles.topBar}>
-      <h1 className={styles.title}>{title}</h1>
+      <div className={styles.titleBlock}>
+        <h1 className={styles.title}>{title}</h1>
+        {question && <p className={styles.question}>{question}</p>}
+      </div>
       <div className={styles.topMeta}>
         <CityClockBadge />
         <p className={styles.shift}>

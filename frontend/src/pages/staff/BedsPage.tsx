@@ -20,6 +20,7 @@ import { canEdit } from '../../features/staff/roles'
 import { useStaff } from '../../features/staff/staffContext'
 import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
+import { BedsCharts } from '../../features/charts/PageCharts'
 
 type StatusFilter = 'all' | BedStatus | 'dischargeToday'
 
@@ -131,6 +132,7 @@ export default function BedsPage() {
           </section>
         )
       })}
+      <BedsCharts beds={data.beds} wards={data.wards} />
     </div>
   )
 }

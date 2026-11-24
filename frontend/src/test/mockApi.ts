@@ -60,6 +60,10 @@ import { sampleMedicines } from './fixtures/pharmacy'
 import { sampleDepartment, samplePublicHospitalDetail, samplePublicHospitals, sampleNetwork } from './fixtures/publicNetwork'
 import { sampleReport } from './fixtures/reports'
 import { sampleSimulation } from './fixtures/simulation'
+import { sampleMetrics } from './fixtures/metrics'
+import { sampleQueue, sampleStaffing } from './fixtures/floor'
+import type { ErVisit, VisitAction } from '../api/emergencies'
+import type { ShiftAction, ShiftRow } from '../api/staffing'
 import { sampleSpecialists, type SpecialistRecord } from './fixtures/specialists'
 
 /** A reply is JSON (`body`), or a file (`file`): its text, sent with the type and the name the server gives it. */
@@ -806,6 +810,9 @@ export function mockStaffApi({
     }
   const view = allowed(canSee)
   const edit = allowed(canEdit)
+  // Our emergency department and staff on duty (B22).
+  let queue = sampleQueue(now)
+  let staffing = sampleStaffing(now)
   // The live city simulation (B21): only the CityCare admin, an admin with no hospital.
   let simulation = sampleSimulation(now)
   const networkAdmin = (reply: (request: Request) => Reply): Route => (request) =>
@@ -872,6 +879,30 @@ export function mockStaffApi({
       samplePublicHospitals(now).some((h) => String(h.id) === params.id)
         ? ok(samplePublicHospitalDetail(now, Number(params.id), role !== null && role !== 'patient'))
         : fail(404, { detail: 'Not found.' }),
+    'GET /metrics/': view('metrics', ({ query }) => ok(sampleMetrics(query, now))),
+    'GET /emergencies/queue/': view('emergencyDepartment', () => ok(queue)),
+    'POST /emergencies/queue/:id/actions/': edit('emergencyDepartment', ({ params, body }) => {
+      const visit = queue.visits.find((v) => v.id === Number(params.id))
+      const { action } = body as { action: VisitAction }
+      if (!visit) return fail(404)
+      if (!visit.actions.includes(action)) return fail(409, { detail: 'Not now.' })
+      const next: ErVisit =
+        action === 'startTreatment'
+          ? { ...visit, status: 'treating', bed: 'ED-09', actions: ['discharge', 'admit', 'transfer'] }
+          : { ...visit, status: 'left', actions: [] }
+      queue = { ...queue, visits: queue.visits.map((v) => (v.id === visit.id ? next : v)).filter((v) => v.status !== 'left') }
+      return ok(next)
+    }),
+    'GET /staffing/': view('staffing', () => ok(staffing)),
+    'POST /staffing/shifts/:id/actions/': edit('staffing', ({ params, body }) => {
+      const row = staffing.people.find((p) => p.id === Number(params.id))
+      const { action } = body as { action: ShiftAction }
+      if (!row) return fail(404)
+      if (!row.actions.includes(action)) return fail(409, { detail: 'That can’t be done for this shift now.' })
+      const next: ShiftRow = { ...row, status: action === 'clockIn' ? 'late' : 'absent', clockedInAt: action === 'clockIn' ? now.toISOString() : null, actions: [] }
+      staffing = { ...staffing, people: staffing.people.map((p) => (p.id === row.id ? next : p)) }
+      return ok(next)
+    }),
     'GET /simulation/': networkAdmin(() => ok(simulation)),
     'POST /simulation/control/': networkAdmin(({ body }) => {
       const { action, value } = body as { action: string; value?: string }

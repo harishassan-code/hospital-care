@@ -6,12 +6,9 @@ import random
 import zlib
 from dataclasses import dataclass, field
 
-from django.contrib.contenttypes.models import ContentType
-
 from apps.blood.models import BloodUnit
 from apps.core.seed.profiles import EXTRA_WARDS, PROFILES
 from apps.hospitals.models import Bed, BedType, Hospital, Ward
-from apps.matching.models import ACTIVE, Reservation
 from apps.operating_rooms.models import OperatingRoom
 
 # Ages each demo ward takes, from the seed's ward lists; a ward added later takes adults.
@@ -53,15 +50,6 @@ def stable(*key) -> random.Random:
     """A random stream fixed by `key` (e.g. a bed and when it started cleaning), so a draw made for one thing
     gives the same answer on every tick: a bed's cleaning time is decided once, not re-rolled."""
     return random.Random(zlib.crc32(":".join(str(k) for k in key).encode()))
-
-
-def held_ids(model) -> set[int]:
-    """Ids of `model` rows held or allocated for a case: the simulation never moves them."""
-    return set(
-        Reservation.objects.filter(
-            content_type=ContentType.objects.get_for_model(model), status__in=ACTIVE
-        ).values_list("object_id", flat=True)
-    )
 
 
 def build_sites() -> list[Site]:

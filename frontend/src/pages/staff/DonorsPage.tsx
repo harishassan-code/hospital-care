@@ -14,6 +14,7 @@ import { canEdit } from '../../features/staff/roles'
 import { useStaff } from '../../features/staff/staffContext'
 import { useLoad } from '../../lib/useLoad'
 import pageStyles from './StaffPages.module.css'
+import { DonorsCharts } from '../../features/charts/PageCharts'
 
 /** Wait this long after typing stops before searching. */
 const SEARCH_DELAY_MS = 300
@@ -148,6 +149,7 @@ export default function DonorsPage() {
       </div>
 
       {selected && <DonorPanel key={selected} code={selected} canWrite={canWrite} onChanged={changed} onClose={closeDonor} />}
+      <DonorsCharts />
     </div>
   )
 }

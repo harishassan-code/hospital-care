@@ -9,6 +9,7 @@ import { canEdit, canSee } from '../../features/staff/roles'
 import { useStaff } from '../../features/staff/staffContext'
 import { StaffDataState } from './StaffDataState'
 import styles from './StaffPages.module.css'
+import { BloodCharts } from '../../features/charts/PageCharts'
 
 export default function BloodPage() {
   const { data, now, role, upsertUnit, refreshUnits } = useStaff()
@@ -22,6 +23,7 @@ export default function BloodPage() {
         <CompatibilityFinder units={data.units} />
         <StorageGuide />
       </div>
+      <BloodCharts units={data.units} />
       <UnitTable units={data.units} now={now} />
       {canEdit(role, 'blood') && (
         <>

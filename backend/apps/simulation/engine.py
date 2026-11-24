@@ -27,6 +27,7 @@ from apps.metrics import catalog
 from apps.metrics import services as metrics
 from apps.metrics.models import MetricSnapshot
 from apps.operating_rooms.models import OperatingRoom
+from apps.resources.services import held_ids
 from apps.staffing.models import Shift
 from apps.staffing.services import extend_rota
 
@@ -35,7 +36,7 @@ from .actor import system_user
 from .coarse import coarse_hour
 from .models import SimEvent, SimulationState
 from .profiles import INCIDENT_SITES, MASS_CASUALTY, PROFILES, draw, shares
-from .world import build_sites, held_ids
+from .world import build_sites
 
 STEP = timedelta(minutes=5)
 DETAIL = timedelta(hours=2)  # the last two hours of any catch-up run step by step

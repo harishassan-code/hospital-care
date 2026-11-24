@@ -10,6 +10,7 @@ import { formatClock } from '../../lib/time'
 import { formatGroup } from '../blood/blood'
 import { BED_TYPE_LABELS, levelWords, nearExpiryWords, shortageLines, shortageWords } from './rules'
 import styles from './CommandCentre.module.css'
+import { CommandCentreCharts } from '../charts/PageCharts'
 
 /** A red-cell figure: a hospital's has a level, the network total has only the count. */
 type Red = { group: BloodGroup; available: number; minimum?: number; level?: ShortageLevel }
@@ -114,6 +115,8 @@ export function CommandCentreBoard({ figures, stale }: { figures: CommandCentre;
           minute.
         </p>
       )}
+
+      <CommandCentreCharts data={figures} />
 
       <Panel title="Shortages" id="shortages">
         {lines.length === 0 ? (

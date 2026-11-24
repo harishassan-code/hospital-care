@@ -47,6 +47,8 @@ class Shift(models.Model):
     ends_at = models.DateTimeField()
     clocked_in_at = models.DateTimeField(null=True, blank=True)
     clocked_out_at = models.DateTimeField(null=True, blank=True)
+    # Marked absent by the nurse in charge or an admin (B22): nobody is expected any more, and the gap shows.
+    absent = models.BooleanField(default=False)
 
     objects = ShiftQuerySet.as_manager()
 

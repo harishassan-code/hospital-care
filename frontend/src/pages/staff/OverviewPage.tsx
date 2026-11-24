@@ -9,6 +9,7 @@ import { useStaff } from '../../features/staff/staffContext'
 import { useScrollToHash } from '../../lib/useScrollToHash'
 import { StaffDataState } from './StaffDataState'
 import styles from './StaffPages.module.css'
+import { OverviewCharts } from '../../features/charts/PageCharts'
 
 export default function OverviewPage() {
   const { data, role } = useStaff()
@@ -26,6 +27,7 @@ export default function OverviewPage() {
           {canSee(role, 'blood') && <RedCellChart data={data} />}
         </div>
       </div>
+      <OverviewCharts beds={canSee(role, 'beds')} />
       {canSee(role, 'beds') && <DischargesToday data={data} />}
     </div>
   )

@@ -11,6 +11,7 @@ from apps.audit.services import record
 from apps.core import clock
 from apps.hospitals.models import Bed
 from apps.hospitals.services import place_patient, vacate_bed
+from apps.resources.services import held_ids
 
 from .models import ErVisit, VisitOutcome, VisitStatus
 
@@ -132,3 +133,92 @@ def finish(
     if action != "board" and visit.bed_id is not None:
         vacate_bed(visit.bed, actor=actor, reason=f"Emergency patient {VERB[action].replace('_', ' ')}")
     return _move(visit, action, actor=actor, at=at, reason=reason)
+
+
+# ── From the queue page (B22) ─────────────────────────────────────────────────────────────────────
+
+STAFF_ACTIONS = ["startTreatment", "discharge", "admit", "transfer", "leaveUnseen"]
+TYPICAL_MINUTES = {1: 220, 2: 180, 3: 135, 4: 80, 5: 40}  # the middle of the simulation's ranges
+CHILD_WORDS = ("child", "paediatric", "pediatric", "neonatal")
+FEMALE_WORDS = ("obstetric", "postnatal", "labour", "gynaecology", "maternity")
+
+
+class NoBedFree(Exception):
+    """The action needs a bed and none is free. Views answer 409."""
+
+
+def actions_for(visit: ErVisit) -> list[str]:
+    """What staff can do next with this patient. Admitting someone with no ward bed free keeps them waiting
+    here ("boarding"), so admit is offered while being treated and while boarding."""
+    return {
+        VisitStatus.WAITING: ["startTreatment", "leaveUnseen"],
+        VisitStatus.TREATING: ["discharge", "admit", "transfer"],
+        VisitStatus.BOARDING: ["admit"],
+    }.get(visit.status, [])
+
+
+def _free_emergency_bed(visit: ErVisit, held: set[int]):
+    return (
+        Bed.objects.filter(hospital=visit.hospital, bed_type="emergency", status="free")
+        .exclude(pk__in=held)
+        .order_by("label")
+        .first()
+    )
+
+
+def _ward_bed(visit: ErVisit, held: set[int]):
+    """A free ward bed that suits the patient: intensive care first for triage 1; a children's ward for
+    children and not otherwise; an obstetric ward only for women of child-bearing age."""
+    child = visit.age_band in ("0-4", "5-17")
+    wanted = ["icu", "general"] if visit.triage == 1 else ["general", "isolation"]
+    beds = (
+        Bed.objects.filter(hospital=visit.hospital, status="free", bed_type__in=wanted)
+        .exclude(pk__in=held)
+        .select_related("ward")
+        .order_by("ward__sort_order", "label")
+    )
+    for bed_type in wanted:
+        for bed in beds:
+            if bed.bed_type != bed_type:
+                continue
+            kind = f"{bed.ward.kind} {bed.ward.name}".lower()
+            if any(w in kind for w in CHILD_WORDS) != child:
+                continue
+            if any(w in kind for w in FEMALE_WORDS) and not (
+                visit.sex == "F" and visit.age_band in ("18-39", "40-64")
+            ):
+                continue
+            return bed
+    return None
+
+
+@transaction.atomic
+def staff_action(visit: ErVisit, action: str, *, actor) -> ErVisit:
+    """A person moves a patient on from the queue page: start treatment (in a free emergency bed, or a chair
+    for a minor complaint), discharge, admit (to a suitable free ward bed, or the patient waits in the
+    department), transfer, or record that they left unseen. The simulation then leaves this patient to
+    staff."""
+    visit = _locked(visit)
+    ErVisit.machine.next(
+        visit.status, "board" if action == "admit" and visit.status == "treating" else action
+    )
+    held = held_ids(Bed)
+    rand = random.Random()
+    if action == "startTreatment":
+        bed = _free_emergency_bed(visit, held)
+        if bed is None and visit.triage <= 3:
+            raise NoBedFree("No emergency bed is free. Discharge or move a patient first.")
+        visit = start_treatment(visit, bed=bed, minutes=TYPICAL_MINUTES[visit.triage], actor=actor, rand=rand)
+    elif action == "admit":
+        ward_bed = _ward_bed(visit, held)
+        if ward_bed is None:
+            if visit.status == VisitStatus.BOARDING:
+                raise NoBedFree("No suitable ward bed is free yet; the patient keeps waiting here.")
+            visit = finish(visit, "board", actor=actor, reason="No ward bed free")
+        else:
+            visit = finish(visit, "admit", actor=actor, ward_bed=ward_bed, rand=rand, stay_days=3)
+    else:
+        visit = finish(visit, action, actor=actor)
+    ErVisit.objects.filter(pk=visit.pk).update(handled_by=actor)
+    visit.handled_by = actor
+    return visit

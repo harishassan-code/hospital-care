@@ -16,6 +16,7 @@ import { formatClock, formatShortDate } from '../../lib/time'
 import { useLoad } from '../../lib/useLoad'
 import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
+import { CasesCharts } from '../../features/charts/PageCharts'
 
 /**
  * Emergency cases at the user's hospital, opening a new one (stories #30, #32), a quick blood request (#36), the
@@ -115,6 +116,7 @@ export default function EmergenciesPage() {
           </div>
         )}
       </Panel>
+      <CasesCharts cases={result.data} />
       <DepartmentStatusPanel />
       {editable && <IncomingPatients />}
       <OutgoingPatients />

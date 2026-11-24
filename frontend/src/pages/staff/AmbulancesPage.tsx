@@ -23,6 +23,7 @@ import { useStaff } from '../../features/staff/staffContext'
 import { useLoad } from '../../lib/useLoad'
 import { StaffDataState } from './StaffDataState'
 import pageStyles from './StaffPages.module.css'
+import { AmbulancesCharts } from '../../features/charts/PageCharts'
 
 type TypeFilter = 'all' | AmbulanceType
 type StatusFilter = 'all' | AmbulanceStatus
@@ -146,6 +147,7 @@ export default function AmbulancesPage() {
           </div>
         )}
       </Panel>
+      <AmbulancesCharts />
     </div>
   )
 }

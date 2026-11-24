@@ -450,3 +450,45 @@ export function getDepartmentStatus(): Promise<DepartmentStatus> {
 export function updateDepartmentStatus(input: DepartmentStatusInput): Promise<DepartmentStatus> {
   return apiPut<DepartmentStatus>('/emergencies/department/', input)
 }
+
+// ── The emergency department queue (B22) ─────────────────────────────────────────────────────────
+
+export type VisitStatus = 'waiting' | 'treating' | 'boarding' | 'left'
+export type VisitAction = 'startTreatment' | 'discharge' | 'admit' | 'transfer' | 'leaveUnseen'
+
+/** One patient in the department: a tag and categories, never a name. Shape of queue_views.visit_data. */
+export interface ErVisit {
+  id: number
+  tag: string
+  triage: 1 | 2 | 3 | 4 | 5
+  ageBand: string
+  sex: 'F' | 'M'
+  complaint: string
+  complaintLabel: string
+  status: VisitStatus
+  arrivedAt: string
+  seenAt: string | null
+  dueAt: string | null
+  waitedMinutes: number
+  bed: string | null
+  handledByStaff: boolean
+  actions: VisitAction[]
+}
+
+export interface ErQueue {
+  visits: ErVisit[]
+  department: DepartmentStatus | null
+  beds: { total: number; free: number }
+  seenLastHour: number
+  now: string
+}
+
+/** GET /api/emergencies/queue/: admin, doctor and nurse at a hospital. */
+export function getQueue(): Promise<ErQueue> {
+  return apiGet<ErQueue>('/emergencies/queue/')
+}
+
+/** POST /api/emergencies/queue/<id>/actions/: 409 when the move isn't allowed now or no bed is free. */
+export function postVisitAction(id: number, action: VisitAction): Promise<ErVisit> {
+  return apiPost<ErVisit>(`/emergencies/queue/${id}/actions/`, { action })
+}

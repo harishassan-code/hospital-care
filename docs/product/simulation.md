@@ -104,6 +104,7 @@ before 14:00; planned admissions 10:00–21:00; theatre lists 08:00–17:00, non
   `seed_demo`). The simulation neither uses nor adds to them. Blood still expires on its date, so after a fast-forward of
   more than about six days run `seed_demo --reset` before the scripted demo.
 - A bed a nurse admitted by hand (no planned discharge date).
+- An emergency patient a person acted on from the queue page, and a shift a person marked absent (B22).
 
 ## Alerts
 

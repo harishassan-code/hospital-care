@@ -13,6 +13,7 @@ import { componentLabel, formatDay, formatMinutes } from '../../features/reports
 import { saveFile } from '../../lib/download'
 import styles from './ReportsPage.module.css'
 import pageStyles from './StaffPages.module.css'
+import { ReportCharts } from '../../features/charts/PageCharts'
 
 const NO_RESPONSE = 'The hospital’s system didn’t respond, so the report couldn’t be loaded. Try again.'
 const NOT_SAVED = 'The file wasn’t downloaded, because the hospital’s system didn’t respond. Try again.'
@@ -146,6 +147,7 @@ export default function ReportsPage() {
             </div>
           </div>
           <p role="status">{notice}</p>
+          <ReportCharts report={report} />
 
           <Panel title="Requests">
             <p className={pageStyles.note}>

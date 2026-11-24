@@ -78,8 +78,10 @@ describe('live refresh of the staff workspace', () => {
     expect(firstLoad['/api/transfers/']).toBe(2)
 
     await advance(RELOAD_MS)
-    const reload = callCounts(fetchMock)
-    expect(reload).toEqual(Object.fromEntries(Object.entries(firstLoad).map(([path, n]) => [path, n * 2])))
+    // The charts' figures (B22) refresh on their own, every minute; everything else reloads with the workspace.
+    const workspace = (counts: Record<string, number>) => Object.fromEntries(Object.entries(counts).filter(([path]) => path !== '/api/metrics/'))
+    const reload = workspace(callCounts(fetchMock))
+    expect(reload).toEqual(Object.fromEntries(Object.entries(workspace(firstLoad)).map(([path, n]) => [path, n * 2])))
   })
 
   it('does not ask for modules the role cannot see on a reload', async () => {

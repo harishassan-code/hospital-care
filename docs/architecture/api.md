@@ -1028,6 +1028,26 @@ It never carries the patient reference, stock or holds.
   before and after, and `emergencyrequest.hospital_changed` with the hospital before and after. Arrival also writes
   `reservation.released` for each hold it releases and `transfer.cancelled` for each stock transfer.
 
+## Trend figures (B22)
+
+| Method | Path | Body → returns | Access |
+|---|---|---|---|
+| GET | `/metrics/?metrics=a,b&days=1&bucket=hour\|day&typical=true&hospital=&perHospital=true` | `{from, to, bucket, series: {name: [{at, value}]}, typical?: {name: [{hour, value}]}, updatedAt}`. A name without its last part sums its family (`beds.occupied` = every bed type). By day, counts add up and levels average. Own hospital; the CityCare admin reads the network (summed; the wait averaged), one hospital, or each apart (`name@<id>`). Up to 12 figures and 31 days; an unknown figure is a 400, another hospital a 404 | metrics: view |
+
+## Emergency department queue (B22)
+
+| Method | Path | Body → returns | Access |
+|---|---|---|---|
+| GET | `/emergencies/queue/` | `{visits: ErVisit[], department, beds: {total, free}, seenLastHour, now}`: the user's hospital's patients waiting, being treated or waiting for a ward bed. `ErVisit` = `{id, tag, triage, ageBand, sex, complaint, complaintLabel, status, arrivedAt, seenAt, dueAt, waitedMinutes, bed, handledByStaff, actions}`: a random tag, never a name | emergencyDepartment: view |
+| POST | `/emergencies/queue/<id>/actions/` | `{action}`: `startTreatment` (a free emergency bed, or a chair for triage 4–5), `discharge`, `admit` (a suitable free ward bed, or the patient waits here), `transfer`, `leaveUnseen` → `ErVisit`. 409 when the move isn't allowed or no bed is free; another hospital's patient is a 404. Audit-logged as `ervisit.<verb>`; the simulation then leaves the patient to staff | emergencyDepartment: edit |
+
+## Staff on duty (B22)
+
+| Method | Path | Body → returns | Access |
+|---|---|---|---|
+| GET | `/staffing/` | `{now, summary: {doctor, nurse: {planned, onDuty, missing}}, people: ShiftRow[], day: [{hour, plannedDoctors, plannedNurses, doctors?, nurses?}], ratios: [{department, patients, nurses, patientsPerNurse, target, short}]}`. People are everyone due now or within two hours; status `onDuty`, `late`, `notInYet`, `missing` (45 minutes past the start), `absent`, `upcoming`, `finished` | staffing: view |
+| POST | `/staffing/shifts/<id>/actions/` | `{action}`: `clockIn` or `markAbsent` → `ShiftRow`. 409 when not allowed now; another hospital's shift is a 404. Audit-logged (`shift.clocked_in`, `shift.marked_absent`) | staffing: edit |
+
 ## Live city simulation (B21)
 
 The city clock and the simulation that runs the network on staging ([docs/product/simulation.md](../product/simulation.md)).
