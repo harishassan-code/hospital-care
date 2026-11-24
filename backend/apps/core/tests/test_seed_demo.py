@@ -40,15 +40,15 @@ def test_seed_demo_is_repeatable():
     first = counts()
     call_command("seed_demo", stdout=None)
     assert first == {
-        "Hospital": 3,
-        "Department": 10,
-        "Ward": 12,
-        "StorageLocation": 10,
-        "Bed": 164,
-        "BloodUnit": 352,  # 320 at CityCare General, 16 at each other hospital (Sprint 7 transfers)
+        "Hospital": 10,  # the scenario's three and seven more (B20)
+        "Department": 41,
+        "Ward": 56,
+        "StorageLocation": 27,
+        "Bed": 1088,
+        "BloodUnit": 1682,  # 320 at CityCare General, the scenario's 16 per partner, and each bank's stock
         "Medicine": 23,
         "User": 6,
-        "Ambulance": 7,  # two per hospital, and a patient transport at CityCare General (story #50)
+        "Ambulance": 31,  # the scenario's seven (story #50) and each hospital's fleet
     }
     assert counts() == first
 
@@ -57,8 +57,11 @@ def test_every_hospital_has_structure_and_resources():
     call_command("seed_demo", stdout=None)
     for hospital in Hospital.objects.all():
         assert hospital.is_active and hospital.capabilities.exists()
-        assert hospital.departments.exists() and hospital.locations.exists() and hospital.wards.exists()
-        assert Bed.objects.filter(hospital=hospital).exists()
+        assert hospital.departments.exists() and hospital.locations.exists()
+        if hospital.type == "bloodBank":  # a blood bank has stock and donors, no beds
+            assert not hospital.wards.exists() and BloodUnit.objects.filter(hospital=hospital).count() >= 500
+            continue
+        assert hospital.wards.exists() and Bed.objects.filter(hospital=hospital).exists()
     assert not Bed.objects.filter(hospital=None).exists()
     assert not BloodUnit.objects.filter(hospital=None).exists()
     assert not BloodUnit.objects.filter(storage_location=None).exists()
@@ -95,17 +98,19 @@ def test_links_data_from_before_sprint_2_without_duplicating_it(make_user):
 
 
 def test_ambulances_per_hospital_and_a_rerun_adds_only_the_missing_ones():
-    """Story #50: advanced and basic at every hospital, and a patient transport at the main one."""
+    """Story #50: the scenario's fleet (advanced and basic at each of its hospitals, a patient transport at
+    the main one) and each hospital's own (B20). A blood bank runs none."""
     call_command("seed_demo", stdout=None)
     main = Hospital.objects.get(name="CityCare General Hospital")
     assert Ambulance.objects.filter(hospital=main, type=AmbulanceType.PATIENT_TRANSPORT).count() == 1
     for hospital in Hospital.objects.all():
-        kinds = sorted(Ambulance.objects.filter(hospital=hospital).values_list("type", flat=True))
-        expected = ["advanced", "basic", "patientTransport"] if hospital == main else ["advanced", "basic"]
-        assert kinds == sorted(expected)
+        kinds = set(Ambulance.objects.filter(hospital=hospital).values_list("type", flat=True))
+        assert (not kinds) == (hospital.type == "bloodBank"), hospital.name
+    scenario = Ambulance.objects.filter(identifier__regex=r"^AMB-0\d$")
+    assert sorted(scenario.values_list("identifier", flat=True)) == [f"AMB-0{n}" for n in range(1, 8)]
     Ambulance.objects.filter(identifier="AMB-05").delete()
     call_command("seed_demo", stdout=None)
-    assert Ambulance.objects.count() == 7
+    assert Ambulance.objects.count() == 31
     assert Ambulance.objects.get(identifier="AMB-05").hospital.name == "Seaview Hospital"
 
 
@@ -113,7 +118,7 @@ def test_reset_starts_over():
     call_command("seed_demo", stdout=None)
     Department.objects.create(hospital=Hospital.objects.first(), name="Extra")
     call_command("seed_demo", "--reset", stdout=None)
-    assert counts()["Department"] == 10
+    assert counts()["Department"] == 41
 
 
 def o_neg_red_cells(hospital):
@@ -130,14 +135,21 @@ def unit_states():
 
 
 def test_citycare_has_one_usable_o_neg_red_cell_for_the_mvp_scenario():
-    """MVP scenario (B12): CityCare reserves its one local unit, and each partner has two to transfer."""
+    """MVP scenario (B12): CityCare reserves its one local unit, and each scenario partner has two to
+    transfer. Seaview's expire first of all the network's usable O- red cells, so it ranks first as the
+    source."""
     call_command("seed_demo", stdout=None)
     main = Hospital.objects.get(name=MAIN)
     assert usable_units(o_neg_red_cells(main)).count() == 1
-    partners = Hospital.objects.exclude(pk=main.pk)
-    assert partners.count() == 2
-    for partner in partners:
-        assert usable_units(o_neg_red_cells(partner)).count() == 2
+    for name in (SEAVIEW, NORTHSIDE):
+        assert usable_units(o_neg_red_cells(Hospital.objects.get(name=name))).count() == 2
+    seaview_first = usable_units(o_neg_red_cells(Hospital.objects.get(name=SEAVIEW))).order_by("expires_at")[
+        0
+    ]
+    others = BloodUnit.objects.filter(group=BloodGroup.O_NEG, component=Component.RED_CELLS).exclude(
+        hospital__name__in=(MAIN, SEAVIEW)
+    )
+    assert all(u.expires_at > seaview_first.expires_at for u in usable_units(others))
 
 
 def test_scenario_stock_is_the_same_on_every_fresh_seed():
@@ -186,14 +198,21 @@ def test_scenario_stock_refuses_to_guess_when_no_o_neg_red_cell_can_be_used():
 
 
 def test_specialists_are_the_demo_doctors_at_their_hospitals():
+    """The scenario's three list the demo doctors (B16); the rest list consultants from their own rosters
+    (B20)."""
     call_command("seed_demo", stdout=None)
-    hospital_of = {s.name: s.hospital.name for s in Specialist.objects.select_related("hospital")}
+    scenario = Specialist.objects.select_related("hospital").filter(
+        hospital__name__in=(SEAVIEW, NORTHSIDE, MAIN)
+    )
+    hospital_of = {s.name: s.hospital.name for s in scenario}
     assert set(hospital_of) == {name for name, *_ in DOCTORS}
     assert set(hospital_of.values()) == {SEAVIEW, NORTHSIDE, MAIN}
+    for specialist in Specialist.objects.exclude(hospital__name__in=(SEAVIEW, NORTHSIDE, MAIN)):
+        assert specialist.hospital.staff_members.filter(name=specialist.name, role="doctor").exists()
     assert hospital_of["Dr. Ayesha Khan"] == SEAVIEW  # Cardiology
     assert hospital_of["Dr. Sana Malik"] == NORTHSIDE  # Paediatrics
     assert hospital_of["Dr. Kamran Shah"] == MAIN  # Emergency medicine
-    assert {s.specialty for s in Specialist.objects.all()} == {department for _, department, *_ in DOCTORS}
+    assert {s.specialty for s in scenario} == {department for _, department, *_ in DOCTORS}
 
 
 def test_every_specialist_has_a_window_for_each_of_the_next_days_in_karachi():
@@ -223,7 +242,7 @@ def test_a_rerun_adds_no_specialist_and_no_window_it_already_has():
     call_command("seed_demo", stdout=None)
     first = (Specialist.objects.count(), OnCallWindow.objects.count())
     call_command("seed_demo", stdout=None)
-    assert first == (len(DOCTORS), len(DOCTORS) * SPECIALIST_DAYS)
+    assert first[1] == first[0] * SPECIALIST_DAYS and first[0] > len(DOCTORS)
     assert (Specialist.objects.count(), OnCallWindow.objects.count()) == first
 
 
@@ -232,23 +251,25 @@ def test_a_rerun_fills_in_a_missing_window_and_duplicates_nothing():
     OnCallWindow.objects.filter(specialist__name="Dr. Kamran Shah").order_by("starts_at").first().delete()
     call_command("seed_demo", stdout=None)
     assert OnCallWindow.objects.filter(specialist__name="Dr. Kamran Shah").count() == SPECIALIST_DAYS
-    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+    assert OnCallWindow.objects.count() == Specialist.objects.count() * SPECIALIST_DAYS
 
 
 def test_a_rerun_leaves_a_specialist_added_by_staff_alone():
     call_command("seed_demo", stdout=None)
+    seeded = Specialist.objects.count()
     Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Added Later", specialty="Oncology")
     call_command("seed_demo", stdout=None)
     assert Specialist.objects.get(name="Dr. Added Later").on_call_windows.count() == 0
-    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+    assert OnCallWindow.objects.count() == seeded * SPECIALIST_DAYS
 
 
 def test_reset_starts_the_specialists_over():
     call_command("seed_demo", stdout=None)
+    seeded = Specialist.objects.count()
     Specialist.objects.create(hospital=Hospital.objects.first(), name="Dr. Extra", specialty="ENT")
     call_command("seed_demo", "--reset", stdout=None)
-    assert Specialist.objects.count() == len(DOCTORS)
-    assert OnCallWindow.objects.count() == len(DOCTORS) * SPECIALIST_DAYS
+    assert Specialist.objects.count() == seeded
+    assert OnCallWindow.objects.count() == seeded * SPECIALIST_DAYS
 
 
 def rehearse():

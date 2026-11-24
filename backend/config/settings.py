@@ -95,6 +95,8 @@ INSTALLED_APPS = [
     "apps.operating_rooms",
     "apps.ambulances",
     "apps.specialists",
+    "apps.staffing",
+    "apps.metrics",
     "apps.notifications",
     "apps.audit",
     "apps.reports",

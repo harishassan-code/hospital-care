@@ -35,6 +35,8 @@ can be unit-tested without HTTP.
 | `hospitals` | 1.3 | Hospital, Department/Ward, StorageLocation, Capability |
 | `resources` | 2.x | abstract Resource + status state machine; Bed, Equipment, OperatingRoom, Ambulance |
 | `specialists` | 2.4 | Specialist and OnCallWindow; each hospital's public page shows who is on call by specialty, names for staff only (B19) |
+| `staffing` | – | StaffMember and Shift: each hospital's doctors and nurses, their shifts and clock-ins (B20; clock-ins live in B21) |
+| `metrics` | – | MetricSnapshot: hourly figures per hospital for the trend charts (B20, B22); catalogue in `catalog.py` |
 | `blood` | 3.x | Donor, Donation, BloodUnit, TestResult, CompatibilityRule, BloodRequest |
 | `emergencies` | 4.x | EmergencyCase, RequirementItem, status history, escalation |
 | `matching` | 5.x | candidate search, scoring strategies, Reservation, Allocation |

@@ -1,6 +1,6 @@
 """B13 search performance (spec seed section): `seed_demo --hospitals N` adds synthetic hospitals to the demo
-network for the load test. The three named hospitals keep their data at any N, running it again adds nothing,
-and N below 3 is refused."""
+network for the load test. The ten named hospitals (B20) keep their data at any N, running it again adds
+nothing, and N below 3 (the scenario's hospitals) is refused."""
 
 from io import StringIO
 
@@ -9,6 +9,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.blood.models import BloodUnit, DonationAppointment
+from apps.core.management.commands.seed_demo import HOSPITALS
 from apps.emergencies.models import EmergencyRequest
 from apps.equipment.models import Equipment
 from apps.hospitals.models import Bed, Hospital, Ward
@@ -16,7 +17,7 @@ from apps.operating_rooms.models import OperatingRoom
 
 pytestmark = pytest.mark.django_db
 
-NAMED = ["CityCare General Hospital", "Seaview Hospital", "Northside Children's Hospital"]
+NAMED = [spec[0] for spec in HOSPITALS]
 
 
 def seed(*args):
@@ -24,8 +25,8 @@ def seed(*args):
 
 
 def named_hospital_data():
-    """What the three named hospitals hold: bed labels and states, and blood unit ids. Times are left out,
-    since each run reads the clock."""
+    """What the named hospitals hold: bed labels and states, and blood unit ids. Times are left out, since
+    each run reads the clock."""
     data = {}
     for hospital in Hospital.objects.filter(name__in=NAMED).order_by("name"):
         data[hospital.name] = {
@@ -48,18 +49,18 @@ def counts():
     return {model.__name__: model.objects.count() for model in models}
 
 
-def test_the_default_is_still_the_three_named_hospitals():
+def test_the_default_is_the_named_hospitals():
     seed()
     assert sorted(Hospital.objects.values_list("name", flat=True)) == sorted(NAMED)
 
 
-def test_hospitals_from_four_on_are_synthetic_and_complete():
-    seed("--hospitals", "6")
+def test_hospitals_after_the_named_ones_are_synthetic_and_complete():
+    seed("--hospitals", "13")
     synthetic = Hospital.objects.exclude(name__in=NAMED).order_by("name")
     assert [hospital.name for hospital in synthetic] == [
-        "Synthetic Hospital 04",
-        "Synthetic Hospital 05",
-        "Synthetic Hospital 06",
+        "Synthetic Hospital 11",
+        "Synthetic Hospital 12",
+        "Synthetic Hospital 13",
     ]
     for hospital in synthetic:
         assert hospital.address == "Karachi (synthetic)"
@@ -71,24 +72,24 @@ def test_hospitals_from_four_on_are_synthetic_and_complete():
 
 
 def test_synthetic_wards_never_share_a_code_or_a_bed_label():
-    seed("--hospitals", "10")
+    seed("--hospitals", "14")
     codes = list(Ward.objects.values_list("code", flat=True))
     assert len(codes) == len(set(codes))
-    assert Ward.objects.filter(hospital__name="Synthetic Hospital 10").exists()
+    assert Ward.objects.filter(hospital__name="Synthetic Hospital 14").exists()
 
 
 def test_the_named_hospitals_keep_their_data_at_any_size():
     seed()
     default = named_hospital_data()
-    seed("--reset", "--hospitals", "10")
+    seed("--reset", "--hospitals", "12")
     assert named_hospital_data() == default
-    assert Hospital.objects.count() == 10
+    assert Hospital.objects.count() == 12
 
 
 def test_running_it_again_at_the_same_size_adds_nothing():
-    seed("--hospitals", "6")
+    seed("--hospitals", "12")
     first = counts()
-    seed("--hospitals", "6")
+    seed("--hospitals", "12")
     assert counts() == first
 
 

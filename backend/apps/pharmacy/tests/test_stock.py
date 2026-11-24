@@ -88,5 +88,7 @@ def test_the_demo_seed_gives_every_hospital_its_own_stock(db):
 
     call_command("seed_demo", verbosity=0)
     for hospital in Hospital.objects.all():
-        assert Batch.objects.filter(hospital=hospital).exists(), hospital.name
+        # A blood bank keeps no medicines (B20); every hospital keeps its own.
+        has_stock = Batch.objects.filter(hospital=hospital).exists()
+        assert has_stock == (hospital.type != "bloodBank"), hospital.name
     assert not Batch.objects.filter(hospital=None).exists()

@@ -28,10 +28,10 @@ stock, shortfall, quantities) are read from the page, not assumed.
 
 | Step | Criterion | What the browser does | Asserts |
 |---|---|---|---|
-| S1 | 1 | Admin opens Hospitals | Three hospitals, all active |
+| S1 | 1 | Admin opens Hospitals | The scenario's three hospitals among the network (ten since B20), every one active |
 | S2 | 2 | Blood bank opens Blood bank; filters to Issued | CityCare has O− red cells in stock; the issued units are listed as issued |
 | S3 | 3 | Nurse sends a critical request: O−, red cells, 3 units | A new case, status Open, need "3 × O− red cells" |
-| S4 | 4, 5 | Nurse reads the case, then its sources | Local stock is 1 or 2 units (precondition); Seaview is ranked above Northside; each has 2 available; "Ordered by earliest expiry first"; "Why this score?" shows the points |
+| S4 | 4, 5 | Nurse reads the case, then its sources | Local stock is 1 or 2 units (precondition); Seaview ranks first, with 2 available (its units expire first in the network, B20); Northside is offered too; "Ordered by earliest expiry first"; "Why this score?" shows the points |
 | S5 | 6 | Nurse reserves the local units | The holds show as Held; status Matching; the timeline says "System" moved it |
 | S6 | 6 | Nurse opens a second critical request for 1 O− unit | "Available here: 0", no reserve form; the case is then cancelled |
 | S7 | 7 | Nurse requests the shortfall from Seaview | Transfer requested, quantity = shortfall; listed under Outgoing with the case |
